@@ -269,6 +269,12 @@ struct BufferBuilder
     explicit BufferBuilder(MemoryRegion memory) { *this = {}; bytes = DynArray<u8>(memory); }
 };
 
+inline void
+Clear(BufferBuilder * builder, bool shouldFreeMemory=false)
+{
+    Clear(&builder->bytes, shouldFreeMemory);
+}
+
 internal u8 *
 AppendNewBytes(BufferBuilder * builder, int cBytes)
 {
@@ -281,6 +287,27 @@ AppendNewBytes(BufferBuilder * builder, int cBytes)
     return builder->bytes + cBytesOld;
 }
 
+internal void
+Append(BufferBuilder * builder, u8 value)
+{
+    u8 * ptr = AppendNewBytes(builder, 1);
+    *ptr = value;
+}
+
+internal void
+Append(BufferBuilder * builder, u16 value)
+{
+    u16 * ptr = (u16 *)AppendNewBytes(builder, 2);
+    *ptr = value;
+}
+
+internal void
+Append(BufferBuilder * builder, u32 value)
+{
+    u32 * ptr = (u32 *)AppendNewBytes(builder, 4);
+    *ptr = value;
+}
+
 inline u8 *
 RawPtr(BufferBuilder * builder)
 {
@@ -291,7 +318,7 @@ RawPtr(BufferBuilder * builder)
 //
 // PushBuffer
 // - Simple paged linear allocator
-// - Can push heterogeneous items indefinitely, then read them back in sequence
+// - Can push heterogeneous (mixed-size) items indefinitely, then read them back in sequence
 // - Doesn't remember types. User is responsible for reading the same types out in the order they were pushed in.
 //
 

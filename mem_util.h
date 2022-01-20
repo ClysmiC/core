@@ -1,5 +1,12 @@
 // !SkipFile
 
+enum class Endianness : u8
+{
+    Nil = 0,
+    Little = Nil,
+    Big
+};
+
 inline uintptr
 GetAlignmentOffset(uintptr value, uintptr alignment)
 {

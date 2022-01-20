@@ -23,9 +23,12 @@ ZStringLength(char * string)
 
 struct String
 {
+    // NOTE - Unicode compatible via UTF-8
+
     char * bytes;
     int cBytes;
-    // TODO - Capacity?
+
+    // TODO - Capacity? String "building" capabilities?
 
     String() = default;
 

@@ -268,4 +268,5 @@ defer_<F> defer_func_(F f) {
 #include "array.h"
 #include "dict.h"
 #include "tree.h"
-#include "util/util.h"
+#include "utf.h"
+#include "util/util.h"  // HMM - should util be moved out of core?
