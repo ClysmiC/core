@@ -9,20 +9,6 @@ namespace UTF
 	static constexpr u32 invalidCodePoint = 0xFFFFFFFF;
 }
 
-internal bool
-IsValidCodePoint(u32 codePoint)
-{
-	bool result =
-		(codePoint >= 0x20 && codePoint <= 0x21) ||
-		(codePoint >= 0x23 && codePoint <= 0x5B) ||
-		(codePoint >= 0x5D && codePoint <= 0x7E) ||
-		(codePoint >= 0xA0 && codePoint <= 0xD7FF) ||
-		(codePoint >= 0xE000 && codePoint <= 0xFFFD) ||
-		(codePoint >= 0x0100000 && codePoint <= 0x10FFFF);
-
-	return result;
-}
-
 // --- UTF-8
 
 #if 0
@@ -115,9 +101,6 @@ NextUtf8CodePoint(StringScanner * scanner)
 		goto LError;
 	}
 
-	if (!IsValidCodePoint(result))
-		goto LError;
-
 	*scanner = cursor;
 	return result;
 
@@ -132,7 +115,7 @@ LError:	// @goto
 namespace UTF8
 {
 
-struct ByteMetadata
+struct CodeUnitMetadata
 {
 	u8 markerMask;
 	u8 markerValue;
@@ -142,16 +125,30 @@ struct ByteMetadata
 	u32 maxCodePoint; // Used to test for "overlong" encoding. Only valid for leading byte metadata.
 };
 
+enum class CodeUnitType : u8
+{
+	Nil = 0,
+	Continuation = Nil,
+
+	LeadLen1,
+	LeadLen2,
+	LeadLen3,
+	LeadLen4,
+
+	EnumCount
+};
+
 // Leading byte
-static constexpr ByteMetadata leadByteLen1 = { 0b10000000, 0b00000000, 1, 0b01111111, 7, 0b1111111 };
-static constexpr ByteMetadata leadByteLen2 = { 0b11100000, 0b11000000, 3, 0b00011111, 5, 0b11111111111 };
-static constexpr ByteMetadata leadByteLen3 = { 0b11110000, 0b11100000, 4, 0b00001111, 4, 0b1111111111111111 };
-static constexpr ByteMetadata leadByteLen4 = { 0b11111000, 0b11110000, 5, 0b00000111, 3, 0b111111111111111111111 };
+static CodeUnitMetadata codeUnitMetadata[] =
+{
+	{ 0b11000000, 0b10000000, 2, 0b00111111, 6, 0 /*unused*/ },				// Continuation
+	{ 0b10000000, 0b00000000, 1, 0b01111111, 7, 0b1111111 },				// LeadLen1
+	{ 0b11100000, 0b11000000, 3, 0b00011111, 5, 0b11111111111 },			// LeadLen2
+	{ 0b11110000, 0b11100000, 4, 0b00001111, 4, 0b1111111111111111 },		// LeadLen3
+	{ 0b11111000, 0b11110000, 5, 0b00000111, 3, 0b111111111111111111111 },	// LeadLen4
+};
 
-// Continuation bytes
-static constexpr ByteMetadata continuationByte  = { 0b11000000, 0b10000000, 2, 0b00111111, 6 };
-
-}
+} // namespace UTF8
 
 // --- UTF-16
 
@@ -190,12 +187,11 @@ NextCodePointUtf16_(u8 * bytesUtf16, int cBytesUtf16, int * pI, Endianness endia
 		u32 codeUnit1 = (*highByte << 8) | *lowByte;
 
 		u32 highSurrogateIntermediate = (codeUnit0 - 0xD800) << 10;
-		u32 lowSurrogateIntermediate = (codeUnit1 - 0xDC37);
-		result = highSurrogateIntermediate + lowSurrogateIntermediate + 0x100000;
+		u32 lowSurrogateIntermediate = (codeUnit1 - 0xDC00);
+		result = highSurrogateIntermediate + lowSurrogateIntermediate + 0x10000;
 	}
 
-	if (!IsValidCodePoint(result))
-		goto LError;
+	// TODO - some kind of final validation to make sure the code point we generated is legal?
 
 	*pI = i;
 	return result;
@@ -205,6 +201,17 @@ LError:	// @goto
 }
 
 // --- Conversion
+
+inline u8
+MakeUtf8CodeUnit_Fast(u32 codePoint, UTF8::CodeUnitType codeUnitType, int cFollowingContinuationBytes)
+{
+	using namespace UTF8;
+
+	CodeUnitMetadata * meta = codeUnitMetadata + (int)codeUnitType;
+	CodeUnitMetadata * contMeta = codeUnitMetadata + (int)CodeUnitType::Continuation;
+	u8 result = (u8)(((codePoint >> (cFollowingContinuationBytes * contMeta->cBitsCodePoint)) & meta->codePointMask) | meta->markerValue);
+	return result;
+}
 
 internal String
 Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, MemoryRegion memory, Endianness endianness=Endianness::Little)
@@ -250,35 +257,37 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, MemoryRegion memory, Endianness 
 		int iByteScan = 0;
 		while (iByteScan < cBytesUtf16)
 		{
+			using namespace UTF8;
+
 			u32 codePoint = NextCodePointUtf16_(bytesUtf16, cBytesUtf16, &iByteScan, endianness);
 			Assert(codePoint != UTF::invalidCodePoint);	// Was already validated when we were counting bytes
 
 			if (codePoint <= 0x7F)
 			{
-				result.bytes[iByteWrite++] = (u8)codePoint;
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen1, 0);
 			}
 			else if (codePoint <= 0x7FF)
 			{
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (1 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::leadByteLen2.codePointMask);
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (0 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen2, 1);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
 			}
 			else if (codePoint <= 0xFFFF)
 			{
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (2 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::leadByteLen3.codePointMask);
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (1 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (0 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen3, 2);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
 			}
 			else
 			{
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (3 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::leadByteLen4.codePointMask);
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (2 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
-				result.bytes[iByteWrite++] = (u8)((codePoint >> (1 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
-                result.bytes[iByteWrite++] = (u8)((codePoint >> (0 * UTF8::continuationByte.cBitsCodePoint)) & UTF8::continuationByte.codePointMask);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen4, 3);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 2);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
+				result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
 			}
 		}
 	}
 
-	Assert(iByteWrite = cBytesRequired);
+	Assert(iByteWrite == cBytesRequired);
 	return result;
 
 LError:	// @goto

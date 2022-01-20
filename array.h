@@ -275,6 +275,13 @@ Clear(BufferBuilder * builder, bool shouldFreeMemory=false)
     Clear(&builder->bytes, shouldFreeMemory);
 }
 
+inline bool
+IsEmpty(BufferBuilder * builder)
+{
+    bool result = (builder->bytes.count == 0);
+    return result;
+}
+
 internal u8 *
 AppendNewBytes(BufferBuilder * builder, int cBytes)
 {
