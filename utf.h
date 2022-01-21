@@ -11,107 +11,6 @@ namespace UTF
 
 // --- UTF-8
 
-#if 0
-internal u32
-NextUtf8CodePoint(StringScanner * scanner)
-{
-	u32 result = UTF::invalidCodePoint;
-
-	StringScanner cursor = *scanner;
-	if (!HasNextChar(cursor))
-		goto LError;
-
-	u8 b1 = NextChar(&cursor);
-	if ((b1 & oneByte.markerMask) == oneByte.markerValue)
-	{
-		return (u32)b1;
-	}
-	else if ((b1 & twoBytes.markerMask) == twoBytes.markerValue)
-	{
-		if (!HasNextChar(&cursor))
-			goto LError;
-
-		u8 b2 = NextChar(&scanner);
-		if ((b2 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u32 codePoint =
-			((u32)(b1 & twoBytes.codePointMask) << (1 * continuationByte.codePointCntBit)) |
-			((u32)(b2 & continuationByte.codePointMask));
-
-		// HMM - Using 2 bytes to encode something that could fit in 1. I think to be well-formed we should reject this...? Idk.
-		if (codePoint <= oneByte.maxCodePoint)
-			goto LError;
-
-		result = codepoint;
-	}
-	else if ((b1 & threeBytes.markerMask) == threeBytes.markerValue)
-	{
-		if (CBytesRemaining(&cursor) < 2)
-			goto LError;
-
-		u8 b2 = NextChar(&cursor);
-		if ((b2 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u8 b3 = NextChar(&cursor);
-		if ((b3 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u32 codePoint =
-			((u32)(b1 & threeBytes.codePointMask)       << (2 * continuationByte.codePointCntBit)) |
-			((u32)(b2 & continuationByte.codePointMask) << (1 * continuationByte.codePointCntBit)) |
-			((u32)(b3 & continuationByte.codePointMask));
-
-		if (codePoint <= twoBytes.maxCodePoint)
-			goto LError;
-
-		result = codePoint;
-	}
-	else if ((b1 & fourBytes.markerMask) == fourBytes.markerValue)
-	{
-		if (CBytesRemaining(&cursor) < 3)
-			goto LError;
-
-		u8 b2 = NextChar(&cursor);
-		if ((b2 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u8 b3 = NextChar(&cursor);
-		if ((b3 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u8 b4 = NextChar(&cursor);
-		if ((b4 & continuationByte.markerMask) != continuationByte.markerValue)
-			goto LError;
-
-		u32 codePoint =
-			((u32)(b1 & fourBytes.codePointMask)        << (3 * continuationByte.codePointCntBit)) |
-			((u32)(b2 & continuationByte.codePointMask) << (2 * continuationByte.codePointCntBit)) |
-			((u32)(b3 & continuationByte.codePointMask) << (1 * continuationByte.codePointCntBit)) |
-			((u32)(b4 & continuationByte.codePointMask));
-
-		if (codePoint <= threeBytes.maxCodePoint)
-			goto LError;
-
-		result = codePoint;
-	}
-	else
-	{
-		goto LError;
-	}
-
-	*scanner = cursor;
-	return result;
-
-LError:	// @goto
-	return UTF::invalidCodePoint;
-}
-#endif
-
-// --- UTF-8
-
-
 namespace UTF8
 {
 
@@ -150,17 +49,125 @@ static CodeUnitMetadata codeUnitMetadata[] =
 
 } // namespace UTF8
 
+inline bool
+IsCodeUnitType(u8 codeUnit, UTF8::CodeUnitType type)
+{
+	UTF8::CodeUnitMetadata * meta = UTF8::codeUnitMetadata + (int)type;
+	bool result = (codeUnit & meta->markerMask) == meta->markerValue;
+	return result;
+}
+
+internal u32
+NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int * pI)
+{
+	int i = *pI;
+
+	if (i < 0 || i >= cBytesUtf8)
+		goto LError;
+
+	u32 result = UTF::invalidCodePoint;
+
+	// NOTE - Immediately cast up to u32 to avoid any surprises when bit-twiddling
+	u32 b0 = (u32)bytesUtf8[i++];
+	if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen1))
+	{
+		result = (u32)b0;
+	}
+	else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen2))
+	{
+		if (i >= cBytesUtf8)
+			goto LError;
+
+		u32 b1 = (u32)bytesUtf8[i++];
+		if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation))
+			goto LError;
+
+		UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen2;
+		UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
+		u32 codePoint =
+			((u32)(b0 & leadByteMeta->codePointMask) << (1 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b1 & contByteMeta->codePointMask));
+
+		// "overlong" encoding
+		if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen1].maxCodePoint)
+			goto LError;
+
+		result = codePoint;
+	}
+	else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen3))
+	{
+		if (i >= cBytesUtf8 - 1)
+			goto LError;
+
+		u32 b1 = (u32)bytesUtf8[i++];
+		u32 b2 = (u32)bytesUtf8[i++];
+		if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation) ||
+		    !IsCodeUnitType((u8)b2, UTF8::CodeUnitType::Continuation))
+			goto LError;
+
+		UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen3;
+		UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
+		u32 codePoint =
+			((u32)(b0 & leadByteMeta->codePointMask) << (2 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b1 & contByteMeta->codePointMask) << (1 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b2 & contByteMeta->codePointMask));
+
+		// "overlong" encoding
+		if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen2].maxCodePoint)
+			goto LError;
+
+		result = codePoint;
+	}
+	else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen4))
+	{
+		if (i >= cBytesUtf8 - 2)
+			goto LError;
+
+		u32 b1 = (u32)bytesUtf8[i++];
+		u32 b2 = (u32)bytesUtf8[i++];
+		u32 b3 = (u32)bytesUtf8[i++];
+		if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation) ||
+		    !IsCodeUnitType((u8)b2, UTF8::CodeUnitType::Continuation) ||
+		    !IsCodeUnitType((u8)b3, UTF8::CodeUnitType::Continuation))
+			goto LError;
+
+		UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen4;
+		UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
+		u32 codePoint =
+			((u32)(b0 & leadByteMeta->codePointMask) << (3 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b1 & contByteMeta->codePointMask) << (2 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b2 & contByteMeta->codePointMask) << (1 * contByteMeta->cBitsCodePoint)) |
+			((u32)(b3 & contByteMeta->codePointMask));
+
+		// "overlong" encoding
+		if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen3].maxCodePoint)
+			goto LError;
+
+		result = codePoint;
+	}
+	else
+	{
+		goto LError;
+	}
+
+	*pI = i;
+	return result;
+
+LError:	// @goto
+	return UTF::invalidCodePoint;
+}
+
 // --- UTF-16
 
 internal u32
 NextCodePointUtf16_(u8 * bytesUtf16, int cBytesUtf16, int * pI, Endianness endianness=Endianness::Little)
 {
-	// NOTE - Immediately cast up to u32 to avoid any surprises when bit-twiddling
 	int i = *pI;
 
-	if (i >= cBytesUtf16 - 1)
+	if (i < 0 || i >= cBytesUtf16 - 1)
 		goto LError;
 
+	// NOTE - Immediately cast up to u32 to avoid any surprises when bit-twiddling
 	u32 b0 = (u32)bytesUtf16[i++];
 	u32 b1 = (u32)bytesUtf16[i++];
 
