@@ -183,8 +183,6 @@ CopySubstring(
     char * dst,
     int cBytesDst)
 {
-    // @Security - Audit this function for security flaws
-
     if (cBytesDst <= 0)
         return;
 
@@ -214,8 +212,6 @@ StringConcat(
     char * dst,
     int cBytesDst)
 {
-    // @Security - Audit this function for security flaws
-
     if (cBytesDst <= 0)
         return;
 
