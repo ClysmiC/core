@@ -244,6 +244,33 @@ StringConcat(
 }
 
 internal String
+StringInsert(
+    String srcA,
+    int iInsert,
+    String srcB,
+    MemoryRegion memory)
+{
+    if (iInsert < 0)
+    {
+        AssertFalseWarn;
+        iInsert = 0;
+    }
+    else if (iInsert > srcA.cBytes)
+    {
+        AssertFalseWarn;
+        iInsert = srcA.cBytes;
+    }
+
+    String result;
+    result.cBytes = srcA.cBytes + srcB.cBytes;
+    result.bytes = (char *)Allocate(memory, result.cBytes);
+    CopyMemory(srcA.bytes, result.bytes, iInsert);
+    CopyMemory(srcB.bytes, result.bytes + iInsert, srcB.cBytes);
+    CopyMemory(srcA.bytes + iInsert, result.bytes + iInsert + srcB.cBytes, srcA.cBytes - iInsert);
+    return result;
+}
+
+internal String
 StringConcat(String srcA, String srcB, MemoryRegion memory)
 {
     String result;
