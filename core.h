@@ -173,6 +173,7 @@ static constexpr f32 minPositive = FLT_MIN;
 //
 
 #define DefaultInvalid default: { AssertFalse; } break
+#define DefaultNilInvalid case 0: default: { AssertFalse; } break
 #define DefaultInvalidEnum(ENUM) case ENUM::EnumCount: default: { AssertFalse; } break
 #define DefaultNilInvalidEnum(ENUM) case ENUM::Nil: case ENUM::EnumCount: default: { AssertFalse; } break
 
@@ -181,6 +182,8 @@ static constexpr f32 minPositive = FLT_MIN;
 #define DefaultNilInvalidEnumFallthrough(ENUM) case ENUM::Nil: case ENUM::EnumCount: default: { AssertFalse; }
 
 // HMM - do I want shift operators?
+// HMM - IsFlagSet really checks if an entire bit pattern is set, by design. It is a slight misnomer though.
+//          Really, the solution to this one is at the type level there should be a distinction between a flag and a flag set. | operator could always produce flag set... other operators might get fuzzy
 #define DefineFlagOps(ENUM, INT_TYPE) \
     inline constexpr ENUM operator|(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs | (INT_TYPE)rhs); } \
     inline constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \

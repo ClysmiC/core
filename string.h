@@ -333,7 +333,7 @@ inline bool
 AreStringsEqual(String str0, String str1)
 {
     if (str0.cBytes != str1.cBytes) return false;
-    if (str0.bytes == str1.bytes)     return true;
+    if (str0.bytes == str1.bytes)   return true;
 
     char * cursor0 = str0.bytes;
     char * endCursor0 = str0.bytes + str0.cBytes;
@@ -344,6 +344,105 @@ AreStringsEqual(String str0, String str1)
     while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
     {
         if (*cursor0 != *cursor1)
+            return false;
+
+        *cursor0++;
+        *cursor1++;
+    }
+
+    return (cursor0 == endCursor0) && (cursor1 == endCursor1);
+}
+
+inline char
+AsciiLowerCase(char ascii)
+{
+    char result = ascii;
+    if (ascii >= 'A' && ascii <= 'Z')
+    {
+        result -= ('A' - 'a');
+    }
+
+    return result;
+}
+
+inline char
+AsciiUpperCase(char ascii)
+{
+    char result = ascii;
+    if (ascii >= 'a' && ascii <= 'z')
+    {
+        result += ('A' - 'a');
+    }
+
+    return result;
+}
+
+inline bool
+AreStringsEqualIgnoreCase(char * str0, char * str1)
+{
+    Assert(str0);
+    Assert(str1);
+
+    char * cursor0 = str0;
+    char * cursor1 = str1;
+
+    while (*cursor0 && *cursor1)
+    {
+        // @Punt - Doesn't support unicode strings
+        if (AsciiLowerCase(*cursor0) != AsciiLowerCase(*cursor1))
+            return false;
+
+        *cursor0++;
+        *cursor1++;
+    }
+
+    return (*cursor0 == '\0' && *cursor1 == '\0');
+}
+
+inline bool
+AreStringsEqualIgnoreCase(String str0, char * str1)
+{
+    char * cursor0 = str0.bytes;
+    char * endCursor0 = str0.bytes + str0.cBytes;
+
+    char * cursor1 = str1;
+
+    while ((cursor0 < endCursor0) && *cursor1)
+    {
+        // @Punt - Doesn't support unicode strings
+        if (AsciiLowerCase(*cursor0) != AsciiLowerCase(*cursor1))
+            return false;
+
+        *cursor0++;
+        *cursor1++;
+    }
+
+    return (cursor0 == endCursor0) && (*cursor1 == '\0');
+}
+
+inline bool
+AreStringsEqualIgnoreCase(char * str0, String str1)
+{
+    bool result = AreStringsEqual(str1, str0);
+    return result;
+}
+
+inline bool
+AreStringsEqualIgnoreCase(String str0, String str1)
+{
+    if (str0.cBytes != str1.cBytes) return false;
+    if (str0.bytes == str1.bytes)   return true;
+
+    char * cursor0 = str0.bytes;
+    char * endCursor0 = str0.bytes + str0.cBytes;
+
+    char * cursor1 = str1.bytes;
+    char * endCursor1 = str1.bytes + str1.cBytes;
+
+    while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
+    {
+        // @Punt - Doesn't support unicode strings
+        if (AsciiLowerCase(*cursor0) != AsciiLowerCase(*cursor1))
             return false;
 
         *cursor0++;

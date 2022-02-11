@@ -283,11 +283,35 @@ operator<=(fix64 lhs, fix64 rhs)
 // Misc
 
 inline fix64
-FloorFix64ToFix64(fix64 f)
+Truncate(fix64 f)
 {
     fix64 result = f;
     result.rawValue_ &= FIX64::intMask;
 
+    return result;
+}
+
+inline fix64
+Floor(fix64 f)
+{
+    fix64 result;
+    if (f >= 0)     // HMM - branchless way to do this?
+    {
+        result = Truncate(f);
+    }
+    else
+    {
+        result = Truncate(f) - 1;
+    }
+
+    return result;
+}
+
+inline fix64
+Ceil(fix64 f)
+{
+    fix64 result = Floor(f);
+    result += 1;
     return result;
 }
 
@@ -565,7 +589,7 @@ operator==(iangle lhs, iangle rhs)
 inline bool
 operator!=(iangle lhs, iangle rhs)
 {
-    bool result = true; //!(lhs == rhs);
+    bool result = !(lhs == rhs);
     return result;
 }
 
@@ -958,6 +982,24 @@ Vec2xMax(Vec2x * candidates, int count)
         result = Vec2xMax(result, candidates[iCandidate]);
     }
 
+    return result;
+}
+
+// NOTE - Narrows on 32 bit int systems!
+inline Vec2i
+Floor(Vec2x v)
+{
+    Vec2i result;
+    result.x = (int)Floor(v.x);
+    result.y = (int)Floor(v.y);
+    return result;
+}
+
+inline Vec2i
+Ceil(Vec2x v)
+{
+    Vec2i result = Floor(v);
+    result += Vec2iFill(1);
     return result;
 }
 

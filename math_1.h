@@ -520,18 +520,18 @@ Lerp(Vec2 a, Vec2 b, f32 t)
 }
 
 inline Vec2
-Clamp(Vec2 v, f32 min, f32 max)
+Clamp(Vec2 v, Vec2 min, Vec2 max)
 {
     Vec2 result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
+    result.x = Clamp(v.x, min.x, max.x);
+    result.y = Clamp(v.y, min.y, max.y);
     return result;
 }
 
 inline Vec2
 Clamp01(Vec2 v)
 {
-    Vec2 result = Clamp(v, 0, 1);
+    Vec2 result = Clamp(v, Vec2Fill(0), Vec2Fill(1));
     return result;
 }
 
@@ -1285,6 +1285,63 @@ union Vec2i
 };
 
 inline Vec2i
+Vec2iFill(int scalar)
+{
+    Vec2i result(scalar, scalar);
+    return result;
+}
+
+inline Vec2i
+Vec2iMin(Vec2i v0, Vec2i v1)
+{
+    Vec2i result(Min(v0.x, v1.x), Min(v0.y, v1.y));
+    return result;
+}
+
+inline Vec2i
+Vec2iMin(Vec2i * candidates, int count)
+{
+    Vec2i result =  {};
+
+    if (count > 0)
+    {
+        result = candidates[0];
+    }
+
+    for (int iCandidate = 1; iCandidate < count; iCandidate++)
+    {
+        result = Vec2iMin(result, candidates[iCandidate]);
+    }
+
+    return result;
+}
+
+inline Vec2i
+Vec2iMax(Vec2i v0, Vec2i v1)
+{
+    Vec2i result(Max(v0.x, v1.x), Max(v0.y, v1.y));
+    return result;
+}
+
+inline Vec2i
+Vec2iMax(Vec2i * candidates, int count)
+{
+    Vec2i result =  {};
+
+    if (count > 0)
+    {
+        result = candidates[0];
+    }
+
+    for (int iCandidate = 1; iCandidate < count; iCandidate++)
+    {
+        result = Vec2iMax(result, candidates[iCandidate]);
+    }
+
+    return result;
+}
+
+inline Vec2i
 operator+(Vec2i lhs, Vec2i rhs)
 {
     Vec2i result;
@@ -1353,6 +1410,15 @@ operator/=(Vec2i & lhs, int rhs)
 {
     lhs = lhs / rhs;
     return lhs;
+}
+
+inline Vec2i
+Clamp(Vec2i v, Vec2i min, Vec2i max)
+{
+    Vec2i result;
+    result.x = Clamp(v.x, min.x, max.x);
+    result.y = Clamp(v.y, min.y, max.y);
+    return result;
 }
 
 union Vec2u
