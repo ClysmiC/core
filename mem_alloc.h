@@ -806,7 +806,7 @@ Allocate(
 	if (alloc->recycleList)
 	{
 		// @UB - Might be UB taking the address of one member of the union and then reading the other member...?
-		//  But it makes sense, and is type-safe-ish
+		//  But it makes sense, behaves as expected on MSVC, and is type-safe-ish
 		result = &alloc->recycleList->item;
 		alloc->recycleList = alloc->recycleList->pNextRecycled;
 

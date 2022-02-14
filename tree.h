@@ -1,8 +1,8 @@
 #include "util/misc.h"
 
-// HMM - The TreeBuilder basically has two different sets of assumptions (and sometimes implementations) if
-//  you are "rebuilding" on top of an existing tree, which makes it a lot more complicated than it should be.
-//  This was done to serve the immediate mode UI code, which usually rebuilds more-or-less the same tree
+// HMM - The TreeBuilder basically has two different sets of assumptions (and sometimes implementations) depending
+//  on if you are "rebuilding" on top of an existing tree or not. This makes it more complicated than it should be.
+//  It was done to serve an immediate mode UI library, which usually rebuilds more-or-less the same tree
 //  every frame, but still needs to track the controls from last frame that got killed off this frame,
 //  so we wanted to keep things around in the tree that we might not have added this frame. Hence, the
 //  tree "rebuilding" functionality. I think it might be better to offload this complexity to the Ui
