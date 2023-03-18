@@ -79,7 +79,7 @@ struct MemoryRegionHeader
     FreeBlockHeader * sharedList;
 };
 
-namespace CONST // @Cleanup - need to put this after struct definitions because of sizeof dependency...
+namespace MEM_ALLOC // @Cleanup - need to put this after struct definitions because of sizeof dependency...
 {
 static constexpr uint cBytesTooSmallToBotherTracking = sizeof(FreeBlockHeader) + 63;
 static constexpr uint cBytesMinimumRegion = sizeof(MemoryRegionHeader) + 256;
@@ -97,7 +97,7 @@ enum AllocType : u8
 function MemoryRegion
 BeginRootMemoryRegion(u8 * bytes, uint cBytes)
 {
-    if (cBytes < CONST::cBytesMinimumRegion)
+    if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
     {
         // Not sure how I want to handle this...
 
@@ -133,7 +133,7 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uint cBytesNew)
     }
     else
     {
-        Assert(cBytesNew > CONST::cBytesTooSmallToBotherTracking);
+        Assert(cBytesNew > MEM_ALLOC::cBytesTooSmallToBotherTracking);
         uint cBytesOrig_debug = pHeadOrig->cBytes; // NOTE - only used for an assert
 
         pHeadOrig->cBytes = cBytesNew;
@@ -149,7 +149,7 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uint cBytesNew)
 
             if (cBytesNew > 0)
             {
-                Assert(cBytesNew > CONST::cBytesTooSmallToBotherTracking);
+                Assert(cBytesNew > MEM_ALLOC::cBytesTooSmallToBotherTracking);
 
                 // Find the node that should point to the old head
                 FreeBlockHeader * biggerThanOrig = *ppHead;
@@ -282,7 +282,7 @@ Allocate(MemoryRegion region, uint cBytes, CTZ clearToZero)
     TrackedBlockHeader * rightOfShared = shared->right;
 
     uint splitcBytes = shared->cBytes - cBytes;
-    if (splitcBytes > CONST::cBytesTooSmallToBotherTracking)
+    if (splitcBytes > MEM_ALLOC::cBytesTooSmallToBotherTracking)
     {
         // ... a smaller shared block (right)
 
@@ -385,7 +385,7 @@ AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero)
     //  memory we give back to the user. Otherwise it'd fragment our left/right merging.
 
     uint splitcBytes = free->cBytes - cBytes;
-    if (splitcBytes <= CONST::cBytesTooSmallToBotherTracking)
+    if (splitcBytes <= MEM_ALLOC::cBytesTooSmallToBotherTracking)
     {
         splitcBytes = 0;
         cBytes = free->cBytes; // HMM - Maybe we should have a way to tell the user that they got a little extra memory?
@@ -403,7 +403,7 @@ AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero)
 
     result = (u8 *)(resultHeader + 1);
 
-    if (splitcBytes > CONST::cBytesTooSmallToBotherTracking)
+    if (splitcBytes > MEM_ALLOC::cBytesTooSmallToBotherTracking)
     {
         // ... a smaller shared block (left)
 
@@ -648,7 +648,7 @@ FreeSubRegionAllocation(MemoryRegion patron, void* subregion)
             // NOTE - We are probably better off just flagging the overflow region with if it
             //  was allocated by the root region calling out to the system. In that case, we
             //  could skip this recursion and directly call FreeFromSystem. (We'd still want
-            //  to recurse in the non-system allocation case only if CONST::trackSubRegions)
+            //  to recurse in the non-system allocation case only if MEM_ALLOC::trackSubRegions)
 
             FreeSubRegionAllocation(patronHeader->patron, subregion);
         }
@@ -745,7 +745,7 @@ ResetMemoryRegion(MemoryRegion region)
 MemoryRegion
 CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uint cBytes)
 {
-    if (cBytes < CONST::cBytesMinimumRegion)
+    if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
         return nullptr;
 
     MemoryRegionHeader * result = nullptr;

@@ -80,14 +80,14 @@ DEBUG_OPTIMIZE_OFF
 
 // --- Undefine conflicting platform macros. core.h should always be included *after* system headers, for this reason.
 
-#undef min          // Conflicts with U32/I32/etc. namespace constant values
+#undef min          // Conflicts with U32/I32/etc. namespace constant values. core.h provides Min(..) and Max(..) macros.
 #undef max          // ...
-#undef ZeroMemory   // Collides with our own implementation
-#undef CopyMemory   // ...
-#undef MoveMemory   // ...
-#undef CONST        // Collides with our namespace naming conventions
-#undef OPTIONAL     // Collides with our hgen macro
-#undef DELETE       // Collides with delete key in win32_keyboard.h
+
+#ifdef _WINDOWS_
+ #undef ZeroMemory  // Collides with our own implementation
+ #undef CopyMemory  // ...
+ #undef MoveMemory  // ...
+#endif
 
 typedef unsigned int uint;
 
