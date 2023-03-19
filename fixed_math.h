@@ -1,3 +1,95 @@
+#if 1
+namespace fxp
+{
+
+enum class Int_Type : u8
+{
+    I32 = 0,
+    I64 = 1,
+
+    INTERMEDIATE = I64,
+};
+
+template <Int_Type TYPE> struct Bind_Int_Type;
+template<> struct Bind_Int_Type<Int_Type::I32> { using Type = i32; };
+template<> struct Bind_Int_Type<Int_Type::I64> { using Type = i64; };
+
+using denom_t = i64;
+
+template<Int_Type TYPE, denom_t D>
+struct value
+{
+    using T = typename Bind_Int_Type<TYPE>::Type;
+
+    T n;
+
+    constexpr value() = default;
+
+    // Implicitly convert from...
+    constexpr value(i8 v)  { this->n = T(v * D); }
+    constexpr value(i16 v) { this->n = T(v * D); }
+    constexpr value(i32 v) { this->n = T(v * D); }
+    constexpr value(i64 v) { this->n = T(v * D); }
+    constexpr value(u8 v)  { this->n = T(v * D); }
+    constexpr value(u16 v) { this->n = T(v * D); }
+    constexpr value(u32 v) { this->n = T(v * D); }
+    constexpr value(u64 v) { this->n = T(v * D); }
+    constexpr value(f32 v) { this->n = T(v * D); }  // TODO - make this consteval only? likely avenue for desyncs to creep in...
+    constexpr value(f64 v) { this->n = T(v * D); }  // TODO - make this consteval only? likely avenue for desyncs to creep in...
+    constexpr value(value<Int_Type::INTERMEDIATE, D> const & v) { this->n = v.n; }
+
+    // Explicitly convert to...
+    explicit constexpr operator i8() const { return i8(n / D); }
+    explicit constexpr operator i16() const { return i16(n / D); }
+    explicit constexpr operator i32() const { return i32(n / D); }
+    explicit constexpr operator i64() const { return i64(n / D); }
+    explicit constexpr operator u8() const { return u8(n / D); }
+    explicit constexpr operator u16() const { return u16(n / D); }
+    explicit constexpr operator u32() const { return u32(n / D); }
+    explicit constexpr operator u64() const { return u64(n / D); }
+    explicit constexpr operator f32() const { return f32(n / (f32)D); }
+    explicit constexpr operator f64() const { return f64(n / (f64)D); }
+};
+
+template<Int_Type T0, denom_t D0, Int_Type T1, denom_t D1>
+constexpr auto operator+(value<T0, D0> v0, value<T1, D1> v1)
+{
+    if constexpr (D0 > D1)
+    {
+        value<Int_Type::INTERMEDIATE, D0> result;
+        result.n = v0.n + v1.n * (D0 / D1);
+        return result;
+    }
+    else
+    {
+        value<Int_Type::INTERMEDIATE, D1> result;
+        result.n = v0.n * (D1 / D0) + v1.n;
+        return result;
+    }
+}
+
+template<Int_Type T0, denom_t D0, Int_Type T1, denom_t D1>
+constexpr auto operator-(value<T0, D0> v0, value<T1, D1> v1)
+{
+    if constexpr (D0 > D1)
+    {
+        value<Int_Type::INTERMEDIATE, D0> result;
+        result.n = v0.n - v1.n * (D0 / D1);
+        return result;
+    }
+    else
+    {
+        value<Int_Type::INTERMEDIATE, D1> result;
+        result.n = v0.n * (D1 / D0) - v1.n;
+        return result;
+    }
+}
+
+} // namespace fxp
+
+using fix32 = fxp::value<fxp::Int_Type::I32, 1 << 12>;
+#endif
+
 #if 0
 
 // HMM - enable inexact floating point exception for the simulation to detect accidental usage of floating point?

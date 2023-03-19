@@ -1,13 +1,6 @@
 #pragma once
 
-// TODO
-// - Templated "List" struct? Literally just a count and a pointer to a buffer. See OpenDDL/OpenGEX where I have
-//   StructureList, PropertyList, (The StructureListReader, PropertyListReader stuff probably isn't generalizable,
-//   but the List stuff probably is)
-
-
-// NOTE - This allows the build file to specify which compiler it is using. In the case that none
-//  is specified, we will try to auto-detect
+// --- Compiler / feature detection
 
 #ifndef COMPILER_MSVC
  #define COMPILER_MSVC 0
@@ -71,12 +64,14 @@
 #define StaticAssert(expr) static_assert(expr, "Static assert failed!")
 #define StaticAssertTodo StaticAssert(false)
 
-#include <stdint.h>
-#include <stddef.h>
-#include <float.h>
-#include <new> // apparently needed for placement new? TODO - Just get rid of all ctors then axe this
 
-DEBUG_OPTIMIZE_OFF
+// TODO - get DEBUG_OPTIMIZE working.
+//  probably need to tweak build.ps1 script, I think we need to have the script tell cl to optimize in debug builds,
+//  then we use this flag to turn it off.
+//  The idea behind this flag is that you can get optimized code in debug builds for core things like math.h
+// DEBUG_OPTIMIZE_OFF
+
+
 
 // --- Undefine conflicting platform macros. core.h should always be included *after* system headers, for this reason.
 
@@ -88,6 +83,14 @@ DEBUG_OPTIMIZE_OFF
  #undef CopyMemory  // ...
  #undef MoveMemory  // ...
 #endif
+
+
+
+// --- Type definitions
+
+#include <stdint.h>
+#include <stddef.h>
+#include <float.h>
 
 typedef unsigned int uint;
 
@@ -108,78 +111,85 @@ typedef double f64;
 
 namespace U64
 {
-static constexpr u64 min = 0;
-static constexpr u64 max = 0xFF'FF'FF'FF'FF'FF'FF'FF;
+static u64 constexpr min = 0;
+static u64 constexpr max = 0xFF'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace U32
 {
-static constexpr u32 min = 0;
-static constexpr u32 max = 0xFF'FF'FF'FF;
+static u32 constexpr min = 0;
+static u32 constexpr max = 0xFF'FF'FF'FF;
 }
 
 namespace U16
 {
-static constexpr u16 min = 0;
-static constexpr u16 max = 0xFF'FF;
+static u16 constexpr min = 0;
+static u16 constexpr max = 0xFF'FF;
 }
 
 namespace U8
 {
-static constexpr u8 min = 0;
-static constexpr u8 max = 0xFF;
+static u8 constexpr min = 0;
+static u8 constexpr max = 0xFF;
 }
 
 namespace I64
 {
-static constexpr i64 min = 0x80'00'00'00'00'00'00'00;
-static constexpr i64 max = 0x7F'FF'FF'FF'FF'FF'FF'FF;
+static i64 constexpr min = 0x80'00'00'00'00'00'00'00;
+static i64 constexpr max = 0x7F'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace I32
 {
-static constexpr i32 min = 0x80'00'00'00;
-static constexpr i32 max = 0x7F'FF'FF'FF;
+static i32 constexpr min = 0x80'00'00'00;
+static i32 constexpr max = 0x7F'FF'FF'FF;
 }
 
 namespace I16
 {
-static constexpr i16 min = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
-static constexpr i16 max = 0x7F'FF;
+static i16 constexpr min = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
+static i16 constexpr max = 0x7F'FF;
 }
 
 namespace I8
 {
-static constexpr i8 min = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
-static constexpr i8 max = 0x7F;
+static i8 constexpr min = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
+static i8 constexpr max = 0x7F;
 }
 
 namespace F32
 {
 
-static constexpr f32 halfPi = 1.57079632679f;
-static constexpr f32 pi = 3.14159265359f;
-static constexpr f32 threeHalvesPi = 4.71238898038f;
-static constexpr f32 twoPi = 6.28318530718f;
+static f32 constexpr halfPi = 1.57079632679f;
+static f32 constexpr pi = 3.14159265359f;
+static f32 constexpr threeHalvesPi = 4.71238898038f;
+static f32 constexpr twoPi = 6.28318530718f;
 
-static constexpr f32 toDeg = 57.2958f;
-static constexpr f32 toRad = 0.0174533f;
+static f32 constexpr toDeg = 57.2958f;
+static f32 constexpr toRad = 0.0174533f;
     
-static constexpr f32 sqrt2 = 1.41421356237f;
-static constexpr f32 halfSqrt2 = 0.70710678118f;
+static f32 constexpr sqrt2 = 1.41421356237f;
+static f32 constexpr halfSqrt2 = 0.70710678118f;
 
-static constexpr f32 goldenRatio = 1.61803398875f;
+static f32 constexpr goldenRatio = 1.61803398875f;
 
-static constexpr f32 max = FLT_MAX;
-static constexpr f32 minPositive = FLT_MIN;
+static f32 constexpr max = FLT_MAX;
+static f32 constexpr minPositive = FLT_MIN;
 
 } // namespace F32
 
-// --- hgen stuff
 
+
+// --- hgen defines
+
+// Tells hgen to generate a forward declaration
 #define function
+
+// Tells hgen to emit a default argument value in the generated forward declaration
 #define OptionalArg(name, defaultValue) name
 #define OptionalArg0(name) name
+
+
 
 // --- Enum stuff
 
@@ -192,48 +202,53 @@ static constexpr f32 minPositive = FLT_MIN;
 #define DefaultInvalidEnumFallthrough(ENUM) case ENUM::ENUM_COUNT: default: { AssertFalse; }
 #define DefaultNilInvalidEnumFallthrough(ENUM) case ENUM::NIL: case ENUM::ENUM_COUNT: default: { AssertFalse; }
 
-// HMM - do I want shift operators?
-// HMM - IsFlagSet really checks if an entire bit pattern is set, by design. It is a slight misnomer though.
 //          Really, the solution to this one is at the type level there should be a distinction between a flag and a flag set. | operator could always produce flag set... other operators might get fuzzy
+// HMM - do I want shift operators?
 #define DefineFlagOps(ENUM, INT_TYPE) \
-    inline constexpr ENUM operator|(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs | (INT_TYPE)rhs); } \
-    inline constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \
-    inline constexpr ENUM operator&(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs & (INT_TYPE)rhs); } \
-    inline constexpr ENUM & operator&=(ENUM & lhs, ENUM rhs) { lhs = lhs & rhs; return lhs; } \
-    inline constexpr bool IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
-    inline constexpr bool IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
-    inline constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \
+    constexpr ENUM operator|(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs | (INT_TYPE)rhs); } \
+    constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \
+    constexpr ENUM operator&(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs & (INT_TYPE)rhs); } \
+    constexpr ENUM & operator&=(ENUM & lhs, ENUM rhs) { lhs = lhs & rhs; return lhs; } \
+    constexpr bool IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
+    constexpr bool IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
+    constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
+    // ID's often increment/decrement by an integer
 #define DefineIdOps(ENUM, INT_TYPE) \
-    inline constexpr bool operator==(ENUM lhs, INT_TYPE rhs) { return (INT_TYPE)lhs == rhs; } \
-    inline constexpr bool operator==(INT_TYPE lhs, ENUM rhs) { return rhs == lhs; } \
-    inline constexpr ENUM& operator++(ENUM & value) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
-    inline constexpr ENUM& operator++(ENUM & value, int) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
-    inline constexpr ENUM& operator--(ENUM & value) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
-    inline constexpr ENUM& operator--(ENUM & value, int) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
-    inline constexpr ENUM operator+(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs + (INT_TYPE)rhs); } \
-    inline constexpr ENUM operator+(ENUM lhs, int rhs) { return (ENUM)((INT_TYPE)lhs + rhs); } \
-    inline constexpr ENUM& operator+=(ENUM & lhs, ENUM rhs) { lhs = lhs + rhs; return lhs; } \
-    inline constexpr ENUM& operator+=(ENUM & lhs, int rhs) { lhs = lhs + rhs; return lhs; } \
-    inline constexpr ENUM operator-(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs - (INT_TYPE)rhs); } \
-    inline constexpr ENUM operator-(ENUM lhs, int rhs) { return (ENUM)((INT_TYPE)lhs - rhs); } \
-    inline constexpr ENUM& operator-=(ENUM & lhs, ENUM rhs) { lhs = lhs - rhs; return lhs; } \
-    inline constexpr ENUM& operator-=(ENUM & lhs, int rhs) { lhs = lhs - rhs; return lhs; } \
+    constexpr bool operator==(ENUM lhs, INT_TYPE rhs) { return (INT_TYPE)lhs == rhs; } \
+    constexpr bool operator==(INT_TYPE lhs, ENUM rhs) { return rhs == lhs; } \
+    constexpr ENUM& operator++(ENUM & value) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
+    constexpr ENUM& operator++(ENUM & value, int) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
+    constexpr ENUM& operator--(ENUM & value) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
+    constexpr ENUM& operator--(ENUM & value, int) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
+    constexpr ENUM operator+(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs + (INT_TYPE)rhs); } \
+    constexpr ENUM operator+(ENUM lhs, INT_TYPE rhs) { return (ENUM)((INT_TYPE)lhs + rhs); } \
+    constexpr ENUM operator+(INT_TYPE lhs, ENUM rhs) { return (ENUM)(lhs + (INT_TYPE)rhs); } \
+    constexpr ENUM& operator+=(ENUM & lhs, ENUM rhs) { lhs = lhs + rhs; return lhs; } \
+    constexpr ENUM& operator+=(ENUM & lhs, INT_TYPE rhs) { lhs = lhs + rhs; return lhs; } \
+    constexpr ENUM operator-(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs - (INT_TYPE)rhs); } \
+    constexpr ENUM operator-(ENUM lhs, INT_TYPE rhs) { return (ENUM)((INT_TYPE)lhs - rhs); } \
+    constexpr ENUM& operator-=(ENUM & lhs, ENUM rhs) { lhs = lhs - rhs; return lhs; } \
+    constexpr ENUM& operator-=(ENUM & lhs, INT_TYPE rhs) { lhs = lhs - rhs; return lhs; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define DefineEnumOps(ENUM, INT_TYPE) \
     DefineIdOps(ENUM, INT_TYPE); \
-    inline constexpr bool IsEnumValid(ENUM value) { return value > ENUM::NIL && value < ENUM::ENUM_COUNT; } \
+    constexpr bool IsEnumValid(ENUM value) { return value > ENUM::NIL && value < ENUM::ENUM_COUNT; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define DefineEnumOpsAllowNil(ENUM, INT_TYPE) \
     DefineIdOps(ENUM, INT_TYPE); \
-    inline constexpr bool IsEnumValid(ENUM value) { return value >= ENUM::NIL && value < ENUM::ENUM_COUNT; } \
+    constexpr bool IsEnumValid(ENUM value) { return value >= ENUM::NIL && value < ENUM::ENUM_COUNT; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define ForEnum(ENUM, it) for (ENUM it = (ENUM)1; it < ENUM::ENUM_COUNT; it++)
 #define ForEnumAllowNil(ENUM, it) for (ENUM it = ENUM::NIL; it < ENUM::ENUM_COUNT; it++)
+
+
+
+// --- Misc. utils
 
 // TODO - Should these always use 64 bit?
 #define ArrayLen(array) (sizeof(array) / sizeof((array)[0]))
@@ -248,6 +263,12 @@ static constexpr f32 minPositive = FLT_MIN;
 #define Min(a, b) ((a) <  (b)) ? (a) : (b)
 #define Max(a, b) ((a) >  (b)) ? (a) : (b)
 
+#define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
+#define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
+
+
+
+// --- Defer macro
 // Courtesy of https://www.gingerbill.org/article/2015/08/19/defer-in-cpp/
 
 template <typename F>
@@ -261,14 +282,16 @@ template <typename F>
 defer_<F> defer_func_(F f) {
     return defer_<F>(f);
 }
-
 #define Defer__1(x, y) x##y
 #define Defer__2(x, y) Defer__1(x, y)
 #define Defer__3(x)      Defer__2(x, __COUNTER__)
 #define Defer(code)      auto Defer__3(_defer_) = defer_func_([&](){code;})
 
-#define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
-#define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
+
+
+// --- Include remaining core features
+
+#include <new> // apparently needed for placement new? TODO - Just get rid of all ctors then axe this
 
 #include "intrinsics.h"
 #include "math.h"
