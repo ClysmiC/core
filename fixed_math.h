@@ -14,7 +14,6 @@ template<> struct integer_type<i32> { static bool constexpr is_supported = true;
 template<> struct integer_type<i64> { static bool constexpr is_supported = true; };
 // TODO - support u32 and u64? Any extra work required?
 
-using intermediate_t = i64;     // Intermediate calculations are in 64 bit
 using denom_t = i64;            // Compile-time calculations with denominators are in 64 bit
 
 template<class T, denom_t D>
@@ -30,37 +29,25 @@ struct Value
     // --- Implicitly convert from...
 
     constexpr Value() = default;
-    constexpr Value(i8 v)  { this->n = T(v * D); }
-    constexpr Value(i16 v) { this->n = T(v * D); }
-    constexpr Value(i32 v) { this->n = T(v * D); }
-    constexpr Value(i64 v) { this->n = T(v * D); }
-    constexpr Value(u8 v)  { this->n = T(v * D); }
-    constexpr Value(u16 v) { this->n = T(v * D); }
-    constexpr Value(u32 v) { this->n = T(v * D); }
-    constexpr Value(u64 v) { this->n = T(v * D); }
+    constexpr Value(i8 v)   : n(T(v * D)) {}
+    constexpr Value(i16 v)  : n(T(v * D)) {}
+    constexpr Value(i32 v)  : n(T(v * D)) {}
+    constexpr Value(i64 v)  : n(T(v * D)) {}
+    constexpr Value(u8 v)   : n(T(v * D)) {}
+    constexpr Value(u16 v)  : n(T(v * D)) {}
+    constexpr Value(u32 v)  : n(T(v * D)) {}
+    constexpr Value(u64 v)  : n(T(v * D)) {}
 
-    FXPCONSTEVAL Value(f32 v) { this->n = T(v * D); }
-    FXPCONSTEVAL Value(f64 v) { this->n = T(v * D); }
+    FXPCONSTEVAL Value(f32 v)   : n(T(v * D)) {}
+    FXPCONSTEVAL Value(f64 v)   : n(T(v * D)) {}
 
-    constexpr Value(Value<intermediate_t, D> const & other) { this->n = T(other.n); }
+    constexpr Value(Value<i32, D> const& other) : n(T(other.n)) {}
+    constexpr Value(Value<i64, D> const& other) : n(T(other.n)) {}
 
-#if 0
     // --- Explicitly convert from...
 
     template <class T_OTHER, denom_t D_OTHER>
-    explicit constexpr Value(Value<T_OTHER, D_OTHER> const & other)
-    {
-        if constexpr (D == D_OTHER)
-        {
-            this->n = n;
-        }
-        else
-        {
-            // HMM - Do I really want to round here?
-            this->n = int_divide_and_round<T, OTHER_D>(other.n * D);
-        }
-    }
-#endif
+    explicit constexpr Value(Value<T_OTHER, D_OTHER> const& other) : n(T(other.n * D / D_OTHER)) {}
 
     // --- Explicitly convert to...
 
@@ -76,101 +63,169 @@ struct Value
     explicit constexpr operator f64() const { return f64(n / (f64)D); }
 };
 
-template <denom_t D> using Value32 = Value<i32, D>;
-template <denom_t D> using Value64 = Value<i64, D>;
-
-
+// All intermediate calculations are 64 bit.
+template <denom_t D> using Intermediate = Value<i64, D>;
 
 // --- Math operations
 //  Binary operators work on 2 fixed point values and return a value with denominator specified by D_RESULT.
 //  There are potentially 3 different denominators at play here but common terms are cancelled out at compile time
 //  when applicable.
 
-template<denom_t D_RESULT,
-    class T0, denom_t D0,
-    class T1, denom_t D1>
-constexpr Value<intermediate_t, D_RESULT>
+template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
+constexpr Intermediate<D_RESULT>
 add(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
 {
-    Value<intermediate_t, D_RESULT> result;
+    Intermediate<D0> i0(v0);
+    Intermediate<D1> i1(v1);
+    Intermediate<D_RESULT> result;
 
     // Cancel equal terms at compile-time
-    if      constexpr   (D0 == D_RESULT && D1 == D_RESULT)  result.n = v0.n + v1.n;
-    else if constexpr   (D0 == D_RESULT)                    result.n = v0.n + (D_RESULT * v1.n / D1);
-    else if constexpr   (D1 == D_RESULT)                    result.n = (D_RESULT * v0.n / D0) + v1.n;
-    else if constexpr   (D0 == D1)                          result.n = (D_RESULT * v0.n + D_RESULT * v1.n) / D0;
-    else                                                    result.n = (D_RESULT * v0.n) / D0 + (D_RESULT * v1.n) / D1;
+    if      constexpr (D0 == D_RESULT && D1 == D_RESULT)    result.n = i0.n + i1.n;
+    else if constexpr (D0 == D_RESULT)                      result.n = i0.n + (D_RESULT * i1.n / D1);
+    else if constexpr (D1 == D_RESULT)                      result.n = (D_RESULT * i0.n / D0) + i1.n;
+    else if constexpr (D0 == D1)                            result.n = (D_RESULT * (i0.n + i1.n)) / D0;
+    else                                                    result.n = (D_RESULT * i0.n) / D0 + (D_RESULT * i1.n) / D1;
 
     return result;
 }
 
-template<denom_t D_RESULT,
-    class T0, denom_t D0,
-    class T1, denom_t D1>
-constexpr Value<intermediate_t, D_RESULT>
+template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
+constexpr Intermediate<D_RESULT>
 subtract(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
 {
-    Value<intermediate_t, D_RESULT> result;
+    Intermediate<D0> i0(v0);
+    Intermediate<D1> i1(v1);
+    Intermediate<D_RESULT> result;
 
     // Cancel equal terms at compile-time
-    if      constexpr   (D0 == D_RESULT && D1 == D_RESULT)  result.n = v0.n - v1.n;
-    else if constexpr   (D0 == D_RESULT)                    result.n = v0.n - (D_RESULT * v1.n / D1);
-    else if constexpr   (D1 == D_RESULT)                    result.n = (D_RESULT * v0.n / D0) - v1.n;
-    else if constexpr   (D0 == D1)                          result.n = (D_RESULT * v0.n - D_RESULT * v1.n) / D0;
-    else                                                    result.n = (D_RESULT * v0.n) / D0 - (D_RESULT * v1.n) / D1;
+    if      constexpr (D0 == D_RESULT && D1 == D_RESULT)    result.n = i0.n - i1.n;
+    else if constexpr (D0 == D_RESULT)                      result.n = i0.n - (D_RESULT * i1.n / D1);
+    else if constexpr (D1 == D_RESULT)                      result.n = (D_RESULT * i0.n / D0) - i1.n;
+    else if constexpr (D0 == D1)                            result.n = (D_RESULT * (i0.n - i1.n)) / D0;
+    else                                                    result.n = (D_RESULT * i0.n) / D0 - (D_RESULT * i1.n) / D1;
 
     return result;
 }
 
-template<denom_t D_RESULT,
-    class T0, denom_t D0,
-    class T1, denom_t D1>
-constexpr Value<intermediate_t, D_RESULT>
+template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
+constexpr Intermediate<D_RESULT>
 multiply(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
 {
-    Value<intermediate_t, D_RESULT> result;
+    Intermediate<D0> i0(v0);
+    Intermediate<D1> i1(v1);
+    Intermediate<D_RESULT> result;
 
     // Cancel equal terms at compile-time
-    if      constexpr   (D0 == D_RESULT)    result.n = (v0.n * v1.n) / D1;
-    else if constexpr   (D1 == D_RESULT)    result.n = (v0.n * v1.n) / D0;
+    if      constexpr (D0 == D_RESULT)  result.n = (i0.n * i1.n) / D1;
+    else if constexpr (D1 == D_RESULT)  result.n = (i0.n * i1.n) / D0;
     // NOTE - Overflowing is a possible concern in this case, if the denominators are huge.
-    else                                    result.n = (D_RESULT * v0.n * v1.n) / (D0 * D1);
+    else                                result.n = (D_RESULT * i0.n * i1.n) / (D0 * D1);
 
     return result;
 }
 
-template<denom_t D_RESULT,
-    class T0, denom_t D0,
-    class T1, denom_t D1>
-constexpr Value<intermediate_t, D_RESULT>
+template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
+constexpr Intermediate<D_RESULT>
 divide(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
 {
-    Value<intermediate_t, D_RESULT> result;
+    Intermediate<D0> i0(v0);
+    Intermediate<D1> i1(v1);
+    Intermediate<D_RESULT> result;
 
     // Cancel equal terms at compile-time
-    if      constexpr   (D0 == D_RESULT)    result.n = (D1 * v0.n) / v1.n;
-    else if constexpr   (D0 == D1)          result.n = (D_RESULT * v0.n) / v1.n;
+    if      constexpr (D0 == D_RESULT)  result.n = (D1 * i0.n) / i1.n;
+    else if constexpr (D0 == D1)        result.n = (D_RESULT * i0.n) / i1.n;
     // NOTE - Overflowing is a possible concern in this case, if the denominators are huge.
-    else                                    result.n = (D_RESULT * D1 * v0.n) / (D0 * v1.n);
+    else                                result.n = (D_RESULT * D1 * i0.n) / (D0 * i1.n);
 
     return result;
 }
 
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator==(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n == I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n == I(v1).n); }
+    return result;
+}
 
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator!=(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n != I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n != I(v1).n); }
+    return result;
+}
+
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator>(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n > I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n > I(v1).n); }
+    return result;
+}
+
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator>=(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n >= I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n >= I(v1).n); }
+    return result;
+}
+
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator<(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n < I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n < I(v1).n); }
+    return result;
+}
+
+template<class T0, denom_t D0, class T1, denom_t D1>
+constexpr bool
+operator<=(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    bool result;
+    if constexpr (D0 >= D1) { using I = Intermediate<D0>; result = (I(v0).n <= I(v1).n); }
+    else                    { using I = Intermediate<D1>; result = (I(v0).n <= I(v1).n); }
+    return result;
+}
 
 // --- Fixed point "quantities" of a specific unit (e.g., meters, seconds).
 //  User code interacts with these, and should never really need to directly interact with a fxp::Value.
 //  A few default units are defined, as well as conversions between them. Users can extend these
-//  by adding their own Product<..> and Quotient<..> specializations. The underlying value types can
-//  be specified/overridden by adding a Unit<..> specialization.
+//  by adding their own Product<..> and Quotient<..> specializations. The underlying value types and
+//  denominators can be specified/overridden by adding a Unit<..> specialization.
 
 enum class Unit_Type : u64
 {
@@ -186,9 +241,14 @@ enum class Unit_Type : u64
     ROTATION_SPEED,
 };
 
+// Note there is no Value64 defined. Users should prefer to use Value32 for their unit types.
+//  This makes you less likely to overflow in intermediate calculations. Although you still can
+//  if you have large denominators and do big multiplications.
+template <denom_t D> using Value32 = Value<i32, D>;
+
 // Default underlying type of a unit.
 // Can be overridden with a Unit<..> specialization
-template<Unit_Type> struct Unit { using Value_Type = Value32<1024>; };
+template<Unit_Type> struct Unit { using Value = Value32<1024>; };
 
 // Predefined conversions between unit types
 //  Users can add their own template specializations to define their own conversions
@@ -208,7 +268,7 @@ template<> struct Product<Unit_Type::TIME, Unit_Type::ROTATION_SPEED>   { static
 template<Unit_Type UNIT_TYPE>
 struct Quantity
 {
-    using Value = typename Unit<UNIT_TYPE>::Value_Type;
+    using Value = typename Unit<UNIT_TYPE>::Value;
     static Unit_Type constexpr unit_type = UNIT_TYPE;
 
     Value value;
@@ -227,6 +287,16 @@ struct Quantity
 
     FXPCONSTEVAL Quantity(f32 v) : value(v) {}
     FXPCONSTEVAL Quantity(f64 v) : value(v) {}
+
+    // --- Explicitly convert from...
+    explicit constexpr Quantity(Quantity<Unit_Type::SCALAR> const& scalar) : value(scalar.value) {}
+
+    template<Unit_Type OTHER_TYPE>
+    explicit constexpr Quantity(Quantity<OTHER_TYPE> const& other) : value(other.value)
+    {
+        // Non-scalar types can only be converted to to scalars
+        StaticAssert(UNIT_TYPE == Unit_Type::SCALAR);
+    }
 
     // --- Explicitly convert to...
 
@@ -326,13 +396,12 @@ template<Unit_Type UNIT0, Unit_Type UNIT1>
 constexpr auto
 operator*(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
 {
-    // User should define both A*B and B*A to produce the same result unit.
-    static Unit_Type constexpr RESULT = Product<UNIT0, UNIT1>::RESULT;
-    static Unit_Type constexpr RESULT_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
-    StaticAssert(RESULT == RESULT_OPPOSITE);
+    static Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
+    static Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
+    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
 
-    Quantity<RESULT> result;
-    result.value = multiply<Quantity<RESULT>::Value::d>(q0.value, q1.value);
+    Quantity<RESULT_TYPE> result;
+    result.value = multiply<Quantity<RESULT_TYPE>::Value::d>(q0.value, q1.value);
     return result;
 }
 
@@ -340,9 +409,9 @@ template<Unit_Type UNIT0, Unit_Type UNIT1>
 constexpr auto
 operator/(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
 {
-    static Unit_Type constexpr RESULT = Quotient<UNIT0, UNIT1>::RESULT;
-    Quantity<RESULT> result;
-    result.value = divide<Quantity<RESULT>::Value::d>(q0.value, q1.value);
+    static Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
+    Quantity<RESULT_TYPE> result;
+    result.value = divide<Quantity<RESULT_TYPE>::Value::d>(q0.value, q1.value);
     return result;
 }
 
