@@ -1,49 +1,77 @@
-#if 1
 namespace fxp
 {
 
-enum class Int_Type : u8
+using intermediate_t = i64;     // Intermediate calculations are in 64 bit
+using denom_t = i64;            // Denominators are 64 bit at compile time (no denom_t's stored at run-time)
+
+// TODO - consteval gives best compile-time guarantee, but requires C++20
+#if (__cplusplus >= 202002L)
+ #define FXPCONSTEVAL consteval
+#else
+ #define FXPCONSTEVAL constexpr
+#endif
+
+
+
+// --- A fixed point value
+
+template<class> struct integer_type { static bool constexpr is_supported = false; };
+template<> struct integer_type<i32> { static bool constexpr is_supported = true; };
+template<> struct integer_type<i64> { static bool constexpr is_supported = true; };
+// TODO - support u32 and u64? Any extra work required?
+
+template<class T, denom_t D>
+struct Value
 {
-    I32 = 0,
-    I64 = 1,
+    StaticAssert(D >= 1);
+    StaticAssert(integer_type<T>::is_supported);
 
-    INTERMEDIATE = I64,
-};
-
-template <Int_Type TYPE> struct Bind_Int_Type;
-template<> struct Bind_Int_Type<Int_Type::I32> { using Type = i32; };
-template<> struct Bind_Int_Type<Int_Type::I64> { using Type = i64; };
-
-using denom_t = i64;
-
-template<Int_Type TYPE, denom_t D>
-struct value
-{
-    using T = typename Bind_Int_Type<TYPE>::Type;
+    static denom_t constexpr d = D;
 
     T n;
 
-    constexpr value() = default;
+    // --- Implicitly convert from...
 
-    // Implicitly convert from...
-    constexpr value(i8 v)  { this->n = T(v * D); }
-    constexpr value(i16 v) { this->n = T(v * D); }
-    constexpr value(i32 v) { this->n = T(v * D); }
-    constexpr value(i64 v) { this->n = T(v * D); }
-    constexpr value(u8 v)  { this->n = T(v * D); }
-    constexpr value(u16 v) { this->n = T(v * D); }
-    constexpr value(u32 v) { this->n = T(v * D); }
-    constexpr value(u64 v) { this->n = T(v * D); }
-    constexpr value(f32 v) { this->n = T(v * D); }  // TODO - make this consteval only? likely avenue for desyncs to creep in...
-    constexpr value(f64 v) { this->n = T(v * D); }  // TODO - make this consteval only? likely avenue for desyncs to creep in...
-    constexpr value(value<Int_Type::INTERMEDIATE, D> const & v) { this->n = v.n; }
+    constexpr Value() = default;
+    constexpr Value(i8 v)  { this->n = T(v * D); }
+    constexpr Value(i16 v) { this->n = T(v * D); }
+    constexpr Value(i32 v) { this->n = T(v * D); }
+    constexpr Value(i64 v) { this->n = T(v * D); }
+    constexpr Value(u8 v)  { this->n = T(v * D); }
+    constexpr Value(u16 v) { this->n = T(v * D); }
+    constexpr Value(u32 v) { this->n = T(v * D); }
+    constexpr Value(u64 v) { this->n = T(v * D); }
 
-    // Explicitly convert to...
-    explicit constexpr operator i8() const { return i8(n / D); }
+    FXPCONSTEVAL Value(f32 v) { this->n = T(v * D); }
+    FXPCONSTEVAL Value(f64 v) { this->n = T(v * D); }
+
+    constexpr Value(Value<intermediate_t, D> const & other) { this->n = T(other.n); }
+
+#if 0
+    // --- Explicitly convert from...
+
+    template <class T_OTHER, denom_t D_OTHER>
+    explicit constexpr Value(Value<T_OTHER, D_OTHER> const & other)
+    {
+        if constexpr (D == D_OTHER)
+        {
+            this->n = n;
+        }
+        else
+        {
+            // HMM - Do I really want to round here?
+            this->n = int_divide_and_round<T, OTHER_D>(other.n * D);
+        }
+    }
+#endif
+
+    // --- Explicitly convert to...
+
+    explicit constexpr operator i8()  const { return i8 (n / D); }
     explicit constexpr operator i16() const { return i16(n / D); }
     explicit constexpr operator i32() const { return i32(n / D); }
     explicit constexpr operator i64() const { return i64(n / D); }
-    explicit constexpr operator u8() const { return u8(n / D); }
+    explicit constexpr operator u8()  const { return u8 (n / D); }
     explicit constexpr operator u16() const { return u16(n / D); }
     explicit constexpr operator u32() const { return u32(n / D); }
     explicit constexpr operator u64() const { return u64(n / D); }
@@ -51,44 +79,304 @@ struct value
     explicit constexpr operator f64() const { return f64(n / (f64)D); }
 };
 
-template<Int_Type T0, denom_t D0, Int_Type T1, denom_t D1>
-constexpr auto operator+(value<T0, D0> v0, value<T1, D1> v1)
+template <denom_t D> using Value32 = Value<i32, D>;
+template <denom_t D> using Value64 = Value<i64, D>;
+
+
+
+// --- Math operations
+//  Binary operators work on 2 fixed point values and return a value with denominator specified by D_RESULT.
+//  There are potentially 3 different denominators at play here but common terms are cancelled out at compile time
+//  when applicable.
+
+template<denom_t D_RESULT,
+    class T0, denom_t D0,
+    class T1, denom_t D1>
+constexpr Value<intermediate_t, D_RESULT>
+add(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
 {
-    if constexpr (D0 > D1)
-    {
-        value<Int_Type::INTERMEDIATE, D0> result;
-        result.n = v0.n + v1.n * (D0 / D1);
-        return result;
-    }
-    else
-    {
-        value<Int_Type::INTERMEDIATE, D1> result;
-        result.n = v0.n * (D1 / D0) + v1.n;
-        return result;
-    }
+    Value<intermediate_t, D_RESULT> result;
+
+    // Cancel equal terms at compile-time
+    if      constexpr   (D0 == D_RESULT && D1 == D_RESULT)  result.n = v0.n + v1.n;
+    else if constexpr   (D0 == D_RESULT)                    result.n = v0.n + (D_RESULT * v1.n / D1);
+    else if constexpr   (D1 == D_RESULT)                    result.n = (D_RESULT * v0.n / D0) + v1.n;
+    else if constexpr   (D0 == D1)                          result.n = (D_RESULT * v0.n + D_RESULT * v1.n) / D0;
+    else                                                    result.n = (D_RESULT * v0.n) / D0 + (D_RESULT * v1.n) / D1;
+
+    return result;
 }
 
-template<Int_Type T0, denom_t D0, Int_Type T1, denom_t D1>
-constexpr auto operator-(value<T0, D0> v0, value<T1, D1> v1)
+template<denom_t D_RESULT,
+    class T0, denom_t D0,
+    class T1, denom_t D1>
+constexpr Value<intermediate_t, D_RESULT>
+subtract(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
 {
-    if constexpr (D0 > D1)
-    {
-        value<Int_Type::INTERMEDIATE, D0> result;
-        result.n = v0.n - v1.n * (D0 / D1);
-        return result;
-    }
-    else
-    {
-        value<Int_Type::INTERMEDIATE, D1> result;
-        result.n = v0.n * (D1 / D0) - v1.n;
-        return result;
-    }
+    Value<intermediate_t, D_RESULT> result;
+
+    // Cancel equal terms at compile-time
+    if      constexpr   (D0 == D_RESULT && D1 == D_RESULT)  result.n = v0.n - v1.n;
+    else if constexpr   (D0 == D_RESULT)                    result.n = v0.n - (D_RESULT * v1.n / D1);
+    else if constexpr   (D1 == D_RESULT)                    result.n = (D_RESULT * v0.n / D0) - v1.n;
+    else if constexpr   (D0 == D1)                          result.n = (D_RESULT * v0.n - D_RESULT * v1.n) / D0;
+    else                                                    result.n = (D_RESULT * v0.n) / D0 - (D_RESULT * v1.n) / D1;
+
+    return result;
 }
+
+template<denom_t D_RESULT,
+    class T0, denom_t D0,
+    class T1, denom_t D1>
+constexpr Value<intermediate_t, D_RESULT>
+multiply(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    Value<intermediate_t, D_RESULT> result;
+
+    // Cancel equal terms at compile-time
+    if      constexpr   (D0 == D_RESULT)    result.n = (v0.n * v1.n) / D1;
+    else if constexpr   (D1 == D_RESULT)    result.n = (v0.n * v1.n) / D0;
+    // NOTE - Overflowing is a possible concern in this case, if the denominators are huge.
+    else                                    result.n = (D_RESULT * v0.n * v1.n) / (D0 * D1);
+
+    return result;
+}
+
+template<denom_t D_RESULT,
+    class T0, denom_t D0,
+    class T1, denom_t D1>
+constexpr Value<intermediate_t, D_RESULT>
+divide(
+    Value<T0, D0> v0,
+    Value<T1, D1> v1)
+{
+    Value<intermediate_t, D_RESULT> result;
+
+    // Cancel equal terms at compile-time
+    if      constexpr   (D0 == D_RESULT)    result.n = (D1 * v0.n) / v1.n;
+    else if constexpr   (D0 == D1)          result.n = (D_RESULT * v0.n) / v1.n;
+    // NOTE - Overflowing is a possible concern in this case, if the denominators are huge.
+    else                                    result.n = (D_RESULT * D1 * v0.n) / (D0 * v1.n);
+
+    return result;
+}
+
+
+
+// --- Fixed point quantities of a specific "unit" (e.g., meters, seconds, mph).
+//  User code interacts with these, and should never really need to directly interact with a fxp::Value.
+//  A few default units are defined, as well as conversions between them. Users can extend these
+//  by adding their own Product<..> and Quotient<..> specializations. The underlying value types can
+//  be specified/overridden by adding a Unit<..> specialization.
+
+enum class Unit_Type : u64
+{
+    SCALAR = 0,
+    NIL = 0,
+
+    DISTANCE,
+    ROTATIONS,
+    TIME,
+
+    SPEED,
+    ACCELERATION,
+};
+
+// Default type of any unit that isn't specified otherwise via template specialization.
+template<Unit_Type> struct Unit
+{
+    using Value_Type = Value32<1024>;
+};
+
+// Predefined conversions
+template<Unit_Type, Unit_Type> struct Quotient;
+template<> struct Quotient<Unit_Type::DISTANCE, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Quotient<Unit_Type::SPEED, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::ACCELERATION; };
+
+template<Unit_Type, Unit_Type> struct Product;
+template<> struct Product<Unit_Type::SPEED, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::DISTANCE; };
+template<> struct Product<Unit_Type::TIME, Unit_Type::SPEED> { static auto constexpr RESULT = Unit_Type::DISTANCE; };
+template<> struct Product<Unit_Type::ACCELERATION, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Product<Unit_Type::TIME, Unit_Type::ACCELERATION> { static auto constexpr RESULT = Unit_Type::SPEED; };
+
+template<Unit_Type UNIT_TYPE>
+struct Quantity
+{
+    using Value = typename Unit<UNIT_TYPE>::Value_Type;
+    static Unit_Type constexpr unit_type = UNIT_TYPE;
+
+    Value value;
+
+    // --- Implicitly convert from...
+
+    constexpr Quantity() = default;
+    constexpr Quantity(i8 v)  : value(v) {}
+    constexpr Quantity(i16 v) : value(v) {}
+    constexpr Quantity(i32 v) : value(v) {}
+    constexpr Quantity(i64 v) : value(v) {}
+    constexpr Quantity(u8 v)  : value(v) {}
+    constexpr Quantity(u16 v) : value(v) {}
+    constexpr Quantity(u32 v) : value(v) {}
+    constexpr Quantity(u64 v) : value(v) {}
+
+    FXPCONSTEVAL Quantity(f32 v) : value(v) {}
+    FXPCONSTEVAL Quantity(f64 v) : value(v) {}
+
+    // --- Explicitly convert to...
+
+    explicit constexpr operator i8()  const { return i8 (value); }
+    explicit constexpr operator i16() const { return i16(value); }
+    explicit constexpr operator i32() const { return i32(value); }
+    explicit constexpr operator i64() const { return i64(value); }
+    explicit constexpr operator u8()  const { return u8 (value); }
+    explicit constexpr operator u16() const { return u16(value); }
+    explicit constexpr operator u32() const { return u32(value); }
+    explicit constexpr operator u64() const { return u64(value); }
+    explicit constexpr operator f32() const { return f32(value); }
+    explicit constexpr operator f64() const { return f64(value); }
+};
+
+using Scalar        = Quantity<Unit_Type::SCALAR>;
+using Distance      = Quantity<Unit_Type::DISTANCE>;
+using Rotations     = Quantity<Unit_Type::ROTATIONS>;
+using Time          = Quantity<Unit_Type::TIME>;
+using Speed         = Quantity<Unit_Type::SPEED>;
+using Acceleration  = Quantity<Unit_Type::ACCELERATION>;
+
+
+
+// --- Same units can always add/subtract
+
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>
+operator+(Quantity<UNIT> q0, Quantity<UNIT> q1)
+{
+    Quantity<UNIT> result;
+    result.value = add<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+template<class FXP, Unit_Type UNIT>
+constexpr Quantity<UNIT>
+operator-(Quantity<UNIT> q0, Quantity<UNIT> q1)
+{
+    Quantity<UNIT> result;
+    result.value = subtract<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+// --- Same units can always divide and get a scalar
+
+template<Unit_Type UNIT>
+constexpr Scalar
+operator/(Quantity<UNIT> q0, Quantity<UNIT> q1)
+{
+    Scalar result;
+    result.value = divide<Scalar::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+// --- Units can always multiply and divide by a scalar
+
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>
+operator*(Quantity<UNIT> q0, Scalar q1)
+{
+    Quantity<UNIT> result;
+    result.value = multiply<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>
+operator*(Scalar q0, Quantity<UNIT> q1)
+{
+    Quantity<UNIT> result;
+    result.value = multiply<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>
+operator/(Quantity<UNIT> q0, Scalar q1)
+{
+    Quantity<UNIT> result;
+    result.value = divide<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+// --- Any 2 quantities with a conversion defined can multiply/divide
+
+template<Unit_Type UNIT0, Unit_Type UNIT1>
+constexpr auto
+operator*(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
+{
+    static Unit_Type constexpr RESULT = Product<UNIT0, UNIT1>::RESULT;
+    Quantity<RESULT> result;
+    result.value = multiply<Quantity<RESULT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+template<Unit_Type UNIT0, Unit_Type UNIT1>
+constexpr auto
+operator/(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
+{
+    static Unit_Type constexpr RESULT = Quotient<UNIT0, UNIT1>::RESULT;
+    Quantity<RESULT> result;
+    result.value = divide<Quantity<RESULT>::Value::d>(q0.value, q1.value);
+    return result;
+}
+
+// TODO - move this to user code
+// --- Unit definitions
+
+template<> struct Unit<Unit_Type::DISTANCE>
+{
+    using Value_Type = Value32<1024 * 16>;
+};
+
+template<> struct Unit<Unit_Type::TIME>
+{
+    using Value_Type = Value32<64>;
+};
+
+template<> struct Unit<Unit_Type::SPEED>
+{
+    using Value_Type = Value32<1024 * 16 / 64>;
+};
+
+#undef FXPCONSTEVAL
 
 } // namespace fxp
 
-using fix32 = fxp::value<fxp::Int_Type::I32, 1 << 12>;
-#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #if 0
 
@@ -119,7 +407,7 @@ struct fix64
     //  going back into float
     
     // NOTE - Constructors are all constexpr to make sure we are getting known constant
-    //  values at COMPILE TIME and aren't relying on float computations at RUTIME. This
+    //  Values at COMPILE TIME and aren't relying on float computations at RUTIME. This
     //  might not be necessary for non-float constructor, but I haven't needed those to
     //  be non-constexpr yet.
     
@@ -205,13 +493,13 @@ struct fix64
 };
 
 inline fix64
-Fix64FromF64UnsafeForSim(f64 value)
+Fix64FromF64UnsafeForSim(f64 Value)
 {
     // Unsafe for deterministic because we are converting from f64 to fix64 at runtime, which
-    //  we don't want to do for values that are part of the simulation logic.
+    //  we don't want to do for Values that are part of the simulation logic.
     
     fix64 result;
-    result.rawValue_ = RoundF64ToS64(value * (1 << FIX64::fracBits));
+    result.rawValue_ = RoundF64ToS64(Value * (1 << FIX64::fracBits));
     return result;
 }
 
@@ -286,7 +574,7 @@ operator-=(fix64 & lhs, fix64 rhs)
 inline constexpr fix64
 operator*(fix64 lhs, fix64 rhs)
 {
-    // TODO - Overflow check? Use double-wide number for intermediate value?
+    // TODO - Overflow check? Use double-wide number for intermediate Value?
     
     fix64 result;
     result.rawValue_ = (lhs.rawValue_ * rhs.rawValue_) >> FIX64::fracBits;
@@ -303,7 +591,7 @@ operator*=(fix64 & lhs, fix64 rhs)
 inline constexpr fix64
 operator/(fix64 lhs, fix64 rhs)
 {
-    // TODO - Overflow check? Use double-wide number for intermediate value?
+    // TODO - Overflow check? Use double-wide number for intermediate Value?
     
     fix64 result;
     result.rawValue_ = (lhs.rawValue_ << FIX64::fracBits) / rhs.rawValue_;
@@ -426,9 +714,9 @@ Mod(fix64 lhs, fix64 rhs)
 }
 
 inline fix64
-Square(fix64 value)
+Square(fix64 Value)
 {
-    fix64 result = value * value;
+    fix64 result = Value * Value;
     return result;
 }
 
@@ -440,22 +728,22 @@ Lerp(fix64 a, fix64 b, fix64 t)
 }
 
 inline fix64
-Abs(fix64 value)
+Abs(fix64 Value)
 {
-    if (value < 0)
-        return -value;
+    if (Value < 0)
+        return -Value;
 
-    return value;
+    return Value;
 }
 
 inline fix64
-SignOf(fix64 value)
+SignOf(fix64 Value)
 {
-    fix64 result = (value >= 0) ? 1 : -1;
+    fix64 result = (Value >= 0) ? 1 : -1;
     return result;
 }
 
-// NOTE - Bigger default epsilon for fix64 values than f32 because calculations
+// NOTE - Bigger default epsilon for fix64 Values than f32 because calculations
 //  tend to be a bit imprecise
 inline bool
 ApproxEq(
@@ -469,25 +757,25 @@ ApproxEq(
 }
 
 inline fix64
-Clamp(fix64 value, fix64 min, fix64 max)
+Clamp(fix64 Value, fix64 min, fix64 max)
 {
-    fix64 result = value;
+    fix64 result = Value;
     result = Max(result, min);
     result = Min(result, max);
     return result;
 }
 
 inline fix64
-Clamp01(fix64 value)
+Clamp01(fix64 Value)
 {
-    fix64 result = Clamp(value, 0, 1);
+    fix64 result = Clamp(Value, 0, 1);
     return result;
 }
 
 inline fix64
-ClampPlusMinus1(fix64 value)
+ClampPlusMinus1(fix64 Value)
 {
-    fix64 result = Clamp(value, -1, 1);
+    fix64 result = Clamp(Value, -1, 1);
     return result;
 }
 
@@ -790,31 +1078,31 @@ Tan(iangle angle)
 }
 
 inline iangle
-Acos(fix64 value)
+Acos(fix64 Value)
 {
-    Assert(value >= -1 && value <= 1);
-    value  = ClampPlusMinus1(value);
-    value += 1;
+    Assert(Value >= -1 && Value <= 1);
+    Value  = ClampPlusMinus1(Value);
+    Value += 1;
     
-    Assert(value.rawValue_ < ArrayLen(s_iangleAcosLut));
+    Assert(Value.rawValue_ < ArrayLen(s_iangleAcosLut));
     iangle result;
-    result.rawValue_ = s_iangleAcosLut[value.rawValue_];
+    result.rawValue_ = s_iangleAcosLut[Value.rawValue_];
     return result;
 }
 
 inline iangle
-Asin(fix64 value)
+Asin(fix64 Value)
 {
-    iangle result = IANGLE::halfPi - Acos(value);
+    iangle result = IANGLE::halfPi - Acos(Value);
     return result;
 }
 
 inline iangle
-Atan(fix64 value)
+Atan(fix64 Value)
 {
     // Binary search the tan lut between pi / 2 and 3 * pi / 2
     // TODO - have a version of the LUT that is a "level order" version of the balanced
-    //  binary tree containing all LUT values. This would give us great cache locality
+    //  binary tree containing all LUT Values. This would give us great cache locality
     //  as we search http://bannalia.blogspot.com/2015/06/cache-friendly-binary-search.html
 
     iangle lower = IANGLE::halfPi;
@@ -828,11 +1116,11 @@ Atan(fix64 value)
         fix64 candidateValue;
         candidateValue.rawValue_= s_iangleTanLut_[candidate.rawValue_];
         
-        if (candidateValue > value)
+        if (candidateValue > Value)
         {
             upper.rawValue_ = candidate.rawValue_ - 1;
         }
-        else if (candidateValue < value)
+        else if (candidateValue < Value)
         {
             lower.rawValue_ = candidate.rawValue_ + 1;
         }
@@ -1237,7 +1525,7 @@ PrepareForNormalize(Vec2x v)
     // @Slow ?
     if (Abs(v.x) + Abs(v.y) < 1.0f)
     {
-        // NOTE - Small values don't have enough precision for the squaring that
+        // NOTE - Small Values don't have enough precision for the squaring that
         //  happens in the length computation. Scale the vector up first!
     
         v *= 4096;
@@ -1591,7 +1879,7 @@ PrepareForNormalize(Vec3x v)
     // @Slow ?
     if (Abs(v.x) + Abs(v.y) + Abs(v.z) < 1.0f)
     {
-        // NOTE - Small values don't have enough precision for the squaring that
+        // NOTE - Small Values don't have enough precision for the squaring that
         //  happens in the length computation. Scale the vector up first!
     
         v *= 4096;
@@ -1875,7 +2163,7 @@ PrepareForNormalize(Vec4x v)
     // @Slow ?
     if (Abs(v.x) + Abs(v.y) + Abs(v.z) + Abs(v.w) < 1.0f)
     {
-        // NOTE - Small values don't have enough precision for the squaring that
+        // NOTE - Small Values don't have enough precision for the squaring that
         //  happens in the length computation. Scale the vector up first!
     
         v *= 4096;
