@@ -31,6 +31,8 @@
  #define DEBUG_OPTIMIZE_ON
 #endif
 
+// --- Asserts
+
 #ifndef ENABLE_ASSERT
  #define ENABLE_ASSERT DEBUG_BUILD
 #endif
@@ -63,6 +65,10 @@
 
 #define StaticAssert(expr) static_assert(expr, "Static assert failed!")
 #define StaticAssertTodo StaticAssert(false)
+
+// Expressive macros inside asserts
+#define Implies(p, q) (!(p) || (q))
+#define Iff(p, q) ((bool)(p) == (bool)(q))
 
 
 // TODO - get DEBUG_OPTIMIZE working.
@@ -256,15 +262,6 @@ static f32 constexpr minPositive = FLT_MIN;
 #define Megabytes(value) (Kilobytes(value) * 1024LL)
 #define Gigabytes(value) (Megabytes(value) * 1024LL)
 #define Terabytes(value) (Gigabytes(value) * 1024LL)
-
-#define Implies(p, q) (!(p) || (q))
-#define Iff(p, q) ((bool)(p) == (bool)(q))
-
-#define Min(a, b) ((a) <  (b)) ? (a) : (b)
-#define Max(a, b) ((a) >  (b)) ? (a) : (b)
-
-#define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
-#define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
 
 
 

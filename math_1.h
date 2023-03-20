@@ -1,7 +1,13 @@
-// --- Misc
+#pragma once
+
+#define Min(a, b) ((a) <  (b)) ? (a) : (b)
+#define Max(a, b) ((a) >  (b)) ? (a) : (b)
+
+#define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
+#define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
 
 inline bool
-ApproxEq(
+f32_eq_approx(
     f32 lhs,
     f32 rhs,
     f32 epsilon=0.001f)
@@ -11,78 +17,30 @@ ApproxEq(
     return result;
 }
 
-inline f32
-Square(f32 value)
+template <class T, class U>
+constexpr T
+lerp(T a, T b, U u)
 {
-    f32 result = value * value;
+    T result = ((1 - u) * a) + (u * b);
     return result;
 }
 
-inline f64
-Square(f64 value)
+template <class T>
+constexpr T
+clamp(T value, T min, T max)
 {
-    f64 result = value * value;
-    return result;
-}
-
-inline i32
-Square(i32 value)
-{
-    i32 result = value * value;
-    return result;
-}
-
-inline i64
-Square(i64 value)
-{
-    i64 result = value * value;
-    return result;
-}
-
-inline u32
-Square(u32 value)
-{
-    u32 result = value * value;
-    return result;
-}
-
-inline u64
-Square(u64 value)
-{
-    u64 result = value * value;
-    return result;
-}
-
-inline f32
-Lerp(f32 a, f32 b, f32 u)
-{
-    f32 result = ((1 - u) * a) + (u * b);
-    return result;
-}
-
-inline f32
-Clamp(f32 value, f32 min, f32 max)
-{
-    f32 result = value;
+    T result = value;
     result = Max(result, min);
     result = Min(result, max);
     return result;
 }
 
-inline f32
-Clamp01(f32 value)
+template <class T>
+inline T
+Clamp01(T value)
 {
-    f32 result = Clamp(value, 0, 1);
+    T result = Clamp(value, 0, 1);
     return result;
-}
-
-inline i32
-Clamp(i32 value, i32 min, i32 max)
-{
-    i32 result = value;
-    result = Max(result, min);
-    result = Min(result, max);
-    return result;    
 }
 
 inline f32

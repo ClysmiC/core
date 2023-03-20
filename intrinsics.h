@@ -1,7 +1,7 @@
 DEBUG_OPTIMIZE_ON
 
 //
-// TODO - Convert all of these to platform-efficient versions instead of using <math.h>
+// TODO - Convert all of these to platform-efficient intrinsic versions instead of using <math.h>
 //
 
 #include <math.h>
@@ -10,62 +10,58 @@ DEBUG_OPTIMIZE_ON
 #include <intrin.h>
 #endif
 
-inline f32
-Abs(f32 value)
+constexpr f32
+abs(f32 value)
 {
     f32 result = fabsf(value);
     return result;
 }
 
-inline f64
-Abs(f64 value)
+constexpr f64
+abs(f64 value)
 {
     f64 result = fabs(value);
     return result;
 }
 
-inline i32
-Abs(i32 value)
-{
-    i32 result = abs(value);
-    return result;
-}
+// Already defined in <math.h>
+// constexpr i32
+// abs(i32 value)
+//  { }
 
-inline i64
-Abs(i64 value)
+constexpr i64
+abs(i64 value)
 {
     i64 result = llabs(value);
     return result;
 }
 
-inline i32
-SignOf(i32 value)
+
+template <class T>
+constexpr T
+signof(T value)
 {
-    i32 result = (value >= 0) ? 1 : -1;
+    T result = (value >= T(0)) ? T(1) : T(-1);
     return result;
 }
 
-inline f32
-Sqrt(f32 value)
+constexpr f32
+sqrt(f32 value)
 {
     f32 result = sqrtf(value);
     return result;
 }
 
-inline i32
-RoundF32ToI32(f32 value)
-{
-    i32 result = (i32)roundf(value);
-    return result;
-}
 
-inline constexpr i32
-RoundF32ToI32Constexpr(f32 value)
+constexpr i32
+i32_from_f32_rounded(f32 value)
 {
     i32 result = (i32)((value >= 0) ? (value + 0.5f) : (value - 0.5f));
     return result;
 }
 
+constexpr i64
+i64_from_
 inline i64
 RoundF64ToI64(f64 value)
 {
