@@ -1,24 +1,21 @@
 namespace fxp
 {
-
-using intermediate_t = i64;     // Intermediate calculations are in 64 bit
-using denom_t = i64;            // Denominators are 64 bit at compile time (no denom_t's stored at run-time)
-
-// TODO - consteval gives best compile-time guarantee, but requires C++20
+// TODO - consteval gives best compile-time determinism guarantee for converting float values to fixed values, but requires C++20.
 #if (__cplusplus >= 202002L)
  #define FXPCONSTEVAL consteval
 #else
  #define FXPCONSTEVAL constexpr
 #endif
 
-
-
-// --- A fixed point value
+// --- A unitless fixed point value
 
 template<class> struct integer_type { static bool constexpr is_supported = false; };
 template<> struct integer_type<i32> { static bool constexpr is_supported = true; };
 template<> struct integer_type<i64> { static bool constexpr is_supported = true; };
 // TODO - support u32 and u64? Any extra work required?
+
+using intermediate_t = i64;     // Intermediate calculations are in 64 bit
+using denom_t = i64;            // Compile-time calculations with denominators are in 64 bit
 
 template<class T, denom_t D>
 struct Value
@@ -169,7 +166,7 @@ divide(
 
 
 
-// --- Fixed point quantities of a specific "unit" (e.g., meters, seconds, mph).
+// --- Fixed point "quantities" of a specific unit (e.g., meters, seconds).
 //  User code interacts with these, and should never really need to directly interact with a fxp::Value.
 //  A few default units are defined, as well as conversions between them. Users can extend these
 //  by adding their own Product<..> and Quotient<..> specializations. The underlying value types can
@@ -177,8 +174,7 @@ divide(
 
 enum class Unit_Type : u64
 {
-    SCALAR = 0,
-    NIL = 0,
+    SCALAR = 0,     // unitless
 
     DISTANCE,
     ROTATIONS,
@@ -186,24 +182,28 @@ enum class Unit_Type : u64
 
     SPEED,
     ACCELERATION,
+
+    ROTATION_SPEED,
 };
 
-// Default type of any unit that isn't specified otherwise via template specialization.
-template<Unit_Type> struct Unit
-{
-    using Value_Type = Value32<1024>;
-};
+// Default underlying type of a unit.
+// Can be overridden with a Unit<..> specialization
+template<Unit_Type> struct Unit { using Value_Type = Value32<1024>; };
 
-// Predefined conversions
+// Predefined conversions between unit types
+//  Users can add their own template specializations to define their own conversions
 template<Unit_Type, Unit_Type> struct Quotient;
-template<> struct Quotient<Unit_Type::DISTANCE, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::SPEED; };
-template<> struct Quotient<Unit_Type::SPEED, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::ACCELERATION; };
+template<> struct Quotient<Unit_Type::DISTANCE, Unit_Type::TIME>        { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Quotient<Unit_Type::SPEED, Unit_Type::TIME>           { static auto constexpr RESULT = Unit_Type::ACCELERATION; };
+template<> struct Quotient<Unit_Type::ROTATIONS, Unit_Type::TIME>       { static auto constexpr RESULT = Unit_Type::ROTATION_SPEED; };
 
 template<Unit_Type, Unit_Type> struct Product;
-template<> struct Product<Unit_Type::SPEED, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::DISTANCE; };
-template<> struct Product<Unit_Type::TIME, Unit_Type::SPEED> { static auto constexpr RESULT = Unit_Type::DISTANCE; };
-template<> struct Product<Unit_Type::ACCELERATION, Unit_Type::TIME> { static auto constexpr RESULT = Unit_Type::SPEED; };
-template<> struct Product<Unit_Type::TIME, Unit_Type::ACCELERATION> { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Product<Unit_Type::SPEED, Unit_Type::TIME>            { static auto constexpr RESULT = Unit_Type::DISTANCE; };
+template<> struct Product<Unit_Type::TIME, Unit_Type::SPEED>            { static auto constexpr RESULT = Unit_Type::DISTANCE; };
+template<> struct Product<Unit_Type::ACCELERATION, Unit_Type::TIME>     { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Product<Unit_Type::TIME, Unit_Type::ACCELERATION>     { static auto constexpr RESULT = Unit_Type::SPEED; };
+template<> struct Product<Unit_Type::ROTATION_SPEED, Unit_Type::TIME>   { static auto constexpr RESULT = Unit_Type::ROTATIONS; };
+template<> struct Product<Unit_Type::TIME, Unit_Type::ROTATION_SPEED>   { static auto constexpr RESULT = Unit_Type::ROTATIONS; };
 
 template<Unit_Type UNIT_TYPE>
 struct Quantity
@@ -242,16 +242,21 @@ struct Quantity
     explicit constexpr operator f64() const { return f64(value); }
 };
 
-using Scalar        = Quantity<Unit_Type::SCALAR>;
-using Distance      = Quantity<Unit_Type::DISTANCE>;
-using Rotations     = Quantity<Unit_Type::ROTATIONS>;
-using Time          = Quantity<Unit_Type::TIME>;
-using Speed         = Quantity<Unit_Type::SPEED>;
-using Acceleration  = Quantity<Unit_Type::ACCELERATION>;
+
+
+// --- Quantity aliases. Users should use these.
+
+using Scalar            = Quantity<Unit_Type::SCALAR>;
+using Distance          = Quantity<Unit_Type::DISTANCE>;
+using Rotations         = Quantity<Unit_Type::ROTATIONS>;
+using Time              = Quantity<Unit_Type::TIME>;
+using Speed             = Quantity<Unit_Type::SPEED>;
+using Acceleration      = Quantity<Unit_Type::ACCELERATION>;
+using Rotation_Speed    = Quantity<Unit_Type::ROTATION_SPEED>;
 
 
 
-// --- Same units can always add/subtract
+// --- Quantities with same units can always add/subtract together
 
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
@@ -270,7 +275,9 @@ operator-(Quantity<UNIT> q0, Quantity<UNIT> q1)
     return result;
 }
 
-// --- Same units can always divide and get a scalar
+
+
+// --- Quantities with same units can always divide and get a scalar result
 
 template<Unit_Type UNIT>
 constexpr Scalar
@@ -281,7 +288,9 @@ operator/(Quantity<UNIT> q0, Quantity<UNIT> q1)
     return result;
 }
 
-// --- Units can always multiply and divide by a scalar
+
+
+// --- Quantities can always multiply and divide by a scalar
 
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
@@ -309,13 +318,19 @@ operator/(Quantity<UNIT> q0, Scalar q1)
     return result;
 }
 
-// --- Any 2 quantities with a conversion defined can multiply/divide
+
+
+// --- Any 2 quantities whose units have Product/Quotient defined can multiply/divide
 
 template<Unit_Type UNIT0, Unit_Type UNIT1>
 constexpr auto
 operator*(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
 {
+    // User should define both A*B and B*A to produce the same result unit.
     static Unit_Type constexpr RESULT = Product<UNIT0, UNIT1>::RESULT;
+    static Unit_Type constexpr RESULT_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
+    StaticAssert(RESULT == RESULT_OPPOSITE);
+
     Quantity<RESULT> result;
     result.value = multiply<Quantity<RESULT>::Value::d>(q0.value, q1.value);
     return result;
@@ -331,23 +346,7 @@ operator/(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
     return result;
 }
 
-// TODO - move this to user code
-// --- Unit definitions
 
-template<> struct Unit<Unit_Type::DISTANCE>
-{
-    using Value_Type = Value32<1024 * 16>;
-};
-
-template<> struct Unit<Unit_Type::TIME>
-{
-    using Value_Type = Value32<64>;
-};
-
-template<> struct Unit<Unit_Type::SPEED>
-{
-    using Value_Type = Value32<1024 * 16 / 64>;
-};
 
 #undef FXPCONSTEVAL
 
