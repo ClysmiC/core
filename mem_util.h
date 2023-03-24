@@ -19,7 +19,7 @@ GetAlignmentOffset(uintptr value, uintptr alignment)
 }
 
 inline void
-ZeroMemory(void* memory, int cBytes)
+ZeroMemory(void* memory, uintptr cBytes)
 {
     bool isMemory8ByteAligned = (((uintptr)memory & 0x7) == 0);
     bool isCount8ByteMultiple = ((cBytes & 0x7) == 0);
@@ -29,8 +29,8 @@ ZeroMemory(void* memory, int cBytes)
         // Faster. Clears 8 bytes at a time.
 
         u64 * pU64 = (u64 *)memory;
-        int cntU64 = cBytes / 8;
-        for (int iU64 = 0; iU64 < cntU64; iU64++)
+        uintptr cntU64 = cBytes / 8;
+        for (uintptr iU64 = 0; iU64 < cntU64; iU64++)
         {
             *pU64 = 0;
             pU64++;
@@ -41,7 +41,7 @@ ZeroMemory(void* memory, int cBytes)
         // Slower. Clears 1 byte at a time.
     
         u8 * pByte = (u8 *)memory;
-        for (int iByte = 0; iByte < cBytes; iByte++)
+        for (uintptr iByte = 0; iByte < cBytes; iByte++)
         {
             *pByte = 0;
             pByte++;
@@ -53,7 +53,7 @@ ZeroMemory(void* memory, int cBytes)
 #define FillArray(array, value) for (int i = 0; i < ArrayLen(array); i++) { (array)[i] = value; }
 
 inline void
-CopyMemory(void* src, void* dst, int cBytes)
+CopyMemory(void* src, void* dst, uintptr cBytes)
 {
     // NOTE - Args are reversed from C memcpy!
     // NOTE - Does not try to handle overlapping src / dst
@@ -62,7 +62,7 @@ CopyMemory(void* src, void* dst, int cBytes)
 
     u8 * byteSrc = (u8 *)src;
     u8 * byteDst = (u8 *)dst;
-    for (int iByte = 0; iByte < cBytes; iByte++)
+    for (uintptr iByte = 0; iByte < cBytes; iByte++)
     {
         *byteDst = *byteSrc;
         byteDst++;

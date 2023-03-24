@@ -330,32 +330,52 @@ using Rotation_Speed    = Quantity<Unit_Type::ROTATION_SPEED>;
 
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
-operator+(Quantity<UNIT> q0, Quantity<UNIT> q1)
+operator+(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Quantity<UNIT> result;
-    result.value = add<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    result.value = add<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
+}
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>&
+operator+=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
+{
+    lhs = lhs + rhs;
+    return lhs;
 }
 template<class FXP, Unit_Type UNIT>
 constexpr Quantity<UNIT>
-operator-(Quantity<UNIT> q0, Quantity<UNIT> q1)
+operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Quantity<UNIT> result;
-    result.value = subtract<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    result.value = subtract<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
 }
-
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>&
+operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
+{
+    lhs = lhs - rhs;
+    return lhs;
+}
 
 
 // --- Quantities with same units can always divide and get a scalar result
 
 template<Unit_Type UNIT>
 constexpr Scalar
-operator/(Quantity<UNIT> q0, Quantity<UNIT> q1)
+operator/(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Scalar result;
-    result.value = divide<Scalar::Value::d>(q0.value, q1.value);
+    result.value = divide<Scalar::Value::d>(lhs.value, rhs.value);
     return result;
+}
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>&
+operator/=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
+{
+    lhs = lhs / rhs;
+    return lhs;
 }
 
 
@@ -364,28 +384,42 @@ operator/(Quantity<UNIT> q0, Quantity<UNIT> q1)
 
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
-operator*(Quantity<UNIT> q0, Scalar q1)
+operator*(Quantity<UNIT> const& lhs, Scalar const& rhs)
 {
     Quantity<UNIT> result;
-    result.value = multiply<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
 }
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
-operator*(Scalar q0, Quantity<UNIT> q1)
+operator*(Scalar const& lhs, Quantity<UNIT> const& rhs)
 {
     Quantity<UNIT> result;
-    result.value = multiply<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
+}
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>&
+operator*=(Quantity<UNIT>& lhs, Scalar const& rhs)
+{
+    lhs = lhs * rhs;
+    return lhs;
 }
 
 template<Unit_Type UNIT>
 constexpr Quantity<UNIT>
-operator/(Quantity<UNIT> q0, Scalar q1)
+operator/(Quantity<UNIT> const& lhs, Scalar const& rhs)
 {
     Quantity<UNIT> result;
-    result.value = divide<Quantity<UNIT>::Value::d>(q0.value, q1.value);
+    result.value = divide<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
+}
+template<Unit_Type UNIT>
+constexpr Quantity<UNIT>&
+operator+=(Quantity<UNIT>& lhs, Scalar const& rhs)
+{
+    lhs = lhs / rhs;
+    return lhs;
 }
 
 
@@ -394,24 +428,24 @@ operator/(Quantity<UNIT> q0, Scalar q1)
 
 template<Unit_Type UNIT0, Unit_Type UNIT1>
 constexpr auto
-operator*(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
+operator*(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 {
     static Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
     static Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
     StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
 
     Quantity<RESULT_TYPE> result;
-    result.value = multiply<Quantity<RESULT_TYPE>::Value::d>(q0.value, q1.value);
+    result.value = multiply<Quantity<RESULT_TYPE>::Value::d>(lhs.value, rhs.value);
     return result;
 }
 
 template<Unit_Type UNIT0, Unit_Type UNIT1>
 constexpr auto
-operator/(Quantity<UNIT0> q0, Quantity<UNIT1> q1)
+operator/(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 {
     static Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
     Quantity<RESULT_TYPE> result;
-    result.value = divide<Quantity<RESULT_TYPE>::Value::d>(q0.value, q1.value);
+    result.value = divide<Quantity<RESULT_TYPE>::Value::d>(lhs.value, rhs.value);
     return result;
 }
 
@@ -789,7 +823,7 @@ Square(fix64 Value)
 }
 
 inline fix64
-Lerp(fix64 a, fix64 b, fix64 t)
+lerp(fix64 a, fix64 b, fix64 t)
 {
     fix64 result = ((1 - t) * a) + (t * b);
     return result;
@@ -825,7 +859,7 @@ f32_eq_approx(
 }
 
 inline fix64
-Clamp(fix64 Value, fix64 min, fix64 max)
+clamp(fix64 Value, fix64 min, fix64 max)
 {
     fix64 result = Value;
     result = Max(result, min);
@@ -834,21 +868,21 @@ Clamp(fix64 Value, fix64 min, fix64 max)
 }
 
 inline fix64
-Clamp01(fix64 Value)
+clamp_01(fix64 Value)
 {
-    fix64 result = Clamp(Value, 0, 1);
+    fix64 result = clamp(Value, 0, 1);
     return result;
 }
 
 inline fix64
-ClampPlusMinus1(fix64 Value)
+clampPlusMinus1(fix64 Value)
 {
-    fix64 result = Clamp(Value, -1, 1);
+    fix64 result = clamp(Value, -1, 1);
     return result;
 }
 
 inline fix64
-DivideSafeN(fix64 numerator, fix64 denominator, fix64 n)
+divide_safe_n(fix64 numerator, fix64 denominator, fix64 n)
 {
     fix64 result = n;
     if (denominator != 0)
@@ -860,16 +894,16 @@ DivideSafeN(fix64 numerator, fix64 denominator, fix64 n)
 }
 
 inline fix64
-DivideSafe1(fix64 numerator, fix64 denominator)
+divide_safe_1(fix64 numerator, fix64 denominator)
 {
-    fix64 result = DivideSafeN(numerator, denominator, 1);
+    fix64 result = divide_safe_n(numerator, denominator, 1);
     return result;
 }
 
 inline fix64
-DivideSafe0(fix64 numerator, fix64 denominator)
+divide_safe_0(fix64 numerator, fix64 denominator)
 {
-    fix64 result = DivideSafeN(numerator, denominator, 0);
+    fix64 result = divide_safe_n(numerator, denominator, 0);
     return result;
 }
 
@@ -1149,7 +1183,7 @@ inline iangle
 Acos(fix64 Value)
 {
     Assert(Value >= -1 && Value <= 1);
-    Value  = ClampPlusMinus1(Value);
+    Value  = clampPlusMinus1(Value);
     Value += 1;
     
     Assert(Value.rawValue_ < ArrayLen(s_iangleAcosLut));
@@ -1565,25 +1599,25 @@ Length(Vec2x v)
 }
 
 inline Vec2x
-Lerp(Vec2x a, Vec2x b, fix64 t)
+lerp(Vec2x a, Vec2x b, fix64 t)
 {
     Vec2x result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec2x
-Clamp(Vec2x v, fix64 min, fix64 max)
+clamp(Vec2x v, fix64 min, fix64 max)
 {
     Vec2x result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
+    result.x = clamp(v.x, min, max);
+    result.y = clamp(v.y, min, max);
     return result;
 }
 
 inline Vec2x
-Clamp01(Vec2x v)
+clamp_01(Vec2x v)
 {
-    Vec2x result = Clamp(v, 0, 1);
+    Vec2x result = clamp(v, 0, 1);
     return result;
 }
 
@@ -1743,11 +1777,11 @@ Hadamard(Vec2x v0, Vec2x v1)
 }
 
 inline Vec2x
-HadamardDivideSafe0(Vec2x v0, Vec2x v1)
+Hadamarddivide_safe_0(Vec2x v0, Vec2x v1)
 {
     Vec2x result;
-    result.x = DivideSafe0(v0.x, v1.x);
-    result.y = DivideSafe0(v0.y, v1.y);
+    result.x = divide_safe_0(v0.x, v1.x);
+    result.y = divide_safe_0(v0.y, v1.y);
     return result;
 }
 
@@ -1918,26 +1952,26 @@ Length(Vec3x v)
 }
 
 inline Vec3x
-Lerp(Vec3x a, Vec3x b, fix64 t)
+lerp(Vec3x a, Vec3x b, fix64 t)
 {
     Vec3x result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec3x
-Clamp(Vec3x v, fix64 min, fix64 max)
+clamp(Vec3x v, fix64 min, fix64 max)
 {
     Vec3x result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
-    result.z = Clamp(v.z, min, max);
+    result.x = clamp(v.x, min, max);
+    result.y = clamp(v.y, min, max);
+    result.z = clamp(v.z, min, max);
     return result;
 }
 
 inline Vec3x
-Clamp01(Vec3x v)
+clamp_01(Vec3x v)
 {
-    Vec3x result = Clamp(v, 0, 1);
+    Vec3x result = clamp(v, 0, 1);
     return result;
 }
 
@@ -2070,12 +2104,12 @@ Hadamard(Vec3x v0, Vec3x v1)
 }
 
 inline Vec3x
-HadamardDivideSafe0(Vec3x v0, Vec3x v1)
+Hadamarddivide_safe_0(Vec3x v0, Vec3x v1)
 {
     Vec3x result;
-    result.x = DivideSafe0(v0.x, v1.x);
-    result.y = DivideSafe0(v0.y, v1.y);
-    result.z = DivideSafe0(v0.z, v1.z);
+    result.x = divide_safe_0(v0.x, v1.x);
+    result.y = divide_safe_0(v0.y, v1.y);
+    result.z = divide_safe_0(v0.z, v1.z);
     return result;
 }
 
@@ -2201,27 +2235,27 @@ Length(Vec4x v)
 }
 
 inline Vec4x
-Lerp(Vec4x a, Vec4x b, fix64 t)
+lerp(Vec4x a, Vec4x b, fix64 t)
 {
     Vec4x result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec4x
-Clamp(Vec4x v, fix64 min, fix64 max)
+clamp(Vec4x v, fix64 min, fix64 max)
 {
     Vec4x result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
-    result.z = Clamp(v.z, min, max);
-    result.w = Clamp(v.w, min, max);
+    result.x = clamp(v.x, min, max);
+    result.y = clamp(v.y, min, max);
+    result.z = clamp(v.z, min, max);
+    result.w = clamp(v.w, min, max);
     return result;
 }
 
 inline Vec4x
-Clamp01(Vec4x v)
+clamp_01(Vec4x v)
 {
-    Vec4x result = Clamp(v, 0, 1);
+    Vec4x result = clamp(v, 0, 1);
     return result;
 }
 

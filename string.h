@@ -97,7 +97,7 @@ function void
 CopyString(String src, String dst)
 {
     CopyString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
-    dst.cBytes = Min(dst.cBytes, src.cBytes);
+    dst.cBytes = min(dst.cBytes, src.cBytes);
 }
 
 function char*
@@ -191,7 +191,7 @@ CopySubstring(
     int cntCharDst = cBytesDst - 1; // Leave 1 byte for null terminator
     int iCharDst = 0;
 
-    int cntCharToCopy = Min(cntCharDst, cntCharSrcToCopy);
+    int cntCharToCopy = min(cntCharDst, cntCharSrcToCopy);
 
     char* cursor = src + iSrcStart;
     while (*cursor && iCharDst < cntCharToCopy)
@@ -599,7 +599,7 @@ GetDirectoryFromFullFilename(String fullFilename)
 {
     String result = {};
 
-    int iLastSlash = Max(IndexOfLast(fullFilename, '\\'), IndexOfLast(fullFilename, '/'));
+    int iLastSlash = max(IndexOfLast(fullFilename, '\\'), IndexOfLast(fullFilename, '/'));
 
     if (iLastSlash < 0) return result;
 

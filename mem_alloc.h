@@ -16,7 +16,7 @@ enum class TrackedState : u8
 
 struct TrackedBlockHeader
 {
-    uint cBytes;               // Includes header
+    uintptr cBytes;               // Includes header
     TrackedBlockHeader * left;  // Physically adjacent in memory
     TrackedBlockHeader * right; // ...
     TrackedState state;
@@ -30,7 +30,7 @@ struct FreeBlockHeader : TrackedBlockHeader
 
 struct OverflowHeader
 {
-    uint cBytes; // Includes header
+    uintptr cBytes; // Includes header
     OverflowHeader * next;
 };
 
@@ -68,7 +68,7 @@ struct MemoryRegionHeader
     DebugHistory debugHistory;
 #endif
 
-    uint cBytesBudget;
+    uintptr cBytesBudget;
     MemoryRegionHeader * patron; // Provides us with memory. Must be an ancestor
     MemoryRegionHeader * parent; // When parent gets freed, we get freed too
     MemoryRegionHeader * first_child;
@@ -81,8 +81,8 @@ struct MemoryRegionHeader
 
 namespace MEM_ALLOC // @Cleanup - need to put this after struct definitions because of sizeof dependency...
 {
-static constexpr uint cBytesTooSmallToBotherTracking = sizeof(FreeBlockHeader) + 63;
-static constexpr uint cBytesMinimumRegion = sizeof(MemoryRegionHeader) + 256;
+static constexpr uintptr cBytesTooSmallToBotherTracking = sizeof(FreeBlockHeader) + 63;
+static constexpr uintptr cBytesMinimumRegion = sizeof(MemoryRegionHeader) + 256;
 }
 
 // Opaque type provided by API
@@ -95,7 +95,7 @@ enum AllocType : u8
 };
 
 function MemoryRegion
-BeginRootMemoryRegion(u8 * bytes, uint cBytes)
+BeginRootMemoryRegion(u8 * bytes, uintptr cBytes)
 {
     if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
     {
@@ -116,7 +116,7 @@ BeginRootMemoryRegion(u8 * bytes, uint cBytes)
 }
 
 inline void
-ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uint cBytesNew)
+ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
 {
     FreeBlockHeader * pHeadOrig = *ppHead;
 
@@ -134,7 +134,7 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uint cBytesNew)
     else
     {
         Assert(cBytesNew > MEM_ALLOC::cBytesTooSmallToBotherTracking);
-        uint cBytesOrig_debug = pHeadOrig->cBytes; // NOTE - only used for an assert
+        uintptr cBytesOrig_debug = pHeadOrig->cBytes; // NOTE - only used for an assert
 
         pHeadOrig->cBytes = cBytesNew;
         bool isHeadTooSmall = pHeadOrig->next && pHeadOrig->next->cBytes > pHeadOrig->cBytes;
@@ -184,11 +184,11 @@ enum class CTZ : u8
 };
 
 // @Cleanup - need these because core doesn't run hgen
-void* Allocate(MemoryRegion region, uint cBytes, CTZ clearToZero=CTZ::NIL);
-void* AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero=CTZ::NIL);
+void* Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+void* AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
 
 inline void*
-AllocateFromSystem(uint cBytes)
+AllocateFromSystem(uintptr cBytes)
 {
     // TOOD - Better way to expose/configure allocations from the system/OS?
     return new u8[cBytes];
@@ -202,7 +202,7 @@ FreeFromSystem(void* allocation)
 }
 
 inline FreeBlockHeader *
-EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uint cBytes, AllocType allocType)
+EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType allocType)
 {
     // NOTE - Caller is responsible for adding bytes for TrackedHeader if making a tracked allocation
 
@@ -223,7 +223,7 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uint cBytes, AllocType al
         // HMM - Maybe make regions have more control over how much they grow when they overflow?
 
         cBytes += sizeof(OverflowHeader);
-        cBytes = Max(cBytes, regionHeader->cBytesBudget);
+        cBytes = max(cBytes, regionHeader->cBytesBudget);
 
         OverflowHeader * overflowHeader;
         if (regionHeader->patron)
@@ -260,7 +260,7 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uint cBytes, AllocType al
 }
 
 void*
-Allocate(MemoryRegion region, uint cBytes, CTZ clearToZero)
+Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
 
@@ -281,7 +281,7 @@ Allocate(MemoryRegion region, uint cBytes, CTZ clearToZero)
 
     TrackedBlockHeader * rightOfShared = shared->right;
 
-    uint splitcBytes = shared->cBytes - cBytes;
+    uintptr splitcBytes = shared->cBytes - cBytes;
     if (splitcBytes > MEM_ALLOC::cBytesTooSmallToBotherTracking)
     {
         // ... a smaller shared block (right)
@@ -347,7 +347,7 @@ template <typename T>
 T*
 AllocateArray(
     MemoryRegion region,
-    uint count,
+    uintptr count,
     CTZ clearToZero=CTZ::NIL)
 {
     T* result = (T*)Allocate(region, sizeof(T) * count, clearToZero);
@@ -355,7 +355,7 @@ AllocateArray(
 }
 
 void*
-AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero)
+AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
 
@@ -367,9 +367,9 @@ AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero)
 
     // Make sure our tracked or free block is big enough!
 
-    uint cBytesOrig = cBytes;
+    uintptr cBytesOrig = cBytes;
     cBytes += sizeof(TrackedBlockHeader);
-    cBytes = Max(cBytes, sizeof(FreeBlockHeader)); // Make sure the allocation is big enough that if it gets freed, we can store a free block header in place
+    cBytes = max(cBytes, sizeof(FreeBlockHeader)); // Make sure the allocation is big enough that if it gets freed, we can store a free block header in place
 
     FreeBlockHeader * free = EnsureBlockWithSize(regionHeader, cBytes, AllocType::Tracked);
     TrackedBlockHeader * rightOfFree = free->right;
@@ -384,7 +384,7 @@ AllocateTracked(MemoryRegion region, uint cBytes, CTZ clearToZero)
     //  that is smaller than the metadata we need to do tracking, just lump it in with the
     //  memory we give back to the user. Otherwise it'd fragment our left/right merging.
 
-    uint splitcBytes = free->cBytes - cBytes;
+    uintptr splitcBytes = free->cBytes - cBytes;
     if (splitcBytes <= MEM_ALLOC::cBytesTooSmallToBotherTracking)
     {
         splitcBytes = 0;
@@ -597,7 +597,7 @@ FreeTrackedAllocation(MemoryRegion region, void* allocation)
 }
 
 void*
-ReallocateTracked(MemoryRegion region, void* allocation, uint cBytesNew)
+ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
 {
     Assert(region);
 
@@ -611,7 +611,7 @@ ReallocateTracked(MemoryRegion region, void* allocation, uint cBytesNew)
         TrackedBlockHeader * trackedHeader = (TrackedBlockHeader *)((u8 *)allocation - sizeof(TrackedBlockHeader));
         Assert(trackedHeader->state == TrackedState::Allocated);
 
-        uint cBytesOld = trackedHeader->cBytes - sizeof(TrackedBlockHeader);
+        uintptr cBytesOld = trackedHeader->cBytes - sizeof(TrackedBlockHeader);
         if (cBytesOld >= cBytesNew)
         {
             result = allocation;
@@ -743,7 +743,7 @@ ResetMemoryRegion(MemoryRegion region)
 }
 
 MemoryRegion
-CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uint cBytes)
+CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uintptr cBytes)
 {
     if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
         return nullptr;
@@ -774,7 +774,7 @@ CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uint cBytes)
 }
 
 inline MemoryRegion
-CreateSubRegion(MemoryRegion parentAndPatron, uint cBytes)
+CreateSubRegion(MemoryRegion parentAndPatron, uintptr cBytes)
 {
     MemoryRegion result = CreateSubRegion(parentAndPatron, parentAndPatron, cBytes);
     return result;

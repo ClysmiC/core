@@ -1,8 +1,5 @@
 #pragma once
 
-#define Min(a, b) ((a) <  (b)) ? (a) : (b)
-#define Max(a, b) ((a) >  (b)) ? (a) : (b)
-
 #define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
 #define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
 
@@ -19,32 +16,49 @@ f32_eq_approx(
 
 template <class T>
 constexpr auto
-Lerp(T a, T b, f32 u)
+lerp(T a, T b, f32 u)
 {
     auto result = ((1 - u) * a) + (u * b);
     return result;
 }
 
 template <class T>
-constexpr T
-Clamp(T value, T min, T max)
+inline T
+min(T a, T b)
 {
-    T result = value;
-    result = Max(result, min);
-    result = Min(result, max);
+    T result = ((a) <  (b)) ? (a) : (b);
     return result;
 }
 
 template <class T>
 inline T
-Clamp01(T value)
+max(T a, T b)
 {
-    T result = Clamp(value, 0, 1);
+    T result = ((a) >  (b)) ? (a) : (b);
     return result;
 }
 
+template <class T>
+constexpr T
+clamp(T value, T minimum, T maximum)
+{
+    T result = value;
+    result = max(result, minimum);
+    result = min(result, maximum);
+    return result;
+}
+
+template <class T>
+inline T
+clamp_01(T value)
+{
+    T result = clamp(value, 0, 1);
+    return result;
+}
+
+
 inline f32
-DivideSafeN(f32 numerator, f32 denominator, f32 n)
+divide_safe_n(f32 numerator, f32 denominator, f32 n)
 {
     f32 result = n;
     if (denominator != 0.0f)
@@ -55,16 +69,16 @@ DivideSafeN(f32 numerator, f32 denominator, f32 n)
 }
 
 inline f32
-DivideSafe1(f32 numerator, f32 denominator)
+divide_safe_1(f32 numerator, f32 denominator)
 {
-    f32 result = DivideSafeN(numerator, denominator, 1);
+    f32 result = divide_safe_n(numerator, denominator, 1);
     return result;
 }
 
 inline f32
-DivideSafe0(f32 numerator, f32 denominator)
+divide_safe_0(f32 numerator, f32 denominator)
 {
-    f32 result = DivideSafeN(numerator, denominator, 0);
+    f32 result = divide_safe_n(numerator, denominator, 0);
     return result;
 }
 
@@ -81,16 +95,16 @@ enum class Axis : u8
     ENUM_COUNT,
 };
 
-enum class SignedAxis : u8
+enum class Signed_Axis : u8
 {
     NIL = 0,
     
-    XPlus,
-    XMinus,
-    YPlus,
-    YMinus,
-    ZPlus,
-    ZMinus,
+    X_PLUS,
+    X_MINUS,
+    Y_PLUS,
+    Y_MINUS,
+    Z_PLUS,
+    Z_MINUS,
 
     ENUM_COUNT
 };
@@ -312,7 +326,7 @@ Vec2Fill(f32 scalar)
 inline Vec2
 Vec2Min(Vec2 v0, Vec2 v1)
 {
-    Vec2 result(Min(v0.x, v1.x), Min(v0.y, v1.y));
+    Vec2 result(min(v0.x, v1.x), min(v0.y, v1.y));
     return result;
 }
 
@@ -337,7 +351,7 @@ Vec2Min(Vec2 * candidates, int count)
 inline Vec2
 Vec2Max(Vec2 v0, Vec2 v1)
 {
-    Vec2 result(Max(v0.x, v1.x), Max(v0.y, v1.y));
+    Vec2 result(max(v0.x, v1.x), max(v0.y, v1.y));
     return result;
 }
 
@@ -478,25 +492,25 @@ Length(Vec2 v)
 }
 
 inline Vec2
-Lerp(Vec2 a, Vec2 b, f32 t)
+lerp(Vec2 a, Vec2 b, f32 t)
 {
     Vec2 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec2
-Clamp(Vec2 v, Vec2 min, Vec2 max)
+clamp(Vec2 v, Vec2 min, Vec2 max)
 {
     Vec2 result;
-    result.x = Clamp(v.x, min.x, max.x);
-    result.y = Clamp(v.y, min.y, max.y);
+    result.x = clamp(v.x, min.x, max.x);
+    result.y = clamp(v.y, min.y, max.y);
     return result;
 }
 
 inline Vec2
-Clamp01(Vec2 v)
+clamp_01(Vec2 v)
 {
-    Vec2 result = Clamp(v, Vec2Fill(0), Vec2Fill(1));
+    Vec2 result = clamp(v, Vec2Fill(0), Vec2Fill(1));
     return result;
 }
 
@@ -602,11 +616,11 @@ Hadamard(Vec2 v0, Vec2 v1)
 }
 
 inline Vec2
-HadamardDivideSafe0(Vec2 v0, Vec2 v1)
+Hadamarddivide_safe_0(Vec2 v0, Vec2 v1)
 {
     Vec2 result;
-    result.x = DivideSafe0(v0.x, v1.x);
-    result.y = DivideSafe0(v0.y, v1.y);
+    result.x = divide_safe_0(v0.x, v1.x);
+    result.y = divide_safe_0(v0.y, v1.y);
     return result;
 }
 
@@ -620,14 +634,14 @@ Vec3Fill(f32 scalar)
 }
 
 inline Vec3
-Vec3Min(Vec3 v0, Vec3 v1)
+Vec3min(Vec3 v0, Vec3 v1)
 {
-    Vec3 result(Min(v0.x, v1.x), Min(v0.y, v1.y), Min(v0.z, v1.z));
+    Vec3 result(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z));
     return result;
 }
 
 inline Vec3
-Vec3Min(Vec3 * candidates, int count)
+Vec3min(Vec3 * candidates, int count)
 {
     Vec3 result =  {};
 
@@ -638,7 +652,7 @@ Vec3Min(Vec3 * candidates, int count)
 
     for (int iCandidate = 1; iCandidate < count; iCandidate++)
     {
-        result = Vec3Min(result, candidates[iCandidate]);
+        result = Vec3min(result, candidates[iCandidate]);
     }
 
     return result;
@@ -647,7 +661,7 @@ Vec3Min(Vec3 * candidates, int count)
 inline Vec3
 Vec3Max(Vec3 v0, Vec3 v1)
 {
-    Vec3 result(Max(v0.x, v1.x), Max(v0.y, v1.y), Max(v0.z, v1.z));
+    Vec3 result(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z));
     return result;
 }
 
@@ -804,26 +818,26 @@ Length(Vec3 v)
 }
 
 inline Vec3
-Lerp(Vec3 a, Vec3 b, f32 t)
+lerp(Vec3 a, Vec3 b, f32 t)
 {
     Vec3 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec3
-Clamp(Vec3 v, f32 min, f32 max)
+clamp(Vec3 v, f32 min, f32 max)
 {
     Vec3 result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
-    result.z = Clamp(v.z, min, max);
+    result.x = clamp(v.x, min, max);
+    result.y = clamp(v.y, min, max);
+    result.z = clamp(v.z, min, max);
     return result;
 }
 
 inline Vec3
-Clamp01(Vec3 v)
+clamp_01(Vec3 v)
 {
-    Vec3 result = Clamp(v, 0, 1);
+    Vec3 result = clamp(v, 0, 1);
     return result;
 }
 
@@ -938,12 +952,12 @@ Hadamard(Vec3 v0, Vec3 v1)
 }
 
 inline Vec3
-HadamardDivideSafe0(Vec3 v0, Vec3 v1)
+Hadamarddivide_safe_0(Vec3 v0, Vec3 v1)
 {
     Vec3 result;
-    result.x = DivideSafe0(v0.x, v1.x);
-    result.y = DivideSafe0(v0.y, v1.y);
-    result.z = DivideSafe0(v0.z, v1.z);
+    result.x = divide_safe_0(v0.x, v1.x);
+    result.y = divide_safe_0(v0.y, v1.y);
+    result.z = divide_safe_0(v0.z, v1.z);
     return result;
 }
 
@@ -1104,27 +1118,27 @@ Length(Vec4 v)
 }
 
 inline Vec4
-Lerp(Vec4 a, Vec4 b, f32 t)
+lerp(Vec4 a, Vec4 b, f32 t)
 {
     Vec4 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
 inline Vec4
-Clamp(Vec4 v, f32 min, f32 max)
+clamp(Vec4 v, f32 min, f32 max)
 {
     Vec4 result;
-    result.x = Clamp(v.x, min, max);
-    result.y = Clamp(v.y, min, max);
-    result.z = Clamp(v.z, min, max);
-    result.w = Clamp(v.w, min, max);
+    result.x = clamp(v.x, min, max);
+    result.y = clamp(v.y, min, max);
+    result.z = clamp(v.z, min, max);
+    result.w = clamp(v.w, min, max);
     return result;
 }
 
 inline Vec4
-Clamp01(Vec4 v)
+clamp_01(Vec4 v)
 {
-    Vec4 result = Clamp(v, 0, 1);
+    Vec4 result = clamp(v, 0, 1);
     return result;
 }
 
@@ -1219,13 +1233,13 @@ Hadamard(Vec4 v0, Vec4 v1)
 }
 
 inline Vec4
-HadamardDivideSafe0(Vec4 v0, Vec4 v1)
+Hadamarddivide_safe_0(Vec4 v0, Vec4 v1)
 {
     Vec4 result;
-    result.x = DivideSafe0(v0.x, v1.x);
-    result.y = DivideSafe0(v0.y, v1.y);
-    result.z = DivideSafe0(v0.z, v1.z);
-    result.w = DivideSafe0(v0.w, v1.w);
+    result.x = divide_safe_0(v0.x, v1.x);
+    result.y = divide_safe_0(v0.y, v1.y);
+    result.z = divide_safe_0(v0.z, v1.z);
+    result.w = divide_safe_0(v0.w, v1.w);
     return result;
 }
 
@@ -1257,14 +1271,14 @@ Vec2iFill(int scalar)
 }
 
 inline Vec2i
-Vec2iMin(Vec2i v0, Vec2i v1)
+Vec2imin(Vec2i v0, Vec2i v1)
 {
-    Vec2i result(Min(v0.x, v1.x), Min(v0.y, v1.y));
+    Vec2i result(min(v0.x, v1.x), min(v0.y, v1.y));
     return result;
 }
 
 inline Vec2i
-Vec2iMin(Vec2i * candidates, int count)
+Vec2imin(Vec2i * candidates, int count)
 {
     Vec2i result =  {};
 
@@ -1275,7 +1289,7 @@ Vec2iMin(Vec2i * candidates, int count)
 
     for (int iCandidate = 1; iCandidate < count; iCandidate++)
     {
-        result = Vec2iMin(result, candidates[iCandidate]);
+        result = Vec2imin(result, candidates[iCandidate]);
     }
 
     return result;
@@ -1284,7 +1298,7 @@ Vec2iMin(Vec2i * candidates, int count)
 inline Vec2i
 Vec2iMax(Vec2i v0, Vec2i v1)
 {
-    Vec2i result(Max(v0.x, v1.x), Max(v0.y, v1.y));
+    Vec2i result(max(v0.x, v1.x), max(v0.y, v1.y));
     return result;
 }
 
@@ -1392,11 +1406,11 @@ operator/=(Vec2i & lhs, int rhs)
 }
 
 inline Vec2i
-Clamp(Vec2i v, Vec2i min, Vec2i max)
+clamp(Vec2i v, Vec2i min, Vec2i max)
 {
     Vec2i result;
-    result.x = Clamp(v.x, min.x, max.x);
-    result.y = Clamp(v.y, min.y, max.y);
+    result.x = clamp(v.x, min.x, max.x);
+    result.y = clamp(v.y, min.y, max.y);
     return result;
 }
 
@@ -2512,7 +2526,7 @@ inline Rect3
 RectFromPoints(Vec3 point0, Vec3 point1)
 {
     Rect3 result;
-    result.min = Vec3Min(point0, point1);
+    result.min = Vec3min(point0, point1);
     result.max = Vec3Max(point0, point1);
     return result;
 }

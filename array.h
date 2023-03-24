@@ -136,7 +136,7 @@ EnsureCapacity(DynArray<T>* array, int capacity)
 {
     if (array->capacity < capacity)
     {
-        int newCapacity = Max(array->capacity, 1);
+        int newCapacity = max(array->capacity, 1);
         while (newCapacity < capacity)
         {
             // Always grow by doubling in size
@@ -374,15 +374,15 @@ struct PushBuffer
 {
     struct PageHeader
     {
-        int cBytesAllocated; // Includes header
-        int cBytesCapacity;  // ...
+        uintptr cBytesAllocated; // Includes header
+        uintptr cBytesCapacity;  // ...
         PageHeader* pNext;
     };
     
     MemoryRegion memory;
     PageHeader* pages;
     PageHeader* pageTail;
-    int cBytesPushed;
+    uintptr cBytesPushed;
 
     PushBuffer() = default;
     PushBuffer(MemoryRegion memory, int cBytesPerPage)
@@ -403,14 +403,14 @@ struct PushBuffer
 };
 
 function void*
-AppendNewBytes(PushBuffer* buffer, int cBytes)
+AppendNewBytes(PushBuffer* buffer, uintptr cBytes)
 {
     auto* page = buffer->pageTail;
 
-    int cBytesFree = page->cBytesCapacity - page->cBytesAllocated;
+    uintptr cBytesFree = page->cBytesCapacity - page->cBytesAllocated;
     if (cBytesFree < cBytes)
     {
-        int cBytesNewPage = Max(page->cBytesCapacity, cBytes + sizeof(PushBuffer::PageHeader));
+        uintptr cBytesNewPage = max(page->cBytesCapacity, cBytes + sizeof(PushBuffer::PageHeader));
 
         page = (PushBuffer::PageHeader*)Allocate(buffer->memory, cBytesNewPage);
         page->cBytesAllocated = sizeof(PushBuffer::PageHeader);
