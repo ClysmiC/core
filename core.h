@@ -2,24 +2,9 @@
 
 // --- Compiler / feature detection
 
-#ifndef COMPILER_MSVC
- #define COMPILER_MSVC 0
-#endif
+#include "detect_compiler.h"
 
-#ifndef COMPILER_LLVM
- #define COMPILER_LLVM 0
-#endif
-
-#if !COMPILER_MSVC && !COMPILER_LLVM
- #if _MSC_VER
-  #undef COMPILER_MSVC
-  #define COMPILER_MSVC 1
-  #else
-  // TODO - Detect more compilers!
-  #endif
-#endif
-
-#if DEBUG_BUILD
+#if BUILD_DEBUG
  #if COMPILER_MSVC
   #define DEBUG_OPTIMIZE_OFF __pragma(optimize("", off))
   #define DEBUG_OPTIMIZE_ON __pragma(optimize("", on))
@@ -34,7 +19,7 @@
 // --- Asserts
 
 #ifndef ENABLE_ASSERT
- #define ENABLE_ASSERT DEBUG_BUILD
+ #define ENABLE_ASSERT BUILD_DEBUG
 #endif
 
 // TODO - Better way to force breakpoint
@@ -42,7 +27,7 @@
  #define ForceBreakpoint() (*(int*)0 = 0)
 #endif
 
-#if DEBUG_BUILD && ENABLE_ASSERT
+#if BUILD_DEBUG && ENABLE_ASSERT
  #define Assert(EXPRESSION) if (!(EXPRESSION)) { ForceBreakpoint(); }
 #else
  #define Assert(EXPRESSION)
@@ -55,7 +40,7 @@
 #define AssertElseTodo(EXPRESSION) Assert(EXPRESSION)
 
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
  #define Verify(expression) Assert(expression)
  #define VerifyWarn(expression) Assert(expression)
 #else
@@ -81,14 +66,8 @@
 
 // --- Undefine conflicting platform macros. core.h should always be included *after* system headers, for this reason.
 
-#undef min          // Conflicts with U32/I32/etc. namespace constant values. core.h provides Min(..) and Max(..) macros.
+#undef min          // Conflicts with U32/I32/etc. namespace constant values, and provided min(..) and max(..) functions.
 #undef max          // ...
-
-#ifdef _WINDOWS_
- #undef ZeroMemory  // Collides with our own implementation
- #undef CopyMemory  // ...
- #undef MoveMemory  // ...
-#endif
 
 
 

@@ -179,7 +179,7 @@ Insert(DynArray<T>* array, const T & item, int iItem)
     int cntItemShift = array->count - iItem; // @ArrayBoundsCheck
     T* dst = array->items + iItem + 1;
     T* src = array->items + iItem;
-    MoveMemory(src, dst, sizeof(T) * cntItemShift);
+    mem_move(dst, src, sizeof(T) * cntItemShift);
     
     array->items[iItem] = item;
     array->count++;
@@ -199,7 +199,7 @@ RemoveAt(DynArray<T>* array, int iItem)
         
         T* dst = array->items + iItem;
         T* src = dst + 1;
-        MoveMemory(src, dst, sizeof(T) * cntItemShift);
+        mem_move(dst, src, sizeof(T) * cntItemShift);
         
         array->count--;
     }
@@ -456,7 +456,7 @@ AppendStringCopy(PushBuffer* buffer, String string)
     *((i32 *)bytes) = string.cBytes;
 
     // Then, write the payload
-    CopyMemory(string.bytes, bytes + sizeof(i32), string.cBytes);
+    mem_copy(bytes + sizeof(i32), string.bytes, string.cBytes);
 }
 
 inline void AdvanceByteCursor(struct PushBufferReader* reader, int advance); // @Hgen - Need to support core module...
@@ -518,7 +518,7 @@ ReadStringCopy(PushBufferReader* reader, MemoryRegion memory)
     String result;
     result.cBytes = cBytes;
     result.bytes = (char*)Allocate(memory, cBytes);
-    CopyMemory(reader->page + reader->iByteInPage, result.bytes, cBytes);
+    mem_copy(result.bytes, reader->page + reader->iByteInPage, cBytes);
     AdvanceByteCursor(reader, cBytes);
 
     return result;

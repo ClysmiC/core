@@ -2,6 +2,9 @@
 
 // TODO - figure out why mem_util.h complains if I don't have this macro,
 //  but other code complains about redifinition if I do...
+//  I don't think I'm #including anything that should give us the CRT offsetof..
+//  May /NODEFAULTLIB would help, but I think that is only a linker option?
+
 // Using _ for now as a hack workaround
 #define offsetof_(type, member) ((uintptr)&(((type*)0)->member))
 
@@ -20,18 +23,19 @@ enum class Endianness : u8
     BIG
 };
 
-inline uintptr
-GetAlignmentOffset(uintptr value, uintptr alignment)
+function uintptr
+mem_align_offset(uintptr value, uintptr alignment)
 {
     // NOTE - Alignment is required to be power of 2
+    // TODO - runtime assert?
     
     uintptr alignMask = alignment - 1;
     uintptr alignOffset = (alignment - (value & alignMask)) & alignMask;
     return alignOffset;
 }
 
-inline void
-ZeroMemory(void* memory, uintptr cBytes)
+function void
+mem_zero(void* memory, uintptr cBytes)
 {
     bool isMemory8ByteAligned = (((uintptr)memory & 0x7) == 0);
     bool isCount8ByteMultiple = ((cBytes & 0x7) == 0);
@@ -61,51 +65,44 @@ ZeroMemory(void* memory, uintptr cBytes)
     }
 }
 
-#define ZeroArray(array) do { ZeroMemory((array), ArrayLen(array) * sizeof((array)[0])); } while (0)
+#define ZeroArray(array) do { mem_zero((array), ArrayLen(array) * sizeof((array)[0])); } while (0)
 #define FillArray(array, value) for (int i = 0; i < ArrayLen(array); i++) { (array)[i] = value; }
 
-inline void
-CopyMemory(void* src, void* dst, uintptr cBytes)
+function void
+mem_copy(void* dst, void* src, uintptr bytes)
 {
-    // NOTE - Args are reversed from C memcpy!
     // NOTE - Does not try to handle overlapping src / dst
-    // TODO - Copy multi-byte chunks for performance (like ZeroMemory does...)
-    // TODO - Make a "move" that does handle overlapping src / dst
+    // TODO - Copy multi-byte chunks for performance (like mem_zero does...)
 
-    u8 * byteSrc = (u8 *)src;
-    u8 * byteDst = (u8 *)dst;
-    for (uintptr iByte = 0; iByte < cBytes; iByte++)
+    u8 * s = (u8 *)src;
+    u8 * d = (u8 *)dst;
+    for (uintptr i = 0; i < bytes; i++)
     {
-        *byteDst = *byteSrc;
-        byteDst++;
-        byteSrc++;
+        *d = *s;
+        d++;
+        s++;
     }
 }
 
-template <typename T>
-inline void
-CopyStruct(T* src, T* dst)
-{
-    CopyMemory(src, dst, sizeof(*src));
-}
-
-inline void
-MoveMemory(void* src, void* dst, int cBytes)
+function void
+mem_move(void* dst, void* src, uintptr bytes)
 {
     // NOTE - Like CopyMemory, but handles overlapping src/dst
+    // TODO - Copy multi-byte chunks for performance (like mem_zero does...)
+
     if (src >= dst)
     {
-        CopyMemory(src, dst, cBytes);
+        mem_copy(dst, src, bytes);
     }
     else
     {
-        u8 * byteSrc = (u8 *)src + cBytes - 1;
-        u8 * byteDst = (u8 *)dst + cBytes - 1;
-        for (int iByte = cBytes - 1; iByte >= 0; iByte--)
+        u8 * s = (u8 *)src + bytes - 1;
+        u8 * d = (u8 *)dst + bytes - 1;
+        for (uintptr i = bytes - 1; i >= 0; i--)
         {
-            *byteDst = *byteSrc;
-            byteDst--;
-            byteSrc--;
+            *d = *s;
+            d--;
+            s--;
         }
     }
 }

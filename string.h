@@ -266,9 +266,9 @@ StringInsert(
     String result;
     result.cBytes = srcA.cBytes + srcB.cBytes;
     result.bytes = (char*)Allocate(memory, result.cBytes);
-    CopyMemory(srcA.bytes, result.bytes, iInsert);
-    CopyMemory(srcB.bytes, result.bytes + iInsert, srcB.cBytes);
-    CopyMemory(srcA.bytes + iInsert, result.bytes + iInsert + srcB.cBytes, srcA.cBytes - iInsert);
+    mem_copy(result.bytes, srcA.bytes, iInsert);
+    mem_copy(result.bytes + iInsert, srcB.bytes, srcB.cBytes);
+    mem_copy(result.bytes + iInsert + srcB.cBytes, srcA.bytes + iInsert, srcA.cBytes - iInsert);
     return result;
 }
 
@@ -278,8 +278,8 @@ StringConcat(String srcA, String srcB, MemoryRegion memory)
     String result;
     result.cBytes = srcA.cBytes + srcB.cBytes;
     result.bytes = (char*)Allocate(memory, result.cBytes);
-    CopyMemory(srcA.bytes, result.bytes, srcA.cBytes);
-    CopyMemory(srcB.bytes, result.bytes + srcA.cBytes, srcB.cBytes);
+    mem_copy(result.bytes, srcA.bytes, srcA.cBytes);
+    mem_copy(result.bytes + srcA.cBytes, srcB.bytes, srcB.cBytes);
     return result;
 }
 

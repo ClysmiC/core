@@ -34,7 +34,7 @@ struct OverflowHeader
     OverflowHeader * next;
 };
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
 struct DebugHistory
 {
     struct Entry
@@ -64,7 +64,7 @@ AddDebugEntry(DebugHistory * history, DebugHistory::Entry entry)
 
 struct MemoryRegionHeader
 {
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     DebugHistory debugHistory;
 #endif
 
@@ -86,7 +86,21 @@ static constexpr uintptr cBytesMinimumRegion = sizeof(MemoryRegionHeader) + 256;
 }
 
 // Opaque type provided by API
-typedef MemoryRegionHeader * MemoryRegion;
+using MemoryRegion = MemoryRegionHeader*;
+
+// "Clear To Zero"?
+enum class CTZ : u8
+{
+    NO = 0,
+    NIL = 0,
+
+    YES,
+};
+
+// @Cleanup - need these because core doesn't run hgen
+void* Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+void* AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+bool EndMemoryRegion_(MemoryRegion region, bool unlink);
 
 enum AllocType : u8
 {
@@ -115,7 +129,7 @@ BeginRootMemoryRegion(u8 * bytes, uintptr cBytes)
     return header;
 }
 
-inline void
+function void
 ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
 {
     FreeBlockHeader * pHeadOrig = *ppHead;
@@ -172,20 +186,6 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
         }
     }
 }
-
-// "Clear To Zero"?
-
-enum class CTZ : u8
-{
-    NO = 0,
-    NIL = 0,
-
-    YES,
-};
-
-// @Cleanup - need these because core doesn't run hgen
-void* Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
-void* AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
 
 inline void*
 AllocateFromSystem(uintptr cBytes)
@@ -259,7 +259,7 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType
     return regionHeader->sharedList;
 }
 
-void*
+function void*
 Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
@@ -303,7 +303,7 @@ Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
             shared->next->prev = split;
         }
 
-        MoveMemory(shared, split, sizeof(FreeBlockHeader));
+        mem_move(split, shared, sizeof(FreeBlockHeader));
         split->left = nullptr;
         if (rightOfShared)
         {
@@ -327,7 +327,7 @@ Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 
     if ((bool)clearToZero)
     {
-        ZeroMemory(result, cBytes);
+        mem_zero(result, cBytes);
     }
 
     return result;
@@ -354,7 +354,7 @@ AllocateArray(
     return result;
 }
 
-void*
+function void*
 AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
@@ -439,10 +439,10 @@ AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
     // @Slow - Should be a separate call or compile-time template param?
     if (clearToZero != CTZ::NIL)
     {
-        ZeroMemory(result, cBytesOrig);
+        mem_zero(result, cBytesOrig);
     }
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     DebugHistory::Entry entry;
     entry.type = DebugHistory::Entry::Type::Allocate;
     entry.address = result;
@@ -462,7 +462,7 @@ AllocateTracked(
     return result;
 }
 
-void
+function void
 RemoveFromList(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
 {
     if (*ppHead == pItem)
@@ -487,7 +487,7 @@ RemoveFromList(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
     }
 }
 
-void
+function void
 AddToListSorted(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
 {
     FreeBlockHeader ** ppNextToFix = ppHead;
@@ -515,7 +515,7 @@ AddToListSorted(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
     *ppNextToFix = pItem;
 }
 
-void
+function void
 FreeTrackedAllocation(MemoryRegion region, void* allocation)
 {
     Assert(region);
@@ -588,7 +588,7 @@ FreeTrackedAllocation(MemoryRegion region, void* allocation)
         AddToListSorted(&regionHeader->trackedList, (FreeBlockHeader *)trackedHeader);
     }
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     DebugHistory::Entry entry;
     entry.type = DebugHistory::Entry::Type::Free;
     entry.address = allocation;
@@ -596,7 +596,7 @@ FreeTrackedAllocation(MemoryRegion region, void* allocation)
 #endif
 }
 
-void*
+function void*
 ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
 {
     Assert(region);
@@ -624,7 +624,7 @@ ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
 
             result = AllocateTracked(region, cBytesNew);
 
-            CopyMemory(allocation, result, cBytesOld);
+            mem_copy(result, allocation, cBytesOld);
             FreeTrackedAllocation(region, allocation);
         }
     }
@@ -632,7 +632,7 @@ ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
     return result;
 }
 
-void
+function void
 FreeSubRegionAllocation(MemoryRegion patron, void* subregion)
 {
     MemoryRegionHeader * patronHeader = patron;
@@ -660,7 +660,7 @@ FreeSubRegionAllocation(MemoryRegion patron, void* subregion)
 
 }
 
-void
+function void
 FreeOverflowAllocations_(MemoryRegionHeader * region)
 {
     OverflowHeader * overflow = region->overflow;
@@ -673,11 +673,7 @@ FreeOverflowAllocations_(MemoryRegionHeader * region)
     }
 }
 
-// @Cleanup - need these because core doesn't run hgen
-
-bool EndMemoryRegion_(MemoryRegion region, bool unlink);
-
-void
+function void
 FreeChildAllocations_(MemoryRegionHeader * region)
 {
     MemoryRegionHeader * child = region->first_child;
@@ -794,7 +790,7 @@ struct RecycleAllocator
     Slot* recycleList;          // Free list. Using "recycle" nomenclature to match the type and function names.
     MemoryRegion memory;
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     int countLive;               // total # of slots live
     int countAvailableToRecycle; // total # of slots on recycled list
     int countRecycledTotal;      // total # of allocations serviced via recycling
@@ -822,10 +818,10 @@ Allocate(
 
         if ((bool)clearToZero)
         {
-            ZeroMemory(result, sizeof(RecycleAllocator<T>::Slot));
+            mem_zero(result, sizeof(RecycleAllocator<T>::Slot));
         }
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
         alloc->countAvailableToRecycle--;
         alloc->countRecycledTotal++;
         Assert(alloc->countAvailableToRecycle >= 0);
@@ -836,7 +832,7 @@ Allocate(
         result = (T*)Allocate(alloc->memory, sizeof(RecycleAllocator<T>::Slot), clearToZero);
     }
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     alloc->countAllocatedTotal++;
     alloc->countLive++;
 #endif
@@ -868,7 +864,7 @@ PreallocateRecycleListContiguous(
 
     alloc->recycleList = slots;
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     alloc->countAvailableToRecycle += cntItemPreallocate;
 #endif
 }
@@ -882,7 +878,7 @@ Recycle(RecycleAllocator<T> * alloc, T* item)
     slot->pNextRecycled = alloc->recycleList;
     alloc->recycleList = slot;
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     alloc->countAvailableToRecycle++;
     alloc->countLive--;
     Assert(alloc->countLive >= 0);

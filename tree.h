@@ -37,7 +37,7 @@ struct TreeBuilder
     MemberRef<T, T*> mPrevSibling; // Optional (if you maintain siblings as a doubly-linked list)
     MemberRef<T, T*> mLastChild;   // Optional (if parent stores pointer to last child)
 
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     bool is_finished;
 #endif
     
@@ -89,7 +89,7 @@ EndRoot(TreeBuilder<T> * builder, bool shouldResetBuilder=false)
     Assert(!builder->is_finished);
     Assert(builder->current_parent == builder->root);
     
-#if DEBUG_BUILD
+#if BUILD_DEBUG
     builder->is_finished = true;
 #endif
 
