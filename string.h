@@ -529,9 +529,8 @@ StringHasSuffix(String str, String suffix)
     return true;
 }
 
-#define STB_SPRINTF_IMPLEMENTATION
+// TODO - get rid of core dependency on stb_sprintf?
 #include "lib/stb/stb_sprintf.h"
-#undef STB_SPRINTF_IMPLEMENTATION
 
 function int
 ZStringFromPrintf(char* buffer, int cBytesBuffer, char* fmt, ...)

@@ -249,17 +249,6 @@ static f32 constexpr goldenRatio = 1.61803398875f;
 
 
 
-// --- Misc. utils
-
-// TODO - Should these always use 64 bit?
-#define ArrayLen(array) (sizeof(array) / sizeof((array)[0]))
-#define Kilobytes(value) ((value) * 1024LL)
-#define Megabytes(value) (Kilobytes(value) * 1024LL)
-#define Gigabytes(value) (Megabytes(value) * 1024LL)
-#define Terabytes(value) (Gigabytes(value) * 1024LL)
-
-
-
 // --- Defer macro
 // Courtesy of https://www.gingerbill.org/article/2015/08/19/defer-in-cpp/
 
@@ -282,8 +271,6 @@ defer_<F> defer_func_(F f) {
 
 
 // --- Include remaining core features
-
-#include <new> // apparently needed for placement new? TODO - Just get rid of all ctors then axe this
 
 #include "math.h"
 #include "mem_util.h"

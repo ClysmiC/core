@@ -503,7 +503,7 @@ AddToListSorted(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
     }
     else
     {
-        pItem->prev = (FreeBlockHeader *)((u8 *)ppNextToFix - offsetof(FreeBlockHeader, next));
+        pItem->prev = (FreeBlockHeader *)((u8 *)ppNextToFix - offsetof_(FreeBlockHeader, next));
     }
 
     pItem->next = *ppNextToFix;

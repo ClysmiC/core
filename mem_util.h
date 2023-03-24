@@ -1,5 +1,17 @@
 // !SkipFile
 
+// TODO - figure out why mem_util.h complains if I don't have this macro,
+//  but other code complains about redifinition if I do...
+// Using _ for now as a hack workaround
+#define offsetof_(type, member) ((uintptr)&(((type*)0)->member))
+
+#define ArrayLen(array) (sizeof(array) / sizeof((array)[0]))
+
+#define Kilobytes(value) ((value) * 1024LL)
+#define Megabytes(value) (Kilobytes(value) * 1024LL)
+#define Gigabytes(value) (Megabytes(value) * 1024LL)
+#define Terabytes(value) (Gigabytes(value) * 1024LL)
+
 enum class Endianness : u8
 {
     LITTLE = 0,
