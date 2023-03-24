@@ -98,7 +98,7 @@ mem_move(void* dst, void* src, uintptr bytes)
     {
         u8 * s = (u8 *)src + bytes - 1;
         u8 * d = (u8 *)dst + bytes - 1;
-        for (uintptr i = bytes - 1; i >= 0; i--)
+        for (intptr i = bytes - 1; i >= 0; i--)
         {
             *d = *s;
             d--;
