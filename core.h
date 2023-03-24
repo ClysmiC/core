@@ -95,25 +95,23 @@
 // --- Type definitions
 
 #include <stdint.h>
-#include <stddef.h>
-#include <float.h>
 
-typedef unsigned int uint;
+using uint = unsigned int;
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef uintptr_t uintptr;
+using u8 = uint8_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 =  uint64_t;
+using uintptr = uintptr_t;
 
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
-typedef int64_t i64;
-typedef intptr_t intptr;
+using i8 = int8_t;
+using i16 = int16_t;
+using i32 = int32_t;
+using i64 = int64_t;
+using intptr = intptr_t;
 
-typedef float f32;
-typedef double f64;
+using f32 = float;
+using f64 = double;
 
 namespace U64
 {
@@ -178,9 +176,6 @@ static f32 constexpr sqrt2 = 1.41421356237f;
 static f32 constexpr halfSqrt2 = 0.70710678118f;
 
 static f32 constexpr goldenRatio = 1.61803398875f;
-
-static f32 constexpr max = FLT_MAX;
-static f32 constexpr minPositive = FLT_MIN;
 
 } // namespace F32
 
@@ -290,7 +285,6 @@ defer_<F> defer_func_(F f) {
 
 #include <new> // apparently needed for placement new? TODO - Just get rid of all ctors then axe this
 
-#include "intrinsics.h"
 #include "math.h"
 #include "mem_util.h"
 #include "mem_alloc.h"

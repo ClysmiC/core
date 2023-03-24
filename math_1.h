@@ -17,17 +17,17 @@ f32_eq_approx(
     return result;
 }
 
-template <class T, class U>
-constexpr T
-lerp(T a, T b, U u)
+template <class T>
+constexpr auto
+Lerp(T a, T b, f32 u)
 {
-    T result = ((1 - u) * a) + (u * b);
+    auto result = ((1 - u) * a) + (u * b);
     return result;
 }
 
 template <class T>
 constexpr T
-clamp(T value, T min, T max)
+Clamp(T value, T min, T max)
 {
     T result = value;
     result = Max(result, min);
@@ -544,7 +544,7 @@ NormalizeSafeYAxis(Vec2 v)
 inline bool
 IsNormalized(Vec2 v, f32 epsilon=0.001f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -560,7 +560,7 @@ inline bool
 AreOrthogonal(Vec2 v0, Vec2 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
@@ -879,7 +879,7 @@ NormalizeSafeZAxis(Vec3 v)
 inline bool
 IsNormalized(Vec3 v, f32 epsilon=0.001f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -895,7 +895,7 @@ inline bool
 AreOrthogonal(Vec3 v0, Vec3 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
@@ -1187,7 +1187,7 @@ NormalizeSafeWAxis(Vec4 v)
 inline bool
 IsNormalized(Vec4 v, f32 epsilon=0.001f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -1203,7 +1203,7 @@ inline bool
 AreOrthogonal(Vec4 v0, Vec4 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
@@ -1316,7 +1316,7 @@ Vec2iFloor(Vec2 v)
 inline Vec2i
 Vec2iCeil(Vec2 v)
 {
-    Vec2i result = Vec2i((int)CeilF32ToI32(v.x), (int)CeilF32ToI32(v.y));
+    Vec2i result = Vec2i(Ceil(v.x), Ceil(v.y));
     return result;
 }
 
@@ -2820,7 +2820,7 @@ TestRectOverlapsCircle(Rect2 rect, Circle2 circle)
     else if (circle.center.y > rect.max.y)
         rectClosest.y = rect.max.y;
 
-    if (LengthSq(circle.center - rectClosest) <= Square(circle.radius))
+    if (LengthSq(circle.center - rectClosest) <= circle.radius * circle.radius)
         return true;
 
     return false;
@@ -2830,7 +2830,10 @@ inline bool
 TestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
 {
     f32 distSq = LengthSq(c0.center - c1.center);
-    bool result = distSq < Square(c0.radius + c1.radius);
+    f32 r = c0.radius + c1.radius;
+    f32 rSq = r * r;
+
+    bool result = distSq < rSq;
     return result;
 }
 
@@ -2845,7 +2848,10 @@ FullTestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
 {
     CircleOverlapTestResult result = {};
     f32 distSq = LengthSq(c0.center - c1.center);
-    if (distSq < Square(c0.radius + c1.radius))
+    f32 r = c0.radius + c1.radius;
+    f32 rSq = r * r;
+
+    if (distSq < rSq)
     {
         result.overlaps = true;
 

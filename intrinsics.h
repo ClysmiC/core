@@ -6,59 +6,52 @@ DEBUG_OPTIMIZE_ON
 
 #include <math.h>
 
-#if COMPILER_MSVC
-#include <intrin.h>
-#endif
+#include <immintrin.h>
 
-constexpr f32
-abs(f32 value)
+TODO_MATH_CONSTEXPR f32
+Abs(f32 value)
 {
     f32 result = fabsf(value);
     return result;
 }
 
-constexpr f64
-abs(f64 value)
+TODO_MATH_CONSTEXPR f64
+Abs(f64 value)
 {
     f64 result = fabs(value);
     return result;
 }
 
-// Already defined in <math.h>
-// constexpr i32
-// abs(i32 value)
-//  { }
+TODO_MATH_CONSTEXPR i32
+Abs(i32 value)
+{
+    i32 result = abs(value);
+    return result;
+}
 
-constexpr i64
-abs(i64 value)
+TODO_MATH_CONSTEXPR i64
+Abs(i64 value)
 {
     i64 result = llabs(value);
     return result;
 }
 
-
 template <class T>
 constexpr T
-signof(T value)
+SignOf(T value)
 {
     T result = (value >= T(0)) ? T(1) : T(-1);
     return result;
 }
 
-constexpr f32
-sqrt(f32 value)
+TODO_MATH_CONSTEXPR f32
+Sqrt(f32 value)
 {
     f32 result = sqrtf(value);
     return result;
 }
 
-
-constexpr i32
-i32_from_f32_rounded(f32 value)
-{
-    i32 result = (i32)((value >= 0) ? (value + 0.5f) : (value - 0.5f));
-    return result;
-}
+#if 0
 
 constexpr i64
 i64_from_
@@ -94,6 +87,23 @@ NormalizedF32ToU8(f32 value)
     f32 scaledValue = value * 0xFF;
     u8 result = RoundF32ToU8(scaledValue);
     return result;
+}
+#endif
+
+TODO_MATH_CONSTEXPR i32
+Round(f32 value)
+{
+    // i32 result = (i32)((value >= 0) ? (value + 0.5f) : (value - 0.5f));
+
+    // Converts using CPU rounding mode
+    i32 result = _mm_cvt_ss2si(_mm_set_ss(value));
+    return result;
+}
+
+inline i32
+Ceil(f32 value)
+{
+    return (i32)ceilf(value);
 }
 
 inline f32
@@ -138,6 +148,7 @@ struct BitScanResult
     bool found;
 };
 
+#if 0
 inline BitScanResult
 FindLeastSignificantBitSet(u32 value)
 {
@@ -189,5 +200,6 @@ RotateRight(u32 value, int shift)
     
     return result;
 }
+#endif
 
 DEBUG_OPTIMIZE_OFF

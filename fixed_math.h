@@ -814,7 +814,7 @@ SignOf(fix64 Value)
 // NOTE - Bigger default epsilon for fix64 Values than f32 because calculations
 //  tend to be a bit imprecise
 inline bool
-ApproxEq(
+f32_eq_approx(
     fix64 lhs,
     fix64 rhs,
     fix64 epsilon=0.01f)
@@ -1685,7 +1685,7 @@ LimitLength(Vec2x v, fix64 maxLength)
 inline bool
 IsNormalized(Vec2x v, fix64 epsilon=0.01f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -1701,7 +1701,7 @@ inline bool
 AreOrthogonal(Vec2x v0, Vec2x v1)
 {
     fix64 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
@@ -2011,7 +2011,7 @@ NormalizeSafeZAxis(Vec3x v)
 inline bool
 IsNormalized(Vec3x v, fix64 epsilon=0.001f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -2027,7 +2027,7 @@ inline bool
 AreOrthogonal(Vec3x v0, Vec3x v1)
 {
     fix64 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
@@ -2302,7 +2302,7 @@ NormalizeSafeWAxis(Vec4x v)
 inline bool
 IsNormalized(Vec4x v, fix64 epsilon=0.001f)
 {
-    bool result = ApproxEq(Length(v), 1.0f, epsilon);
+    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
 
@@ -2318,7 +2318,7 @@ inline bool
 AreOrthogonal(Vec4x v0, Vec4x v1)
 {
     fix64 dot = Dot(v0, v1);
-    bool result = ApproxEq(dot, 0);
+    bool result = f32_eq_approx(dot, 0);
     return result;
 }
 
