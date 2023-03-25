@@ -221,7 +221,7 @@ MakeUtf8CodeUnit_Fast(u32 codePoint, UTF8::CodeUnitType codeUnitType, int cFollo
 }
 
  String
-Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, MemoryRegion memory, Endianness endianness=Endianness::LITTLE)
+Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness endianness=Endianness::LITTLE)
 {
     String result = {};
 

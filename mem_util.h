@@ -106,3 +106,16 @@ mem_move(void* dst, void* src, uintptr bytes)
         }
     }
 }
+
+function void
+mem_set(void* dst, u8 value, uintptr bytes)
+{
+    // TODO - Copy multi-byte chunks for performance (like mem_zero does...)
+
+    u8* cursor = (u8*)dst;
+    while (bytes--)
+    {
+        *cursor = value;
+        cursor++;
+    }
+}

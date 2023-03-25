@@ -7,6 +7,17 @@
 // - Audit for degenerate cases where things like overflow allocations are somehow too small to store an overflow + free header
 // - Clear to Zero on allocations should be a separate call or compile-time template param?
 
+namespace MEM
+{
+    using Fn_System_Allocate = void* (*) (uintptr);
+    using Fn_System_Reallocate = void* (*) (void*, uintptr);
+    using Fn_System_Free = void (*) (void*);
+
+    Fn_System_Allocate system_allocate = {};
+    Fn_System_Reallocate system_reallocate = {};
+    Fn_System_Free system_free = {};
+};
+
 enum class TrackedState : u8
 {
     FreeUnshared,
@@ -34,7 +45,9 @@ struct OverflowHeader
     OverflowHeader * next;
 };
 
-#if BUILD_DEBUG
+#define MEM_DEBUG_HISTORY_ENABLE 0
+
+#if MEM_DEBUG_HISTORY_ENABLE
 struct DebugHistory
 {
     struct Entry
@@ -62,18 +75,18 @@ AddDebugEntry(DebugHistory * history, DebugHistory::Entry entry)
 }
 #endif
 
-struct MemoryRegionHeader
+struct Memory_Region_Header
 {
-#if BUILD_DEBUG
+#if MEM_DEBUG_HISTORY_ENABLE
     DebugHistory debugHistory;
 #endif
 
     uintptr cBytesBudget;
-    MemoryRegionHeader * patron; // Provides us with memory. Must be an ancestor
-    MemoryRegionHeader * parent; // When parent gets freed, we get freed too
-    MemoryRegionHeader * first_child;
-    MemoryRegionHeader * next_sibling;
-    MemoryRegionHeader * prev_sibling;
+
+    Memory_Region_Header * parent;
+    Memory_Region_Header * first_child;
+    Memory_Region_Header * next_sibling;
+    Memory_Region_Header * prev_sibling;
     OverflowHeader * overflow;
     FreeBlockHeader * trackedList;
     FreeBlockHeader * sharedList;
@@ -82,11 +95,11 @@ struct MemoryRegionHeader
 namespace MEM_ALLOC // @Cleanup - need to put this after struct definitions because of sizeof dependency...
 {
 static constexpr uintptr cBytesTooSmallToBotherTracking = sizeof(FreeBlockHeader) + 63;
-static constexpr uintptr cBytesMinimumRegion = sizeof(MemoryRegionHeader) + 256;
+static constexpr uintptr cBytesMinimumRegion = sizeof(Memory_Region_Header) + 256;
 }
 
-// Opaque type provided by API
-using MemoryRegion = MemoryRegionHeader*;
+// "Opaque type" (but not really, due to unity build) provided by API
+using Memory_Region = Memory_Region_Header*;
 
 // "Clear To Zero"?
 enum class CTZ : u8
@@ -98,36 +111,15 @@ enum class CTZ : u8
 };
 
 // @Cleanup - need these because core doesn't run hgen
-void* Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
-void* AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
-bool EndMemoryRegion_(MemoryRegion region, bool unlink);
+void* Allocate(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+void* AllocateTracked(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+bool mem_region_end_(Memory_Region region, bool unlink);
 
 enum AllocType : u8
 {
     Untracked,
     Tracked
 };
-
-function MemoryRegion
-BeginRootMemoryRegion(u8 * bytes, uintptr cBytes)
-{
-    if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
-    {
-        // Not sure how I want to handle this...
-
-        AssertTodo;
-        return nullptr;
-    }
-
-    MemoryRegionHeader * header = (MemoryRegionHeader *)bytes;
-    *header = {};
-    header->cBytesBudget = cBytes;
-    header->sharedList = (FreeBlockHeader *)(header + 1);
-    *header->sharedList = {};
-    header->sharedList->cBytes = header->cBytesBudget - sizeof(MemoryRegionHeader);
-    header->sharedList->state = TrackedState::FreeShared;
-    return header;
-}
 
 function void
 ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
@@ -190,19 +182,17 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
 inline void*
 AllocateFromSystem(uintptr cBytes)
 {
-    // TOOD - Better way to expose/configure allocations from the system/OS?
-    return new u8[cBytes];
+    return MEM::system_allocate(cBytes);
 }
 
 inline void
 FreeFromSystem(void* allocation)
 {
-    // TOOD - Better way to expose/configure allocations from the system/OS?
-    delete[] allocation;
+    MEM::system_free(allocation);
 }
 
 inline FreeBlockHeader *
-EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType allocType)
+EnsureBlockWithSize(Memory_Region_Header * regionHeader, uintptr cBytes, AllocType allocType)
 {
     // NOTE - Caller is responsible for adding bytes for TrackedHeader if making a tracked allocation
 
@@ -215,7 +205,7 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType
         return regionHeader->trackedList;
     }
 
-    // Allocate an overflow region from our patron if shared block is too small
+    // Allocate an overflow region from our parent if shared block is too small
 
     if (!regionHeader->sharedList ||
         regionHeader->sharedList->cBytes < cBytes)
@@ -226,9 +216,9 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType
         cBytes = max(cBytes, regionHeader->cBytesBudget);
 
         OverflowHeader * overflowHeader;
-        if (regionHeader->patron)
+        if (regionHeader->parent)
         {
-            overflowHeader = (OverflowHeader *)AllocateTracked(regionHeader->patron, cBytes);
+            overflowHeader = (OverflowHeader *)AllocateTracked(regionHeader->parent, cBytes);
         }
         else
         {
@@ -260,7 +250,7 @@ EnsureBlockWithSize(MemoryRegionHeader * regionHeader, uintptr cBytes, AllocType
 }
 
 function void*
-Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
+Allocate(Memory_Region region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
 
@@ -268,7 +258,7 @@ Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 
     void* result;
 
-    MemoryRegionHeader * regionHeader = region;
+    Memory_Region_Header * regionHeader = region;
 
     // Make sure our shared block is big enough!
 
@@ -336,7 +326,7 @@ Allocate(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 template <typename T>
 T*
 Allocate(
-    MemoryRegion region,
+    Memory_Region region,
     CTZ clearToZero=CTZ::NIL)
 {
     T* result = (T*)Allocate(region, sizeof(T), clearToZero);
@@ -346,7 +336,7 @@ Allocate(
 template <typename T>
 T*
 AllocateArray(
-    MemoryRegion region,
+    Memory_Region region,
     uintptr count,
     CTZ clearToZero=CTZ::NIL)
 {
@@ -355,7 +345,7 @@ AllocateArray(
 }
 
 function void*
-AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
+AllocateTracked(Memory_Region region, uintptr cBytes, CTZ clearToZero)
 {
     // HMM - Gracefully handle 0 byte allocation?
 
@@ -363,7 +353,7 @@ AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 
     void* result;
 
-    MemoryRegionHeader * regionHeader = region;
+    Memory_Region_Header * regionHeader = region;
 
     // Make sure our tracked or free block is big enough!
 
@@ -442,7 +432,7 @@ AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
         mem_zero(result, cBytesOrig);
     }
 
-#if BUILD_DEBUG
+#if MEM_DEBUG_HISTORY_ENABLE
     DebugHistory::Entry entry;
     entry.type = DebugHistory::Entry::Type::Allocate;
     entry.address = result;
@@ -455,7 +445,7 @@ AllocateTracked(MemoryRegion region, uintptr cBytes, CTZ clearToZero)
 template <typename T>
 T*
 AllocateTracked(
-    MemoryRegion region,
+    Memory_Region region,
     CTZ clearToZero=CTZ::NIL)
 {
     T* result = (T*)AllocateTracked(region, sizeof(T), clearToZero);
@@ -516,11 +506,11 @@ AddToListSorted(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
 }
 
 function void
-FreeTrackedAllocation(MemoryRegion region, void* allocation)
+FreeTrackedAllocation(Memory_Region region, void* allocation)
 {
     Assert(region);
 
-    MemoryRegionHeader * regionHeader = region;
+    Memory_Region_Header * regionHeader = region;
     TrackedBlockHeader * trackedHeader = (TrackedBlockHeader *)((u8 *)allocation - sizeof(TrackedBlockHeader));
     Assert(trackedHeader->state == TrackedState::Allocated);
 
@@ -588,7 +578,7 @@ FreeTrackedAllocation(MemoryRegion region, void* allocation)
         AddToListSorted(&regionHeader->trackedList, (FreeBlockHeader *)trackedHeader);
     }
 
-#if BUILD_DEBUG
+#if MEM_DEBUG_HISTORY_ENABLE
     DebugHistory::Entry entry;
     entry.type = DebugHistory::Entry::Type::Free;
     entry.address = allocation;
@@ -597,7 +587,7 @@ FreeTrackedAllocation(MemoryRegion region, void* allocation)
 }
 
 function void*
-ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
+ReallocateTracked(Memory_Region region, void* allocation, uintptr cBytesNew)
 {
     Assert(region);
 
@@ -633,24 +623,42 @@ ReallocateTracked(MemoryRegion region, void* allocation, uintptr cBytesNew)
 }
 
 function void
-FreeSubRegionAllocation(MemoryRegion patron, void* subregion)
+FreeSubRegionAllocation(Memory_Region parent, void* subregion)
 {
-    MemoryRegionHeader * patronHeader = patron;
-    if (patronHeader)
+    Memory_Region_Header * parentHeader = parent;
+    if (parentHeader)
     {
-        bool isInRegion = (subregion >= patronHeader) && (subregion < (u8 *)patronHeader + patronHeader->cBytesBudget);
+        bool isInRegion = (subregion >= parentHeader) && (subregion < (u8 *)parentHeader + parentHeader->cBytesBudget);
         if (isInRegion)
         {
-            FreeTrackedAllocation(patronHeader, subregion);
+            FreeTrackedAllocation(parentHeader, subregion);
         }
         else
         {
-            // NOTE - We are probably better off just flagging the overflow region with if it
-            //  was allocated by the root region calling out to the system. In that case, we
-            //  could skip this recursion and directly call FreeFromSystem. (We'd still want
-            //  to recurse in the non-system allocation case only if MEM_ALLOC::trackSubRegions)
+            // TODO - this doesn't work, because the region is a tracked allocation which means comes from the
+            //  right end of the overflow region. +1 reason to put tracked allocations on the left and untracked on the right.
+            //  Then, I think this will work
+#if 0
+            // Check if the subregion itself was an overflow allocation in the parent.
+            // If so, we want to the deallocation to include the overflow header.
+            OverflowHeader * overflow = parentHeader->overflow;
+            while (overflow)
+            {
+                // @Slow, maybe we should store this on the Memory_Region header rather than walking this list?
+                if (overflow == ((OverflowHeader*)subregion) - 1)
+                {
+                    FreeSubRegionAllocation(parentHeader->parent, overflow);
+                    break;
+                }
 
-            FreeSubRegionAllocation(patronHeader->patron, subregion);
+                overflow = overflow->next;
+            }
+
+            if (bool not_found = !overflow)
+#endif
+            {
+                FreeSubRegionAllocation(parentHeader->parent, subregion);
+            }
         }
     }
     else
@@ -661,36 +669,36 @@ FreeSubRegionAllocation(MemoryRegion patron, void* subregion)
 }
 
 function void
-FreeOverflowAllocations_(MemoryRegionHeader * region)
+FreeOverflowAllocations_(Memory_Region_Header * region)
 {
     OverflowHeader * overflow = region->overflow;
     while (overflow)
     {
         OverflowHeader * overflowNext = overflow->next;
-        FreeSubRegionAllocation(region->patron, overflow);
+        FreeSubRegionAllocation(region->parent, overflow);
 
         overflow = overflowNext;
     }
 }
 
 function void
-FreeChildAllocations_(MemoryRegionHeader * region)
+FreeChildAllocations_(Memory_Region_Header * region)
 {
-    MemoryRegionHeader * child = region->first_child;
+    Memory_Region_Header * child = region->first_child;
     while (child)
     {
-        MemoryRegionHeader * childNext = child->next_sibling;
-        EndMemoryRegion_(child, false /* unlink */); // Don't bother unlinking, since metadata is being de-allocated too
+        Memory_Region_Header * childNext = child->next_sibling;
+        mem_region_end_(child, false /* unlink */); // Don't bother unlinking, since metadata is being de-allocated too
         child = childNext;
     }
 }
 
-bool
-EndMemoryRegion_(MemoryRegion region, bool unlink)
+function bool
+mem_region_end_(Memory_Region region, bool unlink)
 {
-    MemoryRegionHeader * regionHeader = region;
+    Memory_Region_Header * regionHeader = region;
     FreeOverflowAllocations_(regionHeader);
-    FreeChildAllocations_(regionHeader); // NOTE - This recurses back to EndMemoryRegion_
+    FreeChildAllocations_(regionHeader); // NOTE - This recurses back to mem_region_end_
 
     if (unlink)
     {
@@ -710,27 +718,27 @@ EndMemoryRegion_(MemoryRegion region, bool unlink)
         }
     }
 
-    FreeSubRegionAllocation(regionHeader->patron, region);
+    FreeSubRegionAllocation(regionHeader->parent, region);
 
     // TODO - Maybe add some auditing and return false if it fails? Or just make this return void?
     return true;
 }
 
-bool
-EndMemoryRegion(MemoryRegion region)
+function bool
+mem_region_end(Memory_Region region)
 {
     bool unlink = true;
-    bool result = EndMemoryRegion_(region, unlink);
+    bool result = mem_region_end_(region, unlink);
     return result;
 }
 
-bool
-ResetMemoryRegion(MemoryRegion region)
+function bool
+mem_region_reset(Memory_Region region)
 {
     FreeOverflowAllocations_(region);
     FreeChildAllocations_(region);
 
-    MemoryRegionHeader * regionHeader = region;
+    Memory_Region_Header * regionHeader = region;
     regionHeader->first_child = nullptr;
     regionHeader->overflow = nullptr;
 
@@ -738,28 +746,54 @@ ResetMemoryRegion(MemoryRegion region)
     return true;
 }
 
-MemoryRegion
-CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uintptr cBytes)
+// Initialize a root memory initially backed by the provided memory.
+// If a an allocation would "overflow" a memory region, it will use MEM::system_allocate(..) to get more.
+function Memory_Region
+mem_region_root_begin(u8 * bytes, uintptr cBytes)
 {
-    if (cBytes < MEM_ALLOC::cBytesMinimumRegion)
-        return nullptr;
+    cBytes = max(cBytes, MEM_ALLOC::cBytesMinimumRegion);
 
-    MemoryRegionHeader * result = nullptr;
+    Memory_Region_Header * header = (Memory_Region_Header *)bytes;
+    *header = {};
+    header->cBytesBudget = cBytes;
+    header->sharedList = (FreeBlockHeader *)(header + 1);
+    *header->sharedList = {};
+    header->sharedList->cBytes = header->cBytesBudget - sizeof(Memory_Region_Header);
+    header->sharedList->state = TrackedState::FreeShared;
+    return header;
+}
 
-    // TODO - we might actually get a bigger region than asked for, but we don't really have a way of knowing...
+// Initialize a sub-region within the provided parent region.
+// If parent is nullptr, initializes a root memory region by calling MEM::system_allocate(..)
+function Memory_Region
+mem_region_begin(Memory_Region parent, uintptr cBytes)
+{
+    cBytes = max(cBytes, MEM_ALLOC::cBytesMinimumRegion);
 
-    result = (MemoryRegionHeader *)AllocateTracked(patron, cBytes);
+    Memory_Region_Header * result = nullptr;
+    if (parent)
+    {
+        result = (Memory_Region_Header *)AllocateTracked(parent, cBytes);
+    }
+    else
+    {
+        result = (Memory_Region_Header *)MEM::system_allocate(cBytes);
+    }
+
     *result = {};
     result->cBytesBudget = cBytes;
     result->sharedList = (FreeBlockHeader *)(result + 1);
     *result->sharedList = {};
-    result->sharedList->cBytes = result->cBytesBudget - sizeof(MemoryRegionHeader);
+    result->sharedList->cBytes = result->cBytesBudget - sizeof(Memory_Region_Header);
     result->sharedList->state = TrackedState::FreeShared;
-    result->patron = patron;
     result->parent = parent;
     result->next_sibling = parent->first_child;
     result->prev_sibling = nullptr;
-    parent->first_child = result;
+
+    if (parent)
+    {
+        parent->first_child = result;
+    }
 
     if (result->next_sibling)
     {
@@ -769,12 +803,6 @@ CreateSubRegion(MemoryRegion parent, MemoryRegion patron, uintptr cBytes)
     return result;
 }
 
-inline MemoryRegion
-CreateSubRegion(MemoryRegion parentAndPatron, uintptr cBytes)
-{
-    MemoryRegion result = CreateSubRegion(parentAndPatron, parentAndPatron, cBytes);
-    return result;
-}
 
 // --- Allocator for a single type. Freed values are recycled to service future allocations.
 
@@ -788,7 +816,7 @@ struct RecycleAllocator
     };
 
     Slot* recycleList;          // Free list. Using "recycle" nomenclature to match the type and function names.
-    MemoryRegion memory;
+    Memory_Region memory;
 
 #if BUILD_DEBUG
     int countLive;               // total # of slots live
@@ -798,7 +826,7 @@ struct RecycleAllocator
 #endif
 
     RecycleAllocator() = default;
-    RecycleAllocator(MemoryRegion memory) { *this = {}; this->memory = memory; }
+    RecycleAllocator(Memory_Region memory) { *this = {}; this->memory = memory; }
 };
 
 template <typename T>
@@ -841,7 +869,7 @@ Allocate(
 }
 
 template <typename T>
- void
+void
 PreallocateRecycleListContiguous(
     RecycleAllocator<T> * alloc,
     int cntItemPreallocate,
@@ -884,3 +912,5 @@ Recycle(RecycleAllocator<T> * alloc, T* item)
     Assert(alloc->countLive >= 0);
 #endif
 }
+
+#undef MEM_DEBUG_HISTORY_ENABLE

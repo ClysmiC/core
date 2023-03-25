@@ -11,28 +11,48 @@ DEBUG_OPTIMIZE_ON
 TODO_MATH_CONSTEXPR f32
 Abs(f32 value)
 {
+#if CRT_DISABLED
+    f32 result = (value < 0) ? -value : value;
+#else
     f32 result = fabsf(value);
+#endif
+
     return result;
 }
 
 TODO_MATH_CONSTEXPR f64
 Abs(f64 value)
 {
+#if CRT_DISABLED
+    f64 result = (value < 0) ? -value : value;
+#else
     f64 result = fabs(value);
+#endif
+
     return result;
 }
 
 TODO_MATH_CONSTEXPR i32
 Abs(i32 value)
 {
+#if CRT_DISABLED
+    i32 result = (value < 0) ? -value : value;
+#else
     i32 result = abs(value);
+#endif
+
     return result;
 }
 
 TODO_MATH_CONSTEXPR i64
 Abs(i64 value)
 {
+#if CRT_DISABLED
+    i64 result = (value < 0) ? -value : value;
+#else
     i64 result = llabs(value);
+#endif
+
     return result;
 }
 
@@ -40,16 +60,23 @@ template <class T>
 constexpr T
 SignOf(T value)
 {
+    // TODO - decide if I prefer template or overloads for Abs and SignOf and be
+    //  consistent.
+    // Templates
+    //  +would let me use them on fixed math values
+    //  -would let me use them on unsigned ints, which makes no sense
     T result = (value >= T(0)) ? T(1) : T(-1);
     return result;
 }
 
+#if !CRT_DISABLED
 TODO_MATH_CONSTEXPR f32
 Sqrt(f32 value)
 {
     f32 result = sqrtf(value);
     return result;
 }
+#endif
 
 #if 0
 
@@ -90,22 +117,75 @@ NormalizedF32ToU8(f32 value)
 }
 #endif
 
-TODO_MATH_CONSTEXPR i32
-Round(f32 value)
+inline f32
+f32_round(f32 value)
 {
-    // i32 result = (i32)((value >= 0) ? (value + 0.5f) : (value - 0.5f));
-
-    // Converts using CPU rounding mode
-    i32 result = _mm_cvt_ss2si(_mm_set_ss(value));
+    // @SSE 4.1
+    f32 result = _mm_cvtss_f32(
+                    _mm_round_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value),
+                        _MM_FROUND_TO_NEAREST_INT));
     return result;
 }
 
 inline i32
-Ceil(f32 value)
+i32_from_f32_round(f32 value)
 {
-    return (i32)ceilf(value);
+    // @SSE 4.1
+    i32 result = _mm_cvtss_si32(
+                    _mm_round_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value),
+                        _MM_FROUND_TO_NEAREST_INT));
+    return result;
 }
 
+inline f32
+f32_floor(f32 value)
+{
+    // @SSE 4.1
+    f32 result = _mm_cvtss_f32(
+                    _mm_floor_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value)));
+    return result;
+}
+
+inline i32
+i32_from_f32_floor(f32 value)
+{
+    // @SSE 4.1
+    i32 result = _mm_cvtss_si32(
+                    _mm_floor_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value)));
+    return result;
+}
+
+inline f32
+f32_ceil(f32 value)
+{
+    // @SSE 4.1
+    f32 result = _mm_cvtss_f32(
+                    _mm_ceil_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value)));
+    return result;
+}
+
+inline i32
+i32_from_f32_ceil(f32 value)
+{
+    // @SSE 4.1
+    i32 result = _mm_cvtss_si32(
+                    _mm_ceil_ss(
+                        _mm_setzero_ps(),
+                        _mm_set_ss(value)));
+    return result;
+}
+
+#if !CRT_DISABLED
 inline f32
 Sin(f32 radians)
 {
@@ -141,14 +221,15 @@ Atan2(f32 y, f32 x)
 {
     return atan2f(y, x);
 }
+#endif
 
+#if 0
 struct BitScanResult
 {
     u32 index;
     bool found;
 };
 
-#if 0
 inline BitScanResult
 FindLeastSignificantBitSet(u32 value)
 {

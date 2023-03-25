@@ -91,7 +91,7 @@ MakeString(Slice<u8> slice)
 }
 
 // --- DynArray
-//  Simple dynamic array. Wraps a tracked allocation in a MemoryRegion.
+//  Simple dynamic array. Wraps a tracked allocation in a Memory_Region.
 
 template <typename T>
 struct DynArray
@@ -99,10 +99,10 @@ struct DynArray
     T* items;
     int count;
     int capacity;
-    MemoryRegion memory;
+    Memory_Region memory;
 
     DynArray<T>() = default;
-    explicit DynArray<T>(MemoryRegion memory) { *this = {}; this->memory = memory; }
+    explicit DynArray<T>(Memory_Region memory) { *this = {}; this->memory = memory; }
     
     T* begin() { return items; }
     T* end()   { return items + count; }
@@ -269,7 +269,7 @@ Clear(DynArray<T>* array, bool shouldFreeMemory=false)
     {
         FreeTrackedAllocation(array->memory, array->items);
 
-        MemoryRegion memoryCopy = array->memory;
+        Memory_Region memoryCopy = array->memory;
         *array = {};
         array->memory = memoryCopy;
     }
@@ -291,7 +291,7 @@ struct BufferBuilder
     DynArray<u8> bytes;
 
     BufferBuilder() = default;
-    explicit BufferBuilder(MemoryRegion memory) { *this = {}; bytes = DynArray<u8>(memory); }
+    explicit BufferBuilder(Memory_Region memory) { *this = {}; bytes = DynArray<u8>(memory); }
 };
 
 function Slice<u8>
@@ -379,13 +379,13 @@ struct PushBuffer
         PageHeader* pNext;
     };
     
-    MemoryRegion memory;
+    Memory_Region memory;
     PageHeader* pages;
     PageHeader* pageTail;
     uintptr cBytesPushed;
 
     PushBuffer() = default;
-    PushBuffer(MemoryRegion memory, int cBytesPerPage)
+    PushBuffer(Memory_Region memory, int cBytesPerPage)
     {
         *this = {};
         this->memory = memory;
@@ -504,7 +504,7 @@ Read(PushBufferReader* reader)
 }
 
 function String
-ReadStringCopy(PushBufferReader* reader, MemoryRegion memory)
+ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
 {
     // NOTE - This reads by "copy", which is different than reading by pointer above...
 

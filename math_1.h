@@ -42,9 +42,19 @@ template <class T>
 constexpr T
 clamp(T value, T minimum, T maximum)
 {
-    T result = value;
-    result = max(result, minimum);
-    result = min(result, maximum);
+    T result;
+    if (value < minimum)
+    {
+        result = value;
+    }
+    else if (value > maximum)
+    {
+        result = maximum;
+    }
+    else
+    {
+        result = value;
+    }
     return result;
 }
 
@@ -483,6 +493,7 @@ LengthSq(Vec2 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline f32
 Length(Vec2 v)
 {
@@ -490,6 +501,7 @@ Length(Vec2 v)
     result = Sqrt(result);
     return result;
 }
+#endif
 
 inline Vec2
 lerp(Vec2 a, Vec2 b, f32 t)
@@ -514,6 +526,7 @@ clamp_01(Vec2 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline Vec2
 NormalizeUnsafe(Vec2 v)
 {
@@ -558,9 +571,11 @@ NormalizeSafeYAxis(Vec2 v)
 inline bool
 IsNormalized(Vec2 v, f32 epsilon=0.001f)
 {
+    // TODO - can't I use LengthSq here? 1^2 is just 1...
     bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
+#endif // !CRT_DISABLED
 
 inline bool
 IsZero(Vec2 v)
@@ -809,6 +824,7 @@ LengthSq(Vec3 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline f32
 Length(Vec3 v)
 {
@@ -816,6 +832,7 @@ Length(Vec3 v)
     result = Sqrt(result);
     return result;
 }
+#endif
 
 inline Vec3
 lerp(Vec3 a, Vec3 b, f32 t)
@@ -841,6 +858,7 @@ clamp_01(Vec3 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline Vec3
 NormalizeUnsafe(Vec3 v)
 {
@@ -893,9 +911,11 @@ NormalizeSafeZAxis(Vec3 v)
 inline bool
 IsNormalized(Vec3 v, f32 epsilon=0.001f)
 {
+    // TODO - can't I use LengthSq here? 1^2 is just 1...
     bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
+#endif // !CRT_DISABLED
 
 inline bool
 IsZero(Vec3 v)
@@ -1109,6 +1129,7 @@ LengthSq(Vec4 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline f32
 Length(Vec4 v)
 {
@@ -1116,6 +1137,7 @@ Length(Vec4 v)
     result = Sqrt(result);
     return result;
 }
+#endif
 
 inline Vec4
 lerp(Vec4 a, Vec4 b, f32 t)
@@ -1142,6 +1164,7 @@ clamp_01(Vec4 v)
     return result;
 }
 
+#if !CRT_DISABLED
 inline Vec4
 NormalizeUnsafe(Vec4 v)
 {
@@ -1201,9 +1224,11 @@ NormalizeSafeWAxis(Vec4 v)
 inline bool
 IsNormalized(Vec4 v, f32 epsilon=0.001f)
 {
+    // TODO - can't I use LengthSq here? 1^2 is just 1...
     bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
     return result;
 }
+#endif // !CRT_DISABLED
 
 inline bool
 IsZero(Vec4 v)
@@ -1323,14 +1348,14 @@ Vec2iMax(Vec2i * candidates, int count)
 inline Vec2i
 Vec2iFloor(Vec2 v)
 {
-    Vec2i result = Vec2i((int)v.x, (int)v.y);
+    Vec2i result = Vec2i(i32_from_f32_floor(v.x), i32_from_f32_floor(v.y));
     return result;
 }
 
 inline Vec2i
 Vec2iCeil(Vec2 v)
 {
-    Vec2i result = Vec2i(Ceil(v.x), Ceil(v.y));
+    Vec2i result = Vec2i(i32_from_f32_ceil(v.x), i32_from_f32_ceil(v.y));
     return result;
 }
 
@@ -2037,7 +2062,7 @@ struct Mat4
     }
 };
 
- Mat4
+function Mat4
 operator*(const Mat4 & lhs, const Mat4 & rhs)
 {
     // TODO - simd-ize?
@@ -2082,7 +2107,7 @@ Mat4Identity()
     return result;
 }
 
- Mat4
+inline Mat4
 Mat4Translate(Vec3 t)
 {
     Mat4 result = {{
@@ -2095,7 +2120,7 @@ Mat4Translate(Vec3 t)
     return result;
 }
 
- Mat4
+inline Mat4
 Mat4Scale(f32 s)
 {
     Mat4 result = {{
@@ -2108,7 +2133,7 @@ Mat4Scale(f32 s)
     return result;
 }
 
- Mat4
+inline Mat4
 Mat4Scale(Vec3 s)
 {
     Mat4 result = {{
@@ -2121,7 +2146,9 @@ Mat4Scale(Vec3 s)
     return result;
 }
 
- Mat4
+#if !CRT_DISABLED
+
+inline Mat4
 Mat4RotateX(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2137,7 +2164,7 @@ Mat4RotateX(f32 radians)
     return result;
 }
 
- Mat4
+inline Mat4
 Mat4RotateY(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2153,7 +2180,7 @@ Mat4RotateY(f32 radians)
     return result;
 }
 
- Mat4
+inline Mat4
 Mat4RotateZ(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2168,6 +2195,8 @@ Mat4RotateZ(f32 radians)
     
     return result;
 }
+
+#endif // !CRT_DISABLED
 
 // NOTE - For this game, the coordinate systems are as follows
 
@@ -2216,7 +2245,9 @@ Mat4Ortho(f32 height, f32 aspectRatio, f32 farDist)
     return result;
 }
 
-inline Mat4
+#if !CRT_DISABLED
+
+function Mat4
 Mat4Perspective(f32 fovVertical, f32 aspectRatio, f32 nearDist, f32 farDist)
 {
     // NOTE - FOV is in radians
@@ -2279,7 +2310,7 @@ Mat4Perspective(f32 fovVertical, f32 aspectRatio, f32 nearDist, f32 farDist)
     return result;
 }
 
- Mat4
+function Mat4
 Mat4LookAtDir(Vec3 pos, Vec3 dir, Vec3 up)
 {
     dir = NormalizeSafeYAxis(dir);
@@ -2310,13 +2341,15 @@ Mat4LookAtDir(Vec3 pos, Vec3 dir, Vec3 up)
     return result;
 }
 
- Mat4
+function Mat4
 Mat4LookAtTarget(Vec3 pos, Vec3 target, Vec3 up)
 {
     Vec3 dir = target - pos;
     Mat4 result = Mat4LookAtDir(pos, dir, up);
     return result;
 }
+
+#endif // !CRT_DISABLED
 
 inline const f32 *
 RowMajorPtr(const Mat4 * mat)
@@ -2857,6 +2890,7 @@ struct CircleOverlapTestResult
     Vec2 penetration;
 };
 
+#if !CRT_DISABLED
 inline CircleOverlapTestResult
 FullTestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
 {
@@ -2876,6 +2910,7 @@ FullTestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
     
     return result;
 }
+#endif
 
 enum class WindingOrder : u8
 {

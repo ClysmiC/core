@@ -101,7 +101,7 @@ CopyString(String src, String dst)
 }
 
 function char*
-DuplicateZString(char* src, MemoryRegion memory)
+DuplicateZString(char* src, Memory_Region memory)
 {
     int cBytesSrc = ZStringLength(src);
     int cBytesDst = cBytesSrc + 1;
@@ -112,7 +112,7 @@ DuplicateZString(char* src, MemoryRegion memory)
 }
 
 function String
-DuplicateZStringToString(char* src, MemoryRegion memory)
+DuplicateZStringToString(char* src, Memory_Region memory)
 {
     String dst;
     dst.cBytes = ZStringLength(src);
@@ -122,7 +122,7 @@ DuplicateZStringToString(char* src, MemoryRegion memory)
 }
 
 function String
-DuplicateString(String src, MemoryRegion memory)
+DuplicateString(String src, Memory_Region memory)
 {
     String dst;
     dst.cBytes = src.cBytes;
@@ -132,7 +132,7 @@ DuplicateString(String src, MemoryRegion memory)
 }
 
 function char*
-DuplicateStringToZString(String src, MemoryRegion memory)
+DuplicateStringToZString(String src, Memory_Region memory)
 {
     uint cBytesDst = src.cBytes + 1;
     char* dst = (char*)Allocate(memory, cBytesDst);
@@ -143,7 +143,7 @@ DuplicateStringToZString(String src, MemoryRegion memory)
 function String
 StringFromZString(
     char* src,
-    MemoryRegion memory=nullptr)
+    Memory_Region memory=nullptr)
 {
     int cBytesSrc = ZStringLength(src);
 
@@ -164,7 +164,7 @@ StringFromZString(
 }
 
 function char*
-ZStringFromString(String src, MemoryRegion memory)
+ZStringFromString(String src, Memory_Region memory)
 {
     int cBytesDst = src.cBytes + 1;
     char* dst = (char*)Allocate(memory, cBytesDst);
@@ -250,7 +250,7 @@ StringInsert(
     String srcA,
     int iInsert,
     String srcB,
-    MemoryRegion memory)
+    Memory_Region memory)
 {
     if (iInsert < 0)
     {
@@ -273,7 +273,7 @@ StringInsert(
 }
 
 function String
-StringConcat(String srcA, String srcB, MemoryRegion memory)
+StringConcat(String srcA, String srcB, Memory_Region memory)
 {
     String result;
     result.cBytes = srcA.cBytes + srcB.cBytes;
@@ -533,20 +533,37 @@ StringHasSuffix(String str, String suffix)
 #include "lib/stb/stb_sprintf.h"
 
 function int
-ZStringFromPrintf(char* buffer, int cBytesBuffer, char* fmt, ...)
+ZStringFromPrintf_v(char* buffer, int cBytesBuffer, char const* fmt, va_list varargs)
+{
+    int result = stbsp_vsnprintf(buffer, cBytesBuffer, fmt, varargs);
+    return result;
+}
+
+function int
+ZStringFromPrintf(char* buffer, int cBytesBuffer, char const* fmt, ...)
 {
     va_list varargs;
     va_start(varargs, fmt);
-
-    int result = stbsp_vsnprintf(buffer, cBytesBuffer, fmt, varargs);
-
+    int result = ZStringFromPrintf_v(buffer, cBytesBuffer, fmt, varargs);
     va_end(varargs);
-
     return result;
 }
 
 function String
-StringFromPrintf(MemoryRegion memory, int cBytesBuffer, char* fmt, ...)
+StringFromPrintf_v(Memory_Region memory, int cBytesBuffer, char const* fmt, va_list varargs)
+{
+    // TODO - I don't like having a cBytesBuffer param...
+    //  but this requires some sort of re-allocing string builder (which we don't yet have)
+    //  to work on arbitrarily sized strings...
+
+    String result;
+    result.bytes = (char*)Allocate(memory, sizeof(char) * cBytesBuffer);
+    result.cBytes = stbsp_vsnprintf(result.bytes, cBytesBuffer, fmt, varargs);
+    return result;
+}
+
+function String
+StringFromPrintf(Memory_Region memory, int cBytesBuffer, char const* fmt, ...)
 {
     // TODO - I don't like having a cBytesBuffer param...
     //  but this requires some sort of re-allocing string builder (which we don't yet have)
@@ -554,13 +571,8 @@ StringFromPrintf(MemoryRegion memory, int cBytesBuffer, char* fmt, ...)
 
     va_list varargs;
     va_start(varargs, fmt);
-
-    String result;
-    result.bytes = (char*)Allocate(memory, sizeof(char) * cBytesBuffer);
-    result.cBytes = stbsp_vsnprintf(result.bytes, cBytesBuffer, fmt, varargs);
-
+    String result = StringFromPrintf_v(memory, cBytesBuffer, fmt, varargs);
     va_end(varargs);
-
     return result;
 }
 

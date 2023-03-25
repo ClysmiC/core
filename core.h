@@ -150,7 +150,7 @@ static f32 constexpr twoPi = 6.28318530718f;
 
 static f32 constexpr toDeg = 57.2958f;
 static f32 constexpr toRad = 0.0174533f;
-    
+
 static f32 constexpr sqrt2 = 1.41421356237f;
 static f32 constexpr halfSqrt2 = 0.70710678118f;
 
@@ -247,9 +247,6 @@ defer_<F> defer_func_(F f) {
 #define Defer__3(x)      Defer__2(x, __COUNTER__)
 #define Defer(code)      auto Defer__3(_defer_) = defer_func_([&](){code;})
 
-
-
-// --- Include remaining core features
 
 #include "math.h"
 #include "mem_util.h"
