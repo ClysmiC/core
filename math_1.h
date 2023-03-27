@@ -3,7 +3,7 @@
 #define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
 #define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
 
-inline bool
+function bool
 f32_eq_approx(
     f32 lhs,
     f32 rhs,
@@ -23,7 +23,7 @@ lerp(T a, T b, f32 u)
 }
 
 template <class T>
-inline T
+function T
 min(T a, T b)
 {
     T result = ((a) <  (b)) ? (a) : (b);
@@ -31,7 +31,7 @@ min(T a, T b)
 }
 
 template <class T>
-inline T
+function T
 max(T a, T b)
 {
     T result = ((a) >  (b)) ? (a) : (b);
@@ -45,7 +45,7 @@ clamp(T value, T minimum, T maximum)
     T result;
     if (value < minimum)
     {
-        result = value;
+        result = minimum;
     }
     else if (value > maximum)
     {
@@ -59,7 +59,7 @@ clamp(T value, T minimum, T maximum)
 }
 
 template <class T>
-inline T
+function T
 clamp_01(T value)
 {
     T result = clamp(value, 0, 1);
@@ -67,7 +67,7 @@ clamp_01(T value)
 }
 
 
-inline f32
+function f32
 divide_safe_n(f32 numerator, f32 denominator, f32 n)
 {
     f32 result = n;
@@ -78,14 +78,14 @@ divide_safe_n(f32 numerator, f32 denominator, f32 n)
     return result;
 }
 
-inline f32
+function f32
 divide_safe_1(f32 numerator, f32 denominator)
 {
     f32 result = divide_safe_n(numerator, denominator, 1);
     return result;
 }
 
-inline f32
+function f32
 divide_safe_0(f32 numerator, f32 denominator)
 {
     f32 result = divide_safe_n(numerator, denominator, 0);
@@ -326,21 +326,21 @@ union Vec4
 
 // Vec2
 
-inline Vec2
+function Vec2
 Vec2Fill(f32 scalar)
 {
     Vec2 result(scalar, scalar);
     return result;
 }
 
-inline Vec2
+function Vec2
 Vec2Min(Vec2 v0, Vec2 v1)
 {
     Vec2 result(min(v0.x, v1.x), min(v0.y, v1.y));
     return result;
 }
 
-inline Vec2
+function Vec2
 Vec2Min(Vec2 * candidates, int count)
 {
     Vec2 result =  {};
@@ -358,14 +358,14 @@ Vec2Min(Vec2 * candidates, int count)
     return result;
 }
 
-inline Vec2
+function Vec2
 Vec2Max(Vec2 v0, Vec2 v1)
 {
     Vec2 result(max(v0.x, v1.x), max(v0.y, v1.y));
     return result;
 }
 
-inline Vec2
+function Vec2
 Vec2Max(Vec2 * candidates, int count)
 {
     Vec2 result =  {};
@@ -383,14 +383,14 @@ Vec2Max(Vec2 * candidates, int count)
     return result;
 }
 
-inline Vec2
+function Vec2
 Vec2Abs(Vec2 v)
 {
     Vec2 result(Abs(v.x), Abs(v.y));
     return result;
 }
 
-inline Vec2
+function Vec2
 operator-(Vec2 rhs)
 {
     Vec2 result;
@@ -399,7 +399,7 @@ operator-(Vec2 rhs)
     return result;
 }
 
-inline Vec2
+function Vec2
 operator+(Vec2 lhs, Vec2 rhs)
 {
     Vec2 result;
@@ -408,14 +408,14 @@ operator+(Vec2 lhs, Vec2 rhs)
     return result;
 }
 
-inline Vec2 &
+function Vec2 &
 operator+=(Vec2 & lhs, Vec2 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec2
+function Vec2
 operator-(Vec2 lhs, Vec2 rhs)
 {
     Vec2 result;
@@ -424,14 +424,14 @@ operator-(Vec2 lhs, Vec2 rhs)
     return result;
 }
 
-inline Vec2 &
+function Vec2 &
 operator-=(Vec2 & lhs, Vec2 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec2
+function Vec2
 operator*(Vec2 lhs, f32 rhs)
 {
     Vec2 result;
@@ -440,21 +440,21 @@ operator*(Vec2 lhs, f32 rhs)
     return result;
 }
 
-inline Vec2
+function Vec2
 operator*(f32 lhs, Vec2 rhs)
 {
     Vec2 result = rhs * lhs;
     return result;
 }
 
-inline Vec2 &
+function Vec2 &
 operator*=(Vec2 & lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec2
+function Vec2
 operator/(Vec2 lhs, f32 rhs)
 {
     Vec2 result;
@@ -463,21 +463,21 @@ operator/(Vec2 lhs, f32 rhs)
     return result;
 }
 
-inline Vec2 &
+function Vec2 &
 operator/=(Vec2 & lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
 }
 
-inline f32
+function f32
 Dot(Vec2 v0, Vec2 v1)
 {
     f32 result = v0.x * v1.x + v0.y * v1.y;
     return result;
 }
 
-inline Vec2
+function Vec2
 Perp(Vec2 v)
 {
     Vec2 result;
@@ -486,7 +486,7 @@ Perp(Vec2 v)
     return result;
 }
 
-inline f32
+function f32
 LengthSq(Vec2 v)
 {
     f32 result = Dot(v, v);
@@ -494,7 +494,7 @@ LengthSq(Vec2 v)
 }
 
 #if !CRT_DISABLED
-inline f32
+function f32
 Length(Vec2 v)
 {
     f32 result = LengthSq(v);
@@ -503,14 +503,14 @@ Length(Vec2 v)
 }
 #endif
 
-inline Vec2
+function Vec2
 lerp(Vec2 a, Vec2 b, f32 t)
 {
     Vec2 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
-inline Vec2
+function Vec2
 clamp(Vec2 v, Vec2 min, Vec2 max)
 {
     Vec2 result;
@@ -519,7 +519,7 @@ clamp(Vec2 v, Vec2 min, Vec2 max)
     return result;
 }
 
-inline Vec2
+function Vec2
 clamp_01(Vec2 v)
 {
     Vec2 result = clamp(v, Vec2Fill(0), Vec2Fill(1));
@@ -527,14 +527,14 @@ clamp_01(Vec2 v)
 }
 
 #if !CRT_DISABLED
-inline Vec2
+function Vec2
 NormalizeUnsafe(Vec2 v)
 {
     Vec2 result = v / Length(v);
     return result;
 }
 
-inline Vec2
+function Vec2
 NormalizeSafeOr(Vec2 v, Vec2 fallback)
 {
     Vec2 result = fallback;
@@ -547,28 +547,28 @@ NormalizeSafeOr(Vec2 v, Vec2 fallback)
     return result;
 }
 
-inline Vec2
+function Vec2
 NormalizeSafe0(Vec2 v)
 {
     Vec2 result = NormalizeSafeOr(v, Vec2Fill(0));
     return result;
 }
 
-inline Vec2
+function Vec2
 NormalizeSafeXAxis(Vec2 v)
 {
     Vec2 result = NormalizeSafeOr(v, Vec2(1, 0));
     return result;
 }
 
-inline Vec2
+function Vec2
 NormalizeSafeYAxis(Vec2 v)
 {
     Vec2 result = NormalizeSafeOr(v, Vec2(0, 1));
     return result;
 }
 
-inline bool
+function bool
 IsNormalized(Vec2 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
@@ -577,7 +577,7 @@ IsNormalized(Vec2 v, f32 epsilon=0.001f)
 }
 #endif // !CRT_DISABLED
 
-inline bool
+function bool
 IsZero(Vec2 v)
 {
     // TODO - Epsilon version?
@@ -585,7 +585,7 @@ IsZero(Vec2 v)
     return result;
 }
 
-inline bool
+function bool
 AreOrthogonal(Vec2 v0, Vec2 v1)
 {
     f32 dot = Dot(v0, v1);
@@ -593,35 +593,35 @@ AreOrthogonal(Vec2 v0, Vec2 v1)
     return result;
 }
 
-inline Vec2
+function Vec2
 Project(Vec2 projectee, Vec2 onto)
 {
     Vec2 result = onto * Dot(projectee, onto) / LengthSq(onto);
     return result;
 }
 
-inline Vec2
+function Vec2
 ProjectOntoNormalizedAxis(Vec2 projectee, Vec2 onto)
 {
     Vec2 result = onto * Dot(projectee, onto);
     return result;
 }
 
-inline Vec2
+function Vec2
 Reflect(Vec2 reflectee, Vec2 reflectionAxis)
 {
     Vec2 result = reflectee - 2.0f * Project(reflectee, reflectionAxis);
     return result;
 }
 
-inline Vec2
+function Vec2
 ReflectAcrossNormalizedAxis(Vec2 reflectee, Vec2 normalizedReflectionAxis)
 {
     Vec2 result = reflectee - 2.0f * Dot(reflectee, normalizedReflectionAxis) * normalizedReflectionAxis;
     return result;
 }
 
-inline Vec2
+function Vec2
 Hadamard(Vec2 v0, Vec2 v1)
 {
     Vec2 result;
@@ -630,7 +630,7 @@ Hadamard(Vec2 v0, Vec2 v1)
     return result;
 }
 
-inline Vec2
+function Vec2
 Hadamarddivide_safe_0(Vec2 v0, Vec2 v1)
 {
     Vec2 result;
@@ -641,21 +641,21 @@ Hadamarddivide_safe_0(Vec2 v0, Vec2 v1)
 
 // Vec3
 
-inline Vec3
+function Vec3
 Vec3Fill(f32 scalar)
 {
     Vec3 result(scalar, scalar, scalar);
     return result;
 }
 
-inline Vec3
+function Vec3
 Vec3min(Vec3 v0, Vec3 v1)
 {
     Vec3 result(min(v0.x, v1.x), min(v0.y, v1.y), min(v0.z, v1.z));
     return result;
 }
 
-inline Vec3
+function Vec3
 Vec3min(Vec3 * candidates, int count)
 {
     Vec3 result =  {};
@@ -673,14 +673,14 @@ Vec3min(Vec3 * candidates, int count)
     return result;
 }
 
-inline Vec3
+function Vec3
 Vec3Max(Vec3 v0, Vec3 v1)
 {
     Vec3 result(max(v0.x, v1.x), max(v0.y, v1.y), max(v0.z, v1.z));
     return result;
 }
 
-inline Vec3
+function Vec3
 Vec3Max(Vec3 * candidates, int count)
 {
     Vec3 result =  {};
@@ -698,7 +698,7 @@ Vec3Max(Vec3 * candidates, int count)
     return result;
 }
 
-inline Vec3
+function Vec3
 operator-(Vec3 rhs)
 {
     Vec3 result;
@@ -708,7 +708,7 @@ operator-(Vec3 rhs)
     return result;
 }
 
-inline Vec3
+function Vec3
 operator+(Vec3 lhs, Vec3 rhs)
 {
     Vec3 result;
@@ -718,14 +718,14 @@ operator+(Vec3 lhs, Vec3 rhs)
     return result;
 }
 
-inline Vec3 &
+function Vec3 &
 operator+=(Vec3 & lhs, Vec3 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec3
+function Vec3
 operator-(Vec3 lhs, Vec3 rhs)
 {
     Vec3 result;
@@ -735,14 +735,14 @@ operator-(Vec3 lhs, Vec3 rhs)
     return result;
 }
 
-inline Vec3 &
+function Vec3 &
 operator-=(Vec3 & lhs, Vec3 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec3
+function Vec3
 operator*(Vec3 lhs, f32 rhs)
 {
     Vec3 result;
@@ -752,21 +752,21 @@ operator*(Vec3 lhs, f32 rhs)
     return result;
 }
 
-inline Vec3
+function Vec3
 operator*(f32 lhs, Vec3 rhs)
 {
     Vec3 result = rhs * lhs;
     return result;
 }
 
-inline Vec3 &
+function Vec3 &
 operator*=(Vec3 & lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec3
+function Vec3
 operator/(Vec3 lhs, f32 rhs)
 {
     Vec3 result;
@@ -776,14 +776,14 @@ operator/(Vec3 lhs, f32 rhs)
     return result;
 }
 
-inline Vec3 &
+function Vec3 &
 operator/=(Vec3 & lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
 }
 
-inline Vec3
+function Vec3
 Vec3Rgb(u32 rgb)
 {
     u32 r = (rgb >> 16) & 0xFF;
@@ -793,21 +793,21 @@ Vec3Rgb(u32 rgb)
     return result;
 }
 
-inline Vec3
+function Vec3
 Vec3Rgb(f32 r, f32 g, f32 b)
 {
     Vec3 result = Vec3(r, g, b) / 255.0f;
     return result;
 }
 
-inline f32
+function f32
 Dot(Vec3 v0, Vec3 v1)
 {
     f32 result = v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
     return result;
 }
 
-inline Vec3
+function Vec3
 Cross(Vec3 v0, Vec3 v1)
 {
     Vec3 result;
@@ -817,7 +817,7 @@ Cross(Vec3 v0, Vec3 v1)
     return result;
 }
 
-inline f32
+function f32
 LengthSq(Vec3 v)
 {
     f32 result = Dot(v, v);
@@ -825,7 +825,7 @@ LengthSq(Vec3 v)
 }
 
 #if !CRT_DISABLED
-inline f32
+function f32
 Length(Vec3 v)
 {
     f32 result = LengthSq(v);
@@ -834,14 +834,14 @@ Length(Vec3 v)
 }
 #endif
 
-inline Vec3
+function Vec3
 lerp(Vec3 a, Vec3 b, f32 t)
 {
     Vec3 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
-inline Vec3
+function Vec3
 clamp(Vec3 v, f32 min, f32 max)
 {
     Vec3 result;
@@ -851,7 +851,7 @@ clamp(Vec3 v, f32 min, f32 max)
     return result;
 }
 
-inline Vec3
+function Vec3
 clamp_01(Vec3 v)
 {
     Vec3 result = clamp(v, 0, 1);
@@ -859,14 +859,14 @@ clamp_01(Vec3 v)
 }
 
 #if !CRT_DISABLED
-inline Vec3
+function Vec3
 NormalizeUnsafe(Vec3 v)
 {
     Vec3 result = v / Length(v);
     return result;
 }
 
-inline Vec3
+function Vec3
 NormalizeSafeOr(Vec3 v, Vec3 fallback)
 {
     Vec3 result = fallback;
@@ -880,35 +880,35 @@ NormalizeSafeOr(Vec3 v, Vec3 fallback)
     return result;
 }
 
-inline Vec3
+function Vec3
 NormalizeSafe0(Vec3 v)
 {
     Vec3 result = NormalizeSafeOr(v, Vec3Fill(0));
     return result;
 }
 
-inline Vec3
+function Vec3
 NormalizeSafeXAxis(Vec3 v)
 {
     Vec3 result = NormalizeSafeOr(v, Vec3(1, 0, 0));
     return result;
 }
 
-inline Vec3
+function Vec3
 NormalizeSafeYAxis(Vec3 v)
 {
     Vec3 result = NormalizeSafeOr(v, Vec3(0, 1, 0));
     return result;
 }
 
-inline Vec3
+function Vec3
 NormalizeSafeZAxis(Vec3 v)
 {
     Vec3 result = NormalizeSafeOr(v, Vec3(0, 0, 1));
     return result;
 }
 
-inline bool
+function bool
 IsNormalized(Vec3 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
@@ -917,7 +917,7 @@ IsNormalized(Vec3 v, f32 epsilon=0.001f)
 }
 #endif // !CRT_DISABLED
 
-inline bool
+function bool
 IsZero(Vec3 v)
 {
     // TODO - Epsilon version?
@@ -925,7 +925,7 @@ IsZero(Vec3 v)
     return result;
 }
 
-inline bool
+function bool
 AreOrthogonal(Vec3 v0, Vec3 v1)
 {
     f32 dot = Dot(v0, v1);
@@ -933,35 +933,35 @@ AreOrthogonal(Vec3 v0, Vec3 v1)
     return result;
 }
 
-inline Vec3
+function Vec3
 Project(Vec3 projectee, Vec3 onto)
 {
     Vec3 result = onto * Dot(projectee, onto) / LengthSq(onto);
     return result;
 }
 
-inline Vec3
+function Vec3
 ProjectOntoNormalizedAxis(Vec3 projectee, Vec3 onto)
 {
     Vec3 result = onto * Dot(projectee, onto);
     return result;
 }
 
-inline Vec3
+function Vec3
 Reflect(Vec3 reflectee, Vec3 reflectionAxis)
 {
     Vec3 result = reflectee - 2.0f * Project(reflectee, reflectionAxis);
     return result;
 }
 
-inline Vec3
+function Vec3
 ReflectAcrossNormalizedAxis(Vec3 reflectee, Vec3 normalizedReflectionAxis)
 {
     Vec3 result = reflectee - 2.0f * Dot(reflectee, normalizedReflectionAxis) * normalizedReflectionAxis;
     return result;
 }
 
-inline Vec3
+function Vec3
 Hadamard(Vec3 v0, Vec3 v1)
 {
     Vec3 result;
@@ -971,7 +971,7 @@ Hadamard(Vec3 v0, Vec3 v1)
     return result;
 }
 
-inline Vec3
+function Vec3
 Hadamarddivide_safe_0(Vec3 v0, Vec3 v1)
 {
     Vec3 result;
@@ -983,14 +983,14 @@ Hadamarddivide_safe_0(Vec3 v0, Vec3 v1)
 
 // Vec4
 
-inline Vec4
+function Vec4
 Vec4Fill(f32 scalar)
 {
     Vec4 result(scalar, scalar, scalar, scalar);
     return result;
 }
 
-inline Vec4
+function Vec4
 operator-(Vec4 rhs)
 {
     Vec4 result;
@@ -1001,7 +1001,7 @@ operator-(Vec4 rhs)
     return result;
 }
 
-inline Vec4
+function Vec4
 operator+(Vec4 lhs, Vec4 rhs)
 {
     Vec4 result;
@@ -1012,14 +1012,14 @@ operator+(Vec4 lhs, Vec4 rhs)
     return result;
 }
 
-inline Vec4 &
+function Vec4 &
 operator+=(Vec4 & lhs, Vec4 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec4
+function Vec4
 operator-(Vec4 lhs, Vec4 rhs)
 {
     Vec4 result;
@@ -1030,14 +1030,14 @@ operator-(Vec4 lhs, Vec4 rhs)
     return result;
 }
 
-inline Vec4 &
+function Vec4 &
 operator-=(Vec4 & lhs, Vec4 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec4
+function Vec4
 operator*(Vec4 lhs, f32 rhs)
 {
     Vec4 result;
@@ -1048,21 +1048,21 @@ operator*(Vec4 lhs, f32 rhs)
     return result;
 }
 
-inline Vec4
+function Vec4
 operator*(f32 lhs, Vec4 rhs)
 {
     Vec4 result = rhs * lhs;
     return result;
 }
 
-inline Vec4 &
+function Vec4 &
 operator*=(Vec4 & lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec4
+function Vec4
 operator/(Vec4 lhs, f32 rhs)
 {
     Vec4 result;
@@ -1073,14 +1073,14 @@ operator/(Vec4 lhs, f32 rhs)
     return result;
 }
 
-inline Vec4 &
+function Vec4 &
 operator/=(Vec4 & lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
 }
 
-inline Vec4
+function Vec4
 Vec4Rgba(u32 rgba)
 {
     u32 r = (rgba >> 24) & 0xFF;
@@ -1091,14 +1091,14 @@ Vec4Rgba(u32 rgba)
     return result;
 }
 
-inline Vec4
+function Vec4
 Vec4Rgba(f32 r, f32 g, f32 b, f32 a)
 {
     Vec4 result = Vec4(r, g, b, a) / 255.0f;
     return result;
 }
 
-inline Vec4
+function Vec4
 Vec4Rgb(u32 rgb)
 {
     u32 r = (rgb >> 16) & 0xFF;
@@ -1108,21 +1108,21 @@ Vec4Rgb(u32 rgb)
     return result;
 }
 
-inline Vec4
+function Vec4
 Vec4Rgb(f32 r, f32 g, f32 b)
 {
     Vec4 result = Vec4(r, g, b, 255.0f) / 255.0f;
     return result;
 }
 
-inline f32
+function f32
 Dot(Vec4 v0, Vec4 v1)
 {
     f32 result = v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
     return result;
 }
 
-inline f32
+function f32
 LengthSq(Vec4 v)
 {
     f32 result = Dot(v, v);
@@ -1130,7 +1130,7 @@ LengthSq(Vec4 v)
 }
 
 #if !CRT_DISABLED
-inline f32
+function f32
 Length(Vec4 v)
 {
     f32 result = LengthSq(v);
@@ -1139,14 +1139,14 @@ Length(Vec4 v)
 }
 #endif
 
-inline Vec4
+function Vec4
 lerp(Vec4 a, Vec4 b, f32 t)
 {
     Vec4 result = ((1 - t) * a) + (t * b);
     return result;
 }
 
-inline Vec4
+function Vec4
 clamp(Vec4 v, f32 min, f32 max)
 {
     Vec4 result;
@@ -1157,7 +1157,7 @@ clamp(Vec4 v, f32 min, f32 max)
     return result;
 }
 
-inline Vec4
+function Vec4
 clamp_01(Vec4 v)
 {
     Vec4 result = clamp(v, 0, 1);
@@ -1165,14 +1165,14 @@ clamp_01(Vec4 v)
 }
 
 #if !CRT_DISABLED
-inline Vec4
+function Vec4
 NormalizeUnsafe(Vec4 v)
 {
     Vec4 result = v / Length(v);
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafeOr(Vec4 v, Vec4 fallback)
 {
     Vec4 result = fallback;
@@ -1186,42 +1186,42 @@ NormalizeSafeOr(Vec4 v, Vec4 fallback)
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafe0(Vec4 v)
 {
     Vec4 result = NormalizeSafeOr(v, Vec4Fill(0));
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafeXAxis(Vec4 v)
 {
     Vec4 result = NormalizeSafeOr(v, Vec4(1, 0, 0, 0));
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafeYAxis(Vec4 v)
 {
     Vec4 result = NormalizeSafeOr(v, Vec4(0, 1, 0, 0));
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafeZAxis(Vec4 v)
 {
     Vec4 result = NormalizeSafeOr(v, Vec4(0, 0, 1, 0));
     return result;
 }
 
-inline Vec4
+function Vec4
 NormalizeSafeWAxis(Vec4 v)
 {
     Vec4 result = NormalizeSafeOr(v, Vec4(0, 0, 0, 1));
     return result;
 }
 
-inline bool
+function bool
 IsNormalized(Vec4 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
@@ -1230,7 +1230,7 @@ IsNormalized(Vec4 v, f32 epsilon=0.001f)
 }
 #endif // !CRT_DISABLED
 
-inline bool
+function bool
 IsZero(Vec4 v)
 {
     // TODO - Epsilon version?
@@ -1238,7 +1238,7 @@ IsZero(Vec4 v)
     return result;
 }
 
-inline bool
+function bool
 AreOrthogonal(Vec4 v0, Vec4 v1)
 {
     f32 dot = Dot(v0, v1);
@@ -1246,7 +1246,7 @@ AreOrthogonal(Vec4 v0, Vec4 v1)
     return result;
 }
 
-inline Vec4
+function Vec4
 Hadamard(Vec4 v0, Vec4 v1)
 {
     Vec4 result;
@@ -1257,7 +1257,7 @@ Hadamard(Vec4 v0, Vec4 v1)
     return result;
 }
 
-inline Vec4
+function Vec4
 Hadamarddivide_safe_0(Vec4 v0, Vec4 v1)
 {
     Vec4 result;
@@ -1288,21 +1288,21 @@ union Vec2i
     }
 };
 
-inline Vec2i
+function Vec2i
 Vec2iFill(int scalar)
 {
     Vec2i result(scalar, scalar);
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2imin(Vec2i v0, Vec2i v1)
 {
     Vec2i result(min(v0.x, v1.x), min(v0.y, v1.y));
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2imin(Vec2i * candidates, int count)
 {
     Vec2i result =  {};
@@ -1320,14 +1320,14 @@ Vec2imin(Vec2i * candidates, int count)
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2iMax(Vec2i v0, Vec2i v1)
 {
     Vec2i result(max(v0.x, v1.x), max(v0.y, v1.y));
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2iMax(Vec2i * candidates, int count)
 {
     Vec2i result =  {};
@@ -1345,21 +1345,21 @@ Vec2iMax(Vec2i * candidates, int count)
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2iFloor(Vec2 v)
 {
     Vec2i result = Vec2i(i32_from_f32_floor(v.x), i32_from_f32_floor(v.y));
     return result;
 }
 
-inline Vec2i
+function Vec2i
 Vec2iCeil(Vec2 v)
 {
     Vec2i result = Vec2i(i32_from_f32_ceil(v.x), i32_from_f32_ceil(v.y));
     return result;
 }
 
-inline Vec2i
+function Vec2i
 operator+(Vec2i lhs, Vec2i rhs)
 {
     Vec2i result;
@@ -1368,14 +1368,14 @@ operator+(Vec2i lhs, Vec2i rhs)
     return result;
 }
 
-inline Vec2i &
+function Vec2i &
 operator+=(Vec2i & lhs, Vec2i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec2i
+function Vec2i
 operator-(Vec2i lhs, Vec2i rhs)
 {
     Vec2i result;
@@ -1384,14 +1384,14 @@ operator-(Vec2i lhs, Vec2i rhs)
     return result;
 }
 
-inline Vec2i &
+function Vec2i &
 operator-=(Vec2i & lhs, Vec2i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec2i
+function Vec2i
 operator*(Vec2i lhs, int rhs)
 {
     Vec2i result;
@@ -1400,21 +1400,21 @@ operator*(Vec2i lhs, int rhs)
     return result;
 }
 
-inline Vec2i
+function Vec2i
 operator*(int lhs, Vec2i rhs)
 {
     Vec2i result = rhs * lhs;
     return result;
 }
 
-inline Vec2i &
+function Vec2i &
 operator*=(Vec2i & lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec2i
+function Vec2i
 operator/(Vec2i lhs, int rhs)
 {
     Vec2i result;
@@ -1423,14 +1423,14 @@ operator/(Vec2i lhs, int rhs)
     return result;
 }
 
-inline Vec2i &
+function Vec2i &
 operator/=(Vec2i & lhs, int rhs)
 {
     lhs = lhs / rhs;
     return lhs;
 }
 
-inline Vec2i
+function Vec2i
 clamp(Vec2i v, Vec2i min, Vec2i max)
 {
     Vec2i result;
@@ -1456,7 +1456,7 @@ union Vec2u
     }
 };
 
-inline Vec2u
+function Vec2u
 operator+(Vec2u lhs, Vec2u rhs)
 {
     Vec2u result;
@@ -1465,14 +1465,14 @@ operator+(Vec2u lhs, Vec2u rhs)
     return result;
 }
 
-inline Vec2u &
+function Vec2u &
 operator+=(Vec2u & lhs, Vec2u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec2u
+function Vec2u
 operator-(Vec2u lhs, Vec2u rhs)
 {
     Vec2u result;
@@ -1481,14 +1481,14 @@ operator-(Vec2u lhs, Vec2u rhs)
     return result;
 }
 
-inline Vec2u &
+function Vec2u &
 operator-=(Vec2u & lhs, Vec2u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec2u
+function Vec2u
 operator*(Vec2u lhs, uint rhs)
 {
     Vec2u result;
@@ -1497,21 +1497,21 @@ operator*(Vec2u lhs, uint rhs)
     return result;
 }
 
-inline Vec2u
+function Vec2u
 operator*(uint lhs, Vec2u rhs)
 {
     Vec2u result = rhs * lhs;
     return result;
 }
 
-inline Vec2u &
+function Vec2u &
 operator*=(Vec2u & lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec2u
+function Vec2u
 operator/(Vec2u lhs, uint rhs)
 {
     Vec2u result;
@@ -1520,7 +1520,7 @@ operator/(Vec2u lhs, uint rhs)
     return result;
 }
 
-inline Vec2u &
+function Vec2u &
 operator/=(Vec2u & lhs, uint rhs)
 {
     lhs = lhs / rhs;
@@ -1545,7 +1545,7 @@ union Vec3i
     }
 };
 
-inline Vec3i
+function Vec3i
 operator+(Vec3i lhs, Vec3i rhs)
 {
     Vec3i result;
@@ -1555,14 +1555,14 @@ operator+(Vec3i lhs, Vec3i rhs)
     return result;
 }
 
-inline Vec3i &
+function Vec3i &
 operator+=(Vec3i & lhs, Vec3i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec3i
+function Vec3i
 operator-(Vec3i lhs, Vec3i rhs)
 {
     Vec3i result;
@@ -1572,14 +1572,14 @@ operator-(Vec3i lhs, Vec3i rhs)
     return result;
 }
 
-inline Vec3i &
+function Vec3i &
 operator-=(Vec3i & lhs, Vec3i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec3i
+function Vec3i
 operator*(Vec3i lhs, int rhs)
 {
     Vec3i result;
@@ -1589,21 +1589,21 @@ operator*(Vec3i lhs, int rhs)
     return result;
 }
 
-inline Vec3i
+function Vec3i
 operator*(int lhs, Vec3i rhs)
 {
     Vec3i result = rhs * lhs;
     return result;
 }
 
-inline Vec3i &
+function Vec3i &
 operator*=(Vec3i & lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec3i
+function Vec3i
 operator/(Vec3i lhs, int rhs)
 {
     Vec3i result;
@@ -1613,7 +1613,7 @@ operator/(Vec3i lhs, int rhs)
     return result;
 }
 
-inline Vec3i &
+function Vec3i &
 operator/=(Vec3i & lhs, int rhs)
 {
     lhs = lhs / rhs;
@@ -1638,7 +1638,7 @@ union Vec3u
     }
 };
 
-inline Vec3u
+function Vec3u
 operator+(Vec3u lhs, Vec3u rhs)
 {
     Vec3u result;
@@ -1648,14 +1648,14 @@ operator+(Vec3u lhs, Vec3u rhs)
     return result;
 }
 
-inline Vec3u &
+function Vec3u &
 operator+=(Vec3u & lhs, Vec3u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec3u
+function Vec3u
 operator-(Vec3u lhs, Vec3u rhs)
 {
     Vec3u result;
@@ -1665,14 +1665,14 @@ operator-(Vec3u lhs, Vec3u rhs)
     return result;
 }
 
-inline Vec3u &
+function Vec3u &
 operator-=(Vec3u & lhs, Vec3u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec3u
+function Vec3u
 operator*(Vec3u lhs, uint rhs)
 {
     Vec3u result;
@@ -1682,21 +1682,21 @@ operator*(Vec3u lhs, uint rhs)
     return result;
 }
 
-inline Vec3u
+function Vec3u
 operator*(uint lhs, Vec3u rhs)
 {
     Vec3u result = rhs * lhs;
     return result;
 }
 
-inline Vec3u &
+function Vec3u &
 operator*=(Vec3u & lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec3u
+function Vec3u
 operator/(Vec3u lhs, uint rhs)
 {
     Vec3u result;
@@ -1706,7 +1706,7 @@ operator/(Vec3u lhs, uint rhs)
     return result;
 }
 
-inline Vec3u &
+function Vec3u &
 operator/=(Vec3u & lhs, uint rhs)
 {
     lhs = lhs / rhs;
@@ -1732,7 +1732,7 @@ union Vec4i
     }
 };
 
-inline Vec4i
+function Vec4i
 operator+(Vec4i lhs, Vec4i rhs)
 {
     Vec4i result;
@@ -1743,14 +1743,14 @@ operator+(Vec4i lhs, Vec4i rhs)
     return result;
 }
 
-inline Vec4i &
+function Vec4i &
 operator+=(Vec4i & lhs, Vec4i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec4i
+function Vec4i
 operator-(Vec4i lhs, Vec4i rhs)
 {
     Vec4i result;
@@ -1761,14 +1761,14 @@ operator-(Vec4i lhs, Vec4i rhs)
     return result;
 }
 
-inline Vec4i &
+function Vec4i &
 operator-=(Vec4i & lhs, Vec4i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec4i
+function Vec4i
 operator*(Vec4i lhs, int rhs)
 {
     Vec4i result;
@@ -1779,21 +1779,21 @@ operator*(Vec4i lhs, int rhs)
     return result;
 }
 
-inline Vec4i
+function Vec4i
 operator*(int lhs, Vec4i rhs)
 {
     Vec4i result = rhs * lhs;
     return result;
 }
 
-inline Vec4i &
+function Vec4i &
 operator*=(Vec4i & lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec4i
+function Vec4i
 operator/(Vec4i lhs, int rhs)
 {
     Vec4i result;
@@ -1804,7 +1804,7 @@ operator/(Vec4i lhs, int rhs)
     return result;
 }
 
-inline Vec4i &
+function Vec4i &
 operator/=(Vec4i & lhs, int rhs)
 {
     lhs = lhs / rhs;
@@ -1830,7 +1830,7 @@ union Vec4u
     }
 };
 
-inline Vec4u
+function Vec4u
 operator+(Vec4u lhs, Vec4u rhs)
 {
     Vec4u result;
@@ -1841,14 +1841,14 @@ operator+(Vec4u lhs, Vec4u rhs)
     return result;
 }
 
-inline Vec4u &
+function Vec4u &
 operator+=(Vec4u & lhs, Vec4u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 
-inline Vec4u
+function Vec4u
 operator-(Vec4u lhs, Vec4u rhs)
 {
     Vec4u result;
@@ -1859,14 +1859,14 @@ operator-(Vec4u lhs, Vec4u rhs)
     return result;
 }
 
-inline Vec4u &
+function Vec4u &
 operator-=(Vec4u & lhs, Vec4u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
 }
 
-inline Vec4u
+function Vec4u
 operator*(Vec4u lhs, uint rhs)
 {
     Vec4u result;
@@ -1877,21 +1877,21 @@ operator*(Vec4u lhs, uint rhs)
     return result;
 }
 
-inline Vec4u
+function Vec4u
 operator*(uint lhs, Vec4u rhs)
 {
     Vec4u result = rhs * lhs;
     return result;
 }
 
-inline Vec4u &
+function Vec4u &
 operator*=(Vec4u & lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
 }
 
-inline Vec4u
+function Vec4u
 operator/(Vec4u lhs, uint rhs)
 {
     Vec4u result;
@@ -1902,7 +1902,7 @@ operator/(Vec4u lhs, uint rhs)
     return result;
 }
 
-inline Vec4u &
+function Vec4u &
 operator/=(Vec4u & lhs, uint rhs)
 {
     lhs = lhs / rhs;
@@ -1971,7 +1971,7 @@ struct Mat3
     }
 };
 
-inline Mat3
+function Mat3
 Mat3Identity()
 {
     Mat3 result = {{
@@ -2039,7 +2039,7 @@ operator*(Mat3 & lhs, Mat3 & rhs)
     return result;
 }
 
-inline f32 *
+function f32 *
 RowMajorPtr(Mat3 * mat)
 {
     return mat->e[0];
@@ -2083,7 +2083,7 @@ operator*(const Mat4 & lhs, const Mat4 & rhs)
     return result;
 }
 
-inline Vec4
+function Vec4
 operator*(const Mat4 & m, const Vec4 & v)
 {
     Vec4 result;
@@ -2094,7 +2094,7 @@ operator*(const Mat4 & m, const Vec4 & v)
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4Identity()
 {
     Mat4 result = {{
@@ -2107,7 +2107,7 @@ Mat4Identity()
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4Translate(Vec3 t)
 {
     Mat4 result = {{
@@ -2120,7 +2120,7 @@ Mat4Translate(Vec3 t)
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4Scale(f32 s)
 {
     Mat4 result = {{
@@ -2133,7 +2133,7 @@ Mat4Scale(f32 s)
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4Scale(Vec3 s)
 {
     Mat4 result = {{
@@ -2148,7 +2148,7 @@ Mat4Scale(Vec3 s)
 
 #if !CRT_DISABLED
 
-inline Mat4
+function Mat4
 Mat4RotateX(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2164,7 +2164,7 @@ Mat4RotateX(f32 radians)
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4RotateY(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2180,7 +2180,7 @@ Mat4RotateY(f32 radians)
     return result;
 }
 
-inline Mat4
+function Mat4
 Mat4RotateZ(f32 radians)
 {
     f32 c = Cos(radians);
@@ -2210,7 +2210,7 @@ Mat4RotateZ(f32 radians)
 //  Y is "up"
 //  Z is "backwards"
 
-inline Mat4
+function Mat4
 Mat4Ortho(f32 height, f32 aspectRatio, f32 farDist)
 {
     // See FGED Vol 2 - Chapter 6.3.4
@@ -2351,7 +2351,7 @@ Mat4LookAtTarget(Vec3 pos, Vec3 target, Vec3 up)
 
 #endif // !CRT_DISABLED
 
-inline const f32 *
+function const f32 *
 RowMajorPtr(const Mat4 * mat)
 {
     return mat->e[0];
@@ -2371,7 +2371,7 @@ struct Rect2
     explicit Rect2(struct Rect2i);
 };
 
-inline Rect2
+function Rect2
 RectFromMinAndMax(Vec2 min, Vec2 max)
 {
     Rect2 result;
@@ -2380,7 +2380,7 @@ RectFromMinAndMax(Vec2 min, Vec2 max)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromPoints(Vec2 point0, Vec2 point1)
 {
     Rect2 result;
@@ -2389,7 +2389,7 @@ RectFromPoints(Vec2 point0, Vec2 point1)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromCenterHalfDim(Vec2 center, Vec2 halfDim)
 {
     Rect2 result;
@@ -2398,26 +2398,26 @@ RectFromCenterHalfDim(Vec2 center, Vec2 halfDim)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromCenterHalfDim(Vec2 center, f32 halfDim)
 {
     return RectFromCenterHalfDim(center, Vec2Fill(halfDim));
 }
 
-inline Rect2
+function Rect2
 RectFromCenterDim(Vec2 center, Vec2 dim)
 {
     Rect2 result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromCenterDim(Vec2 center, f32 dim)
 {
     return RectFromCenterDim(center, Vec2Fill(dim));
 }
 
-inline Rect2
+function Rect2
 RectFromMinDim(Vec2 min, Vec2 dim)
 {
     Rect2 result;
@@ -2426,7 +2426,7 @@ RectFromMinDim(Vec2 min, Vec2 dim)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromMinDim(Vec2 min, f32 dim)
 {
     Rect2 result;
@@ -2435,7 +2435,7 @@ RectFromMinDim(Vec2 min, f32 dim)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromMaxDim(Vec2 max, Vec2 dim)
 {
     Rect2 result;
@@ -2444,7 +2444,7 @@ RectFromMaxDim(Vec2 max, Vec2 dim)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromMaxDim(Vec2 max, f32 dim)
 {
     Rect2 result;
@@ -2453,7 +2453,7 @@ RectFromMaxDim(Vec2 max, f32 dim)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromRectAndMargin(Rect2 original, f32 margin)
 {
     Rect2 result = original;
@@ -2462,7 +2462,7 @@ RectFromRectAndMargin(Rect2 original, f32 margin)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromRectAndMargin(Rect2 original, Vec2 margin)
 {
     Rect2 result = original;
@@ -2471,7 +2471,7 @@ RectFromRectAndMargin(Rect2 original, Vec2 margin)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromRectAndOffset(Rect2 original, f32 offset)
 {
     Rect2 result;
@@ -2480,7 +2480,7 @@ RectFromRectAndOffset(Rect2 original, f32 offset)
     return result;
 }
 
-inline Rect2
+function Rect2
 RectFromRectAndOffset(Rect2 original, Vec2 offset)
 {
     Rect2 result;
@@ -2489,28 +2489,28 @@ RectFromRectAndOffset(Rect2 original, Vec2 offset)
     return result;
 }
 
-inline Vec2
+function Vec2
 GetCenter(Rect2 rect)
 {
     Vec2 result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
-inline Vec2
+function Vec2
 GetDim(Rect2 rect)
 {
     Vec2 result = rect.max - rect.min;
     return result;
 }
 
-inline bool
+function bool
 IsDimZeroOrNegative(Rect2 rect)
 {
     bool result = (rect.max.x <= rect.min.x) || (rect.max.y <= rect.min.y);
     return result;
 }
 
-inline bool
+function bool
 TestPointInRect(Rect2 rect, Vec2 testPoint)
 {
     bool result =
@@ -2522,7 +2522,7 @@ TestPointInRect(Rect2 rect, Vec2 testPoint)
     return result;
 }
 
-inline bool
+function bool
 TestRectOverlapsRect(Rect2 rect0, Rect2 rect1)
 {
     bool result = !((rect0.min.x >= rect1.max.x) ||
@@ -2546,7 +2546,7 @@ struct Rect3
     // explicit Rect3(struct Rect3x);
 };
 
-inline Rect3
+function Rect3
 RectFromMinAndMax(Vec3 min, Vec3 max)
 {
     Rect3 result;
@@ -2555,7 +2555,7 @@ RectFromMinAndMax(Vec3 min, Vec3 max)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromPoints(Vec3 point0, Vec3 point1)
 {
     Rect3 result;
@@ -2564,7 +2564,7 @@ RectFromPoints(Vec3 point0, Vec3 point1)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromCenterHalfDim(Vec3 center, Vec3 halfDim)
 {
     Rect3 result;
@@ -2573,20 +2573,20 @@ RectFromCenterHalfDim(Vec3 center, Vec3 halfDim)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromCenterDim(Vec3 center, Vec3 dim)
 {
     Rect3 result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromCenterDim(Vec3 center, f32 dim)
 {
     return RectFromCenterDim(center, Vec3Fill(dim));
 }
 
-inline Rect3
+function Rect3
 RectFromMinDim(Vec3 min, Vec3 dim)
 {
     Rect3 result;
@@ -2595,7 +2595,7 @@ RectFromMinDim(Vec3 min, Vec3 dim)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromMinDim(Vec3 min, f32 dim)
 {
     Rect3 result;
@@ -2604,7 +2604,7 @@ RectFromMinDim(Vec3 min, f32 dim)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromMaxDim(Vec3 max, Vec3 dim)
 {
     Rect3 result;
@@ -2613,7 +2613,7 @@ RectFromMaxDim(Vec3 max, Vec3 dim)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromMaxDim(Vec3 max, f32 dim)
 {
     Rect3 result;
@@ -2622,7 +2622,7 @@ RectFromMaxDim(Vec3 max, f32 dim)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromRectAndMargin(Rect3 original, f32 margin)
 {
     Rect3 result = original;
@@ -2631,7 +2631,7 @@ RectFromRectAndMargin(Rect3 original, f32 margin)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromRectAndMargin(Rect3 original, Vec3 margin)
 {
     Rect3 result = original;
@@ -2640,7 +2640,7 @@ RectFromRectAndMargin(Rect3 original, Vec3 margin)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromRectAndOffset(Rect3 original, f32 offset)
 {
     Rect3 result;
@@ -2649,7 +2649,7 @@ RectFromRectAndOffset(Rect3 original, f32 offset)
     return result;
 }
 
-inline Rect3
+function Rect3
 RectFromRectAndOffset(Rect3 original, Vec3 offset)
 {
     Rect3 result;
@@ -2658,28 +2658,28 @@ RectFromRectAndOffset(Rect3 original, Vec3 offset)
     return result;
 }
 
-inline Vec3
+function Vec3
 GetCenter(Rect3 rect)
 {
     Vec3 result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
-inline Vec3
+function Vec3
 GetDim(Rect3 rect)
 {
     Vec3 result = rect.max - rect.min;
     return result;
 }
 
-inline bool
+function bool
 IsDimZeroOrNegative(Rect3 rect)
 {
     bool result = (rect.max.x <= rect.min.x) || (rect.max.y <= rect.min.y) || (rect.max.x <= rect.min.x);
     return result;
 }
 
-inline bool
+function bool
 TestPointInRect(Rect3 rect, Vec3 testPoint)
 {
     bool result =
@@ -2693,7 +2693,7 @@ TestPointInRect(Rect3 rect, Vec3 testPoint)
     return result;
 }
 
-inline bool
+function bool
 TestRectOverlapsRect(Rect3 rect0, Rect3 rect1)
 {
     bool result = !((rect0.min.x >= rect1.max.x) ||
@@ -2715,7 +2715,7 @@ struct Rect2i
     Vec2i max;
 };
 
-inline Rect2i
+function Rect2i
 Rect2i_MinAndMax(Vec2i min, Vec2i max)
 {
     Rect2i result;
@@ -2724,7 +2724,7 @@ Rect2i_MinAndMax(Vec2i min, Vec2i max)
     return result;
 }
 
-inline Rect2i
+function Rect2i
 Rect2i_MinDim(Vec2i min, Vec2i dim)
 {
     Rect2i result;
@@ -2733,21 +2733,21 @@ Rect2i_MinDim(Vec2i min, Vec2i dim)
     return result;
 }
 
-inline Vec2i
+function Vec2i
 GetDim(Rect2i rect)
 {
     Vec2i result = rect.max - rect.min;
     return result;
 }
 
-inline bool
+function bool
 IsDimZeroOrNegative(Rect2i rect)
 {
     bool result = rect.min.x >= rect.max.x || rect.min.y >= rect.max.y;
     return result;
 }
 
-inline bool
+function bool
 TestPointInRect(Rect2i rect, Vec2i testPoint)
 {
     bool result =
@@ -2760,7 +2760,7 @@ TestPointInRect(Rect2i rect, Vec2i testPoint)
 }
 
 
-inline bool
+function bool
 TestRectOverlapsRect(Rect2i rect0, Rect2i rect1)
 {
     bool result = !((rect0.min.x >= rect1.max.x) ||
@@ -2780,7 +2780,7 @@ struct Rect2u
     Vec2u max;
 };
 
-inline Rect2u
+function Rect2u
 Rect2uFromMinAndMax(Vec2u min, Vec2u max)
 {
     Rect2u result;
@@ -2789,7 +2789,7 @@ Rect2uFromMinAndMax(Vec2u min, Vec2u max)
     return result;
 }
 
-inline Rect2u
+function Rect2u
 Rect2uFromMinDim(Vec2u min, Vec2u dim)
 {
     Rect2u result;
@@ -2798,21 +2798,21 @@ Rect2uFromMinDim(Vec2u min, Vec2u dim)
     return result;
 }
 
-inline Vec2u
+function Vec2u
 GetDim(Rect2u rect)
 {
     Vec2u result = rect.max - rect.min;
     return result;
 }
 
-inline bool
+function bool
 IsDimZeroOrNegative(Rect2u rect)
 {
     bool result = rect.min.x >= rect.max.x || rect.min.y >= rect.max.y;
     return result;
 }
 
-inline bool
+function bool
 TestPointInRect(Rect2u rect, Vec2u testPoint)
 {
     bool result =
@@ -2824,7 +2824,7 @@ TestPointInRect(Rect2u rect, Vec2u testPoint)
     return result;
 }
 
-inline bool
+function bool
 TestRectOverlapsRect(Rect2u rect0, Rect2u rect1)
 {
     bool result = !((rect0.min.x >= rect1.max.x) ||
@@ -2843,7 +2843,7 @@ struct Circle2
     f32 radius;
 };
 
-inline Circle2
+function Circle2
 CircleFromCenterRad(Vec2 center, f32 radius)
 {
     Circle2 result;
@@ -2852,7 +2852,7 @@ CircleFromCenterRad(Vec2 center, f32 radius)
     return result;
 }
 
-inline bool
+function bool
 TestRectOverlapsCircle(Rect2 rect, Circle2 circle)
 {
     Vec2 rectClosest = circle.center;
@@ -2873,7 +2873,7 @@ TestRectOverlapsCircle(Rect2 rect, Circle2 circle)
     return false;
 }
 
-inline bool
+function bool
 TestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
 {
     f32 distSq = LengthSq(c0.center - c1.center);
@@ -2891,7 +2891,7 @@ struct CircleOverlapTestResult
 };
 
 #if !CRT_DISABLED
-inline CircleOverlapTestResult
+function CircleOverlapTestResult
 FullTestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
 {
     CircleOverlapTestResult result = {};

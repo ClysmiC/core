@@ -163,7 +163,13 @@ static f32 constexpr goldenRatio = 1.61803398875f;
 // --- hgen defines
 
 // Tells hgen to generate a forward declaration
-#define function
+#define function static
+
+#if COMPILER_MSVC
+    #define DLLEXPORT extern "C" __declspec(dllexport)
+#else
+    #define DLLEXPORT extern "C"
+#endif
 
 // Tells hgen to emit a default argument value in the generated forward declaration
 #define OptionalArg(name, defaultValue) name

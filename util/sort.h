@@ -108,7 +108,7 @@ void BubbleSort(Slice<T> slice, FnComparatorWithCtx<T, Ctx> Compare, Ctx * ctx)
 }
 
 template <typename T>
-inline void
+function void
 BubbleSort(DynArray<T> * array, FnComparator<T> comparator)
 {
     // NOTE - The array param technically doesn't need to be a pointer, but since
@@ -118,7 +118,7 @@ BubbleSort(DynArray<T> * array, FnComparator<T> comparator)
 }
 
 template <typename T, typename Ctx>
-inline void
+function void
 BubbleSort(DynArray<T> * array, FnComparatorWithCtx<T, Ctx> comparator, Ctx * ctx)
 {
     BubbleSort(MakeSlice(*array), comparator, ctx);

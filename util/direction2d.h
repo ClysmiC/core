@@ -26,7 +26,7 @@ enum class OrdinalDir : u8
 };
 DefineEnumOps(OrdinalDir, u8);
 
-inline Vec2
+function Vec2
 CornerPos(Rect2 rect, OrdinalDir dir)
 {
     // NOTE - +Y is up (N)
@@ -62,14 +62,14 @@ enum class Dir : u8
 };
 DefineEnumOps(Dir, u8);
 
-inline bool
+function bool
 IsCardinal(Dir dir)
 {
     bool result = (dir == Dir::N) || (dir == Dir::E) || (dir == Dir::S) || (dir == Dir::W);
     return result;
 }
 
-inline bool
+function bool
 IsOrdinal(Dir dir)
 {
     bool result = (dir == Dir::NE) || (dir == Dir::SE) || (dir == Dir::SW) || (dir == Dir::NW);

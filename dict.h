@@ -30,7 +30,7 @@ static const uint8_t s_infoOccupiedMask        = 0b00100000;
 }
 
 // FNV-1a : http://www.isthe.com/chongo/tech/comp/fnv/
-inline unsigned int
+function unsigned int
 BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
 {
     unsigned int result = runningHash;
@@ -45,7 +45,7 @@ BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
     return result;
 }
 
-inline unsigned int
+function unsigned int
 BuildHashZString(const char* zString, unsigned int runningHash)
 {
     unsigned int result = runningHash;
@@ -61,21 +61,21 @@ BuildHashZString(const char* zString, unsigned int runningHash)
     return result;
 }
 
-inline unsigned int
+function unsigned int
 StartHash(const void* pBytes=nullptr, int cBytes=0)
 {
     static const unsigned int s_fnvOffsetBasis = 2166136261;
     return BuildHash(pBytes, cBytes, s_fnvOffsetBasis);
 }
 
-inline unsigned int
+function unsigned int
 StartHashZString(const char* zString)
 {
     static const unsigned int s_fnvOffsetBasis = 2166136261;
     return BuildHashZString(zString, s_fnvOffsetBasis);
 }
 
-inline unsigned int
+function unsigned int
 CombineHash(unsigned int hash0, unsigned int hash1)
 {
     return hash0 ^ 37 * hash1;
@@ -310,7 +310,7 @@ enum class HashOp : uint8_t
 };
 
 template <typename K, typename V>
-inline bool AlsHashHelper_(
+function bool AlsHashHelper_(
     HashMap<K, V> * pHashmap,
     const K & key,
     HashOp hashopk,

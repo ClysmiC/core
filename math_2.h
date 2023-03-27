@@ -90,7 +90,7 @@ struct Vec
 
 
 template<class T, int N>
-inline Vec<T, N>
+function Vec<T, N>
 operator-(Vec<T, N> const& rhs)
 {
     Vec<T, N> result;
@@ -100,7 +100,7 @@ operator-(Vec<T, N> const& rhs)
 }
 
 template<class T, int N>
-inline Vec<T, N>
+function Vec<T, N>
 operator+(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 {
     Vec<T, N> result;
@@ -110,7 +110,7 @@ operator+(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N>
-inline Vec<T, N>&
+function Vec<T, N>&
 operator+=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 {
     lhs = lhs + rhs;
@@ -118,7 +118,7 @@ operator+=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N>
-inline Vec<T, N>
+function Vec<T, N>
 operator-(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 {
     Vec<T, N> result;
@@ -128,7 +128,7 @@ operator-(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N>
-inline Vec<T, N>&
+function Vec<T, N>&
 operator-=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 {
     lhs = lhs - rhs;
@@ -136,7 +136,7 @@ operator-=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>
+function Vec<T, N>
 operator*(Vec<T, N> const& lhs, O const& rhs)
 {
     Vec<T, N> result;
@@ -146,7 +146,7 @@ operator*(Vec<T, N> const& lhs, O const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>
+function Vec<T, N>
 operator*(O const& lhs, Vec<T, N> const& rhs)
 {
     // NOTE - assumes commutative property
@@ -155,7 +155,7 @@ operator*(O const& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>&
+function Vec<T, N>&
 operator*=(Vec<T, N>& lhs, O const& rhs)
 {
     lhs = lhs * rhs;
@@ -163,7 +163,7 @@ operator*=(Vec<T, N>& lhs, O const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>
+function Vec<T, N>
 operator/(Vec<T, N> const& lhs, O const& rhs)
 {
     Vec<T, N> result;
@@ -173,7 +173,7 @@ operator/(Vec<T, N> const& lhs, O const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>
+function Vec<T, N>
 operator/(O const& lhs, Vec<T, N> const& rhs)
 {
     Vec<T, N> result;
@@ -183,7 +183,7 @@ operator/(O const& lhs, Vec<T, N> const& rhs)
 }
 
 template<class T, int N, class O>
-inline Vec<T, N>&
+function Vec<T, N>&
 operator/=(Vec<T, N>& lhs, O const& rhs)
 {
     lhs = lhs / rhs;

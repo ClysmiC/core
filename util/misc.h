@@ -72,7 +72,7 @@ struct MemberRef
 #define MakeMemberRef(TYPE, MEMBER_TYPE, MEMBER_NAME) (MemberRef<TYPE, MEMBER_TYPE>(offsetof(TYPE, MEMBER_NAME)))
 
 template <typename TStruct, typename TMember>
-inline MemberRef<TStruct, TMember>
+function MemberRef<TStruct, TMember>
 MemberRef_Nil()
 {
     MemberRef<TStruct, TMember> result = {};
@@ -80,7 +80,7 @@ MemberRef_Nil()
 }
 
 template <typename TStruct, typename TMember>
-inline TMember*
+function TMember*
 PMember(TStruct* pStruct, MemberRef<TStruct, TMember> memberRef)
 {
     TMember * result = nullptr;

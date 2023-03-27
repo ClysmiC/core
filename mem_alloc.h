@@ -111,9 +111,9 @@ enum class CTZ : u8
 };
 
 // @Cleanup - need these because core doesn't run hgen
-void* Allocate(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
-void* AllocateTracked(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
-bool mem_region_end_(Memory_Region region, bool unlink);
+function void* Allocate(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+function void* AllocateTracked(Memory_Region region, uintptr cBytes, CTZ clearToZero=CTZ::NIL);
+function bool mem_region_end_(Memory_Region region, bool unlink);
 
 enum AllocType : u8
 {
@@ -179,19 +179,19 @@ ChangeHeadSizeAndMaybeSort(FreeBlockHeader ** ppHead, uintptr cBytesNew)
     }
 }
 
-inline void*
+function void*
 AllocateFromSystem(uintptr cBytes)
 {
     return MEM::system_allocate(cBytes);
 }
 
-inline void
+function void
 FreeFromSystem(void* allocation)
 {
     MEM::system_free(allocation);
 }
 
-inline FreeBlockHeader *
+function FreeBlockHeader *
 EnsureBlockWithSize(Memory_Region_Header * regionHeader, uintptr cBytes, AllocType allocType)
 {
     // NOTE - Caller is responsible for adding bytes for TrackedHeader if making a tracked allocation

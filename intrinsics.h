@@ -82,33 +82,33 @@ Sqrt(f32 value)
 
 constexpr i64
 i64_from_
-inline i64
+function i64
 RoundF64ToI64(f64 value)
 {
     i64 result = (i64)round(value);
     return result;
 }
 
-inline i32
+function i32
 FloorF32ToI32(f32 value)
 {
     return (i32)floorf(value);
 }
 
-inline i32
+function i32
 CeilF32ToI32(f32 value)
 {
     return (i32)ceilf(value);
 }
 
-inline u8
+function u8
 RoundF32ToU8(f32 value)
 {
     u8 result = (u8)(value + 0.5f);
     return result;
 }
 
-inline u8
+function u8
 NormalizedF32ToU8(f32 value)
 {
     f32 scaledValue = value * 0xFF;
@@ -117,7 +117,7 @@ NormalizedF32ToU8(f32 value)
 }
 #endif
 
-inline f32
+function f32
 f32_round(f32 value)
 {
     // @SSE 4.1
@@ -129,7 +129,7 @@ f32_round(f32 value)
     return result;
 }
 
-inline i32
+function i32
 i32_from_f32_round(f32 value)
 {
     // @SSE 4.1
@@ -141,7 +141,7 @@ i32_from_f32_round(f32 value)
     return result;
 }
 
-inline f32
+function f32
 f32_floor(f32 value)
 {
     // @SSE 4.1
@@ -152,7 +152,7 @@ f32_floor(f32 value)
     return result;
 }
 
-inline i32
+function i32
 i32_from_f32_floor(f32 value)
 {
     // @SSE 4.1
@@ -163,7 +163,7 @@ i32_from_f32_floor(f32 value)
     return result;
 }
 
-inline f32
+function f32
 f32_ceil(f32 value)
 {
     // @SSE 4.1
@@ -174,7 +174,7 @@ f32_ceil(f32 value)
     return result;
 }
 
-inline i32
+function i32
 i32_from_f32_ceil(f32 value)
 {
     // @SSE 4.1
@@ -186,37 +186,37 @@ i32_from_f32_ceil(f32 value)
 }
 
 #if !CRT_DISABLED
-inline f32
+function f32
 Sin(f32 radians)
 {
     return sinf(radians);
 }
 
-inline f32
+function f32
 Cos(f32 radians)
 {
     return cosf(radians);
 }
 
-inline f32
+function f32
 Tan(f32 radians)
 {
     return tanf(radians);
 }
 
-inline f32
+function f32
 Asin(f32 val)
 {
     return asinf(val);
 }
 
-inline f32
+function f32
 Acos(f32 val)
 {
     return acosf(val);
 }
 
-inline f32
+function f32
 Atan2(f32 y, f32 x)
 {
     return atan2f(y, x);
@@ -230,7 +230,7 @@ struct BitScanResult
     bool found;
 };
 
-inline BitScanResult
+function BitScanResult
 FindLeastSignificantBitSet(u32 value)
 {
     BitScanResult result = {};
@@ -252,7 +252,7 @@ FindLeastSignificantBitSet(u32 value)
     return result;
 }
 
-inline u32
+function u32
 RotateLeft(u32 value, int shift)
 {
 #if COMPILER_MSVC
@@ -267,7 +267,7 @@ RotateLeft(u32 value, int shift)
     return result;
 }
 
-inline u32
+function u32
 RotateRight(u32 value, int shift)
 {
 #if COMPILER_MSVC

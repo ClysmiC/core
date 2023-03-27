@@ -253,7 +253,7 @@ RemoveUnordered(DynArray<T>* array, T item)
 }
 
 template <typename T>
-inline bool
+function bool
 IsEmpty(DynArray<T> array)
 {
     bool result = (array.count == 0);
@@ -261,7 +261,7 @@ IsEmpty(DynArray<T> array)
 }
 
 template <typename T>
-inline void
+function void
 Clear(DynArray<T>* array, bool shouldFreeMemory=false)
 {
     array->count = 0;
@@ -276,7 +276,7 @@ Clear(DynArray<T>* array, bool shouldFreeMemory=false)
 }
 
 template <typename T>
-inline T*
+function T*
 RawPtr(DynArray<T>* array)
 {
     T* result = array->items;
@@ -302,13 +302,13 @@ MakeSlice(BufferBuilder builder)
     return result;
 }
 
-inline void
+function void
 Clear(BufferBuilder* builder, bool shouldFreeMemory=false)
 {
     Clear(&builder->bytes, shouldFreeMemory);
 }
 
-inline bool
+function bool
 IsEmpty(BufferBuilder* builder)
 {
     bool result = (builder->bytes.count == 0);
@@ -358,7 +358,7 @@ AppendStringCopy(BufferBuilder* builder, String string)
     CopyString(string, ptr, string.cBytes, Null_Terminate::NO);
 }
 
-inline u8 *
+function u8 *
 RawPtr(BufferBuilder* builder)
 {
     u8 * result = builder->bytes.items;
@@ -459,7 +459,7 @@ AppendStringCopy(PushBuffer* buffer, String string)
     mem_copy(bytes + sizeof(i32), string.bytes, string.cBytes);
 }
 
-inline void AdvanceByteCursor(struct PushBufferReader* reader, int advance); // @Hgen - Need to support core module...
+function void AdvanceByteCursor(struct PushBufferReader* reader, int advance); // @Hgen - Need to support core module...
 
 struct PushBufferReader
 {
@@ -478,7 +478,7 @@ struct PushBufferReader
     }
 };
 
-inline bool
+function bool
 IsFinishedReading(PushBufferReader* reader)
 {
     bool result = (reader->page == nullptr);
@@ -524,7 +524,7 @@ ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
     return result;
 }
 
-inline void
+function void
 AdvanceByteCursor(PushBufferReader* reader, int advance)
 {
     reader->iByteInPage += advance;

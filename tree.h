@@ -262,7 +262,7 @@ EndChild(TreeBuilder<T> * builder)
 }
 
 template <typename T>
-inline void
+function void
 LeafChild(TreeBuilder<T> * builder, T* child)
 {
     BeginChild(builder, child);
@@ -270,7 +270,7 @@ LeafChild(TreeBuilder<T> * builder, T* child)
 }
 
 template <typename T>
-inline void
+function void
 SetInsertionCursorAfter(TreeBuilder<T> * builder, T* insert_child_after)
 {
     // NOTE - passing nullptr for insert_child_after makes the next inserted

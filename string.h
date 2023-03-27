@@ -283,7 +283,7 @@ StringConcat(String srcA, String srcB, Memory_Region memory)
     return result;
 }
 
-inline bool
+function bool
 AreStringsEqual(char* str0, char* str1)
 {
     Assert(str0);
@@ -304,7 +304,7 @@ AreStringsEqual(char* str0, char* str1)
     return (*cursor0 == '\0' && *cursor1 == '\0');
 }
 
-inline bool
+function bool
 AreStringsEqual(String str0, char* str1)
 {
     char* cursor0 = str0.bytes;
@@ -324,14 +324,14 @@ AreStringsEqual(String str0, char* str1)
     return (cursor0 == endCursor0) && (*cursor1 == '\0');
 }
 
-inline bool
+function bool
 AreStringsEqual(char* str0, String str1)
 {
     bool result = AreStringsEqual(str1, str0);
     return result;
 }
 
-inline bool
+function bool
 AreStringsEqual(String str0, String str1)
 {
     if (str0.cBytes != str1.cBytes) return false;
@@ -355,7 +355,7 @@ AreStringsEqual(String str0, String str1)
     return (cursor0 == endCursor0) && (cursor1 == endCursor1);
 }
 
-inline char
+function char
 AsciiLowerCase(char ascii)
 {
     char result = ascii;
@@ -367,7 +367,7 @@ AsciiLowerCase(char ascii)
     return result;
 }
 
-inline char
+function char
 AsciiUpperCase(char ascii)
 {
     char result = ascii;
@@ -379,7 +379,7 @@ AsciiUpperCase(char ascii)
     return result;
 }
 
-inline bool
+function bool
 AreStringsEqualIgnoreCase(char* str0, char* str1)
 {
     Assert(str0);
@@ -401,7 +401,7 @@ AreStringsEqualIgnoreCase(char* str0, char* str1)
     return (*cursor0 == '\0' && *cursor1 == '\0');
 }
 
-inline bool
+function bool
 AreStringsEqualIgnoreCase(String str0, char* str1)
 {
     char* cursor0 = str0.bytes;
@@ -422,14 +422,14 @@ AreStringsEqualIgnoreCase(String str0, char* str1)
     return (cursor0 == endCursor0) && (*cursor1 == '\0');
 }
 
-inline bool
+function bool
 AreStringsEqualIgnoreCase(char* str0, String str1)
 {
     bool result = AreStringsEqual(str1, str0);
     return result;
 }
 
-inline bool
+function bool
 AreStringsEqualIgnoreCase(String str0, String str1)
 {
     if (str0.cBytes != str1.cBytes) return false;
@@ -454,7 +454,7 @@ AreStringsEqualIgnoreCase(String str0, String str1)
     return (cursor0 == endCursor0) && (cursor1 == endCursor1);
 }
 
-inline bool
+function bool
 StringHasPrefix(char* str, char* prefix)
 {
     char* strCursor = str;
@@ -472,7 +472,7 @@ StringHasPrefix(char* str, char* prefix)
     return (*prefixCursor == '\0');
 }
 
-inline bool
+function bool
 StringHasPrefix(String str, String prefix)
 {
     if (prefix.cBytes > str.cBytes) return false;
@@ -488,7 +488,7 @@ StringHasPrefix(String str, String prefix)
     return true;
 }
 
-inline bool
+function bool
 StringHasSuffix(char* str, char* suffix)
 {
     int strLength = ZStringLength(str);
@@ -510,7 +510,7 @@ StringHasSuffix(char* str, char* suffix)
     return true;
 }
 
-inline bool
+function bool
 StringHasSuffix(String str, String suffix)
 {
     if (suffix.cBytes > str.cBytes) return false;
@@ -619,7 +619,7 @@ GetDirectoryFromFullFilename(String fullFilename)
     return result;
 }
 
-inline bool
+function bool
 IsDecimalDigit(char c)
 {
     bool result = (c >= '0' && c <= '9');
