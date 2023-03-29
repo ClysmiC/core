@@ -1483,7 +1483,7 @@ function Vec2i
 Ceil(Vec2x v)
 {
     Vec2i result = Floor(v);
-    result += Vec2iFill(1);
+    result += Vec2i(1);
     return result;
 }
 
@@ -2451,20 +2451,20 @@ RectFromCenterHalfDim(Vec2x center, fix64 halfDim)
 }
 
 function Rect2x
-RectFromCenterDim(Vec2x center, Vec2x dim)
+rect_from_center_dim(Vec2x center, Vec2x dim)
 {
     Rect2x result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
 function Rect2x
-RectFromCenterDim(Vec2x center, fix64 dim)
+rect_from_center_dim(Vec2x center, fix64 dim)
 {
-    return RectFromCenterDim(center, Vec2xFill(dim));
+    return rect_from_center_dim(center, Vec2xFill(dim));
 }
 
 function Rect2x
-RectFromMinDim(Vec2x min, Vec2x dim)
+rect_from_min_dim(Vec2x min, Vec2x dim)
 {
     Rect2x result;
     result.min = min;
@@ -2473,7 +2473,7 @@ RectFromMinDim(Vec2x min, Vec2x dim)
 }
 
 function Rect2x
-RectFromMinDim(Vec2x min, fix64 dim)
+rect_from_min_dim(Vec2x min, fix64 dim)
 {
     Rect2x result;
     result.min = min;
@@ -2518,7 +2518,7 @@ RectFromRectAndMargin(Rect2x original, Vec2x margin)
 }
 
 function Rect2x
-RectFromRectAndOffset(Rect2x original, fix64 offset)
+rect_from_rect_offset(Rect2x original, fix64 offset)
 {
     Rect2x result;
     result.min = original.min + Vec2xFill(offset);
@@ -2527,7 +2527,7 @@ RectFromRectAndOffset(Rect2x original, fix64 offset)
 }
 
 function Rect2x
-RectFromRectAndOffset(Rect2x original, Vec2x offset)
+rect_from_rect_offset(Rect2x original, Vec2x offset)
 {
     Rect2x result;
     result.min = original.min + offset;
@@ -2536,14 +2536,14 @@ RectFromRectAndOffset(Rect2x original, Vec2x offset)
 }
 
 function Vec2x
-GetCenter(Rect2x rect)
+rect_center(Rect2x rect)
 {
     Vec2x result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
 function Vec2x
-GetDim(Rect2x rect)
+rect_dim(Rect2x rect)
 {
     Vec2x result = rect.max - rect.min;
     return result;
@@ -2557,7 +2557,7 @@ IsDimZeroOrNegative(Rect2x rect)
 }
 
 function bool
-TestPointInRect(Rect2x rect, Vec2x testPoint)
+rect_contains_point(Rect2x rect, Vec2x testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2609,14 +2609,14 @@ RectFromCenterHalfDim(Vec3x center, Vec3x halfDim)
 }
 
 function Rect3x
-RectFromCenterDim(Vec3x center, Vec3x dim)
+rect_from_center_dim(Vec3x center, Vec3x dim)
 {
     Rect3x result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
 function Rect3x
-RectFromMinDim(Vec3x min, Vec3x dim)
+rect_from_min_dim(Vec3x min, Vec3x dim)
 {
     Rect3x result;
     result.min = min;
@@ -2661,7 +2661,7 @@ RectFromRectAndMargin(Rect3x original, Vec3x margin)
 }
 
 function Rect3x
-RectFromRectAndOffset(Rect3x original, fix64 offset)
+rect_from_rect_offset(Rect3x original, fix64 offset)
 {
     Rect3x result;
     result.min = original.min + Vec3xFill(offset);
@@ -2670,7 +2670,7 @@ RectFromRectAndOffset(Rect3x original, fix64 offset)
 }
 
 function Rect3x
-RectFromRectAndOffset(Rect3x original, Vec3x offset)
+rect_from_rect_offset(Rect3x original, Vec3x offset)
 {
     Rect3x result;
     result.min = original.min + offset;
@@ -2679,14 +2679,14 @@ RectFromRectAndOffset(Rect3x original, Vec3x offset)
 }
 
 function Vec3x
-GetCenter(Rect3x rect)
+rect_center(Rect3x rect)
 {
     Vec3x result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
 function Vec3x
-GetDim(Rect3x rect)
+rect_dim(Rect3x rect)
 {
     Vec3x result = rect.max - rect.min;
     return result;
@@ -2700,7 +2700,7 @@ IsDimZeroOrNegative(Rect3x rect)
 }
 
 function bool
-TestPointInRect(Rect3x rect, Vec3x testPoint)
+rect_contains_point(Rect3x rect, Vec3x testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2796,3 +2796,6 @@ FullTestCircleOverlapsCircle(Circle2x c0, Circle2x c1)
 }
 
 #endif
+
+using Vec2x = Vec<fxp::Distance, 2>;
+using Rect2x = Rect<fxp::Distance ,2>;

@@ -124,6 +124,8 @@ enum class Signed_Axis : u8
     ENUM_COUNT
 };
 
+
+#if 0
 union Vec2
 {
     struct
@@ -332,21 +334,21 @@ union Vec4
 // Vec2
 
 function Vec2
-Vec2Fill(f32 scalar)
+Vec2(f32 scalar)
 {
     Vec2 result(scalar, scalar);
     return result;
 }
 
 function Vec2
-Vec2Min(Vec2 v0, Vec2 v1)
+vec_min(Vec2 v0, Vec2 v1)
 {
     Vec2 result(min(v0.x, v1.x), min(v0.y, v1.y));
     return result;
 }
 
 function Vec2
-Vec2Min(Vec2 * candidates, int count)
+vec_min(Vec2 * candidates, int count)
 {
     Vec2 result =  {};
 
@@ -357,21 +359,21 @@ Vec2Min(Vec2 * candidates, int count)
 
     for (int iCandidate = 1; iCandidate < count; iCandidate++)
     {
-        result = Vec2Min(result, candidates[iCandidate]);
+        result = vec_min(result, candidates[iCandidate]);
     }
 
     return result;
 }
 
 function Vec2
-Vec2Max(Vec2 v0, Vec2 v1)
+vec_max(Vec2 v0, Vec2 v1)
 {
     Vec2 result(max(v0.x, v1.x), max(v0.y, v1.y));
     return result;
 }
 
 function Vec2
-Vec2Max(Vec2 * candidates, int count)
+vec_max(Vec2 * candidates, int count)
 {
     Vec2 result =  {};
 
@@ -382,7 +384,7 @@ Vec2Max(Vec2 * candidates, int count)
 
     for (int iCandidate = 1; iCandidate < count; iCandidate++)
     {
-        result = Vec2Max(result, candidates[iCandidate]);
+        result = vec_max(result, candidates[iCandidate]);
     }
 
     return result;
@@ -533,7 +535,7 @@ clamp(Vec2 v, Vec2 min, Vec2 max)
 function Vec2
 clamp_01(Vec2 v)
 {
-    Vec2 result = clamp(v, Vec2Fill(0), Vec2Fill(1));
+    Vec2 result = clamp(v, Vec2(0), Vec2(1));
     return result;
 }
 
@@ -561,7 +563,7 @@ NormalizeSafeOr(Vec2 v, Vec2 fallback)
 function Vec2
 NormalizeSafe0(Vec2 v)
 {
-    Vec2 result = NormalizeSafeOr(v, Vec2Fill(0));
+    Vec2 result = NormalizeSafeOr(v, Vec2(0));
     return result;
 }
 
@@ -653,7 +655,7 @@ Hadamarddivide_safe_0(Vec2 v0, Vec2 v1)
 // Vec3
 
 function Vec3
-Vec3Fill(f32 scalar)
+Vec3(f32 scalar)
 {
     Vec3 result(scalar, scalar, scalar);
     return result;
@@ -894,7 +896,7 @@ NormalizeSafeOr(Vec3 v, Vec3 fallback)
 function Vec3
 NormalizeSafe0(Vec3 v)
 {
-    Vec3 result = NormalizeSafeOr(v, Vec3Fill(0));
+    Vec3 result = NormalizeSafeOr(v, Vec3(0));
     return result;
 }
 
@@ -995,7 +997,7 @@ Hadamarddivide_safe_0(Vec3 v0, Vec3 v1)
 // Vec4
 
 function Vec4
-Vec4Fill(f32 scalar)
+Vec4(f32 scalar)
 {
     Vec4 result(scalar, scalar, scalar, scalar);
     return result;
@@ -1092,7 +1094,7 @@ operator/=(Vec4& lhs, f32 rhs)
 }
 
 function Vec4
-Vec4Rgba(u32 rgba)
+Rgba(u32 rgba)
 {
     u32 r = (rgba >> 24) & 0xFF;
     u32 g = (rgba >> 16) & 0xFF;
@@ -1103,7 +1105,7 @@ Vec4Rgba(u32 rgba)
 }
 
 function Vec4
-Vec4Rgba(f32 r, f32 g, f32 b, f32 a)
+Rgba(f32 r, f32 g, f32 b, f32 a)
 {
     Vec4 result = Vec4(r, g, b, a) / 255.0f;
     return result;
@@ -1200,7 +1202,7 @@ NormalizeSafeOr(Vec4 v, Vec4 fallback)
 function Vec4
 NormalizeSafe0(Vec4 v)
 {
-    Vec4 result = NormalizeSafeOr(v, Vec4Fill(0));
+    Vec4 result = NormalizeSafeOr(v, Vec4(0));
     return result;
 }
 
@@ -1300,7 +1302,7 @@ union Vec2i
 };
 
 function Vec2i
-Vec2iFill(int scalar)
+Vec2i(int scalar)
 {
     Vec2i result(scalar, scalar);
     return result;
@@ -1919,7 +1921,10 @@ operator/=(Vec4u& lhs, uint rhs)
     lhs = lhs / rhs;
     return lhs;
 }
+#endif
 
+
+#if 0
 // --- Ray
 
 struct Ray2
@@ -1964,6 +1969,8 @@ Vec3 PosAtT(Ray3 ray, f32 t)
     Vec3 result = ray.p0 + ray.dir * t;
     return result;
 }
+#endif
+
 
 // Mat3
 
@@ -2324,11 +2331,11 @@ Mat4Perspective(f32 fovVertical, f32 aspectRatio, f32 nearDist, f32 farDist)
 function Mat4
 Mat4LookAtDir(Vec3 pos, Vec3 dir, Vec3 up)
 {
-    dir = NormalizeSafeYAxis(dir);
-    up = NormalizeSafeOr(up, dir + Vec3(0, 0, 1));
+    dir = vec_normalize_safe_or(dir, Vec3(0, 1, 0));
+    up = vec_normalize_safe_or(up, dir + Vec3(0, 0, 1));
 
-    Vec3 right = Cross(dir, up);
-    up = Cross(right, dir);
+    Vec3 right = vec_cross(dir, up);
+    up = vec_cross(right, dir);
 
     // NOTE - rotation is transposed from the matrix that would move item into
     //  the space defined by the camera, and translation is negated. This is due
@@ -2336,8 +2343,6 @@ Mat4LookAtDir(Vec3 pos, Vec3 dir, Vec3 up)
     //  else in the opposite fashion.
 
     // NOTE - dir is negated because in camera space, dir corresponds to our negative z axis
-
-    // NOTE - The not
     
     Mat4 rotation = {{
             { right.x, right.y, right.z, 0 },
@@ -2352,6 +2357,7 @@ Mat4LookAtDir(Vec3 pos, Vec3 dir, Vec3 up)
     return result;
 }
 
+#if 0
 function Mat4
 Mat4LookAtTarget(Vec3 pos, Vec3 target, Vec3 up)
 {
@@ -2359,6 +2365,7 @@ Mat4LookAtTarget(Vec3 pos, Vec3 target, Vec3 up)
     Mat4 result = Mat4LookAtDir(pos, dir, up);
     return result;
 }
+#endif
 
 #endif // !CRT_DISABLED
 
@@ -2370,6 +2377,7 @@ RowMajorPtr(const Mat4 * mat)
 
 // Rect2
 
+#if 0
 struct Rect2
 {
     Vec2 min;
@@ -2395,8 +2403,8 @@ function Rect2
 RectFromPoints(Vec2 point0, Vec2 point1)
 {
     Rect2 result;
-    result.min = Vec2Min(point0, point1);
-    result.max = Vec2Max(point0, point1);
+    result.min = vec_min(point0, point1);
+    result.max = vec_max(point0, point1);
     return result;
 }
 
@@ -2412,24 +2420,24 @@ RectFromCenterHalfDim(Vec2 center, Vec2 halfDim)
 function Rect2
 RectFromCenterHalfDim(Vec2 center, f32 halfDim)
 {
-    return RectFromCenterHalfDim(center, Vec2Fill(halfDim));
+    return RectFromCenterHalfDim(center, Vec2(halfDim));
 }
 
 function Rect2
-RectFromCenterDim(Vec2 center, Vec2 dim)
+rect_from_center_dim(Vec2 center, Vec2 dim)
 {
     Rect2 result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
 function Rect2
-RectFromCenterDim(Vec2 center, f32 dim)
+rect_from_center_dim(Vec2 center, f32 dim)
 {
-    return RectFromCenterDim(center, Vec2Fill(dim));
+    return rect_from_center_dim(center, Vec2(dim));
 }
 
 function Rect2
-RectFromMinDim(Vec2 min, Vec2 dim)
+rect_from_min_dim(Vec2 min, Vec2 dim)
 {
     Rect2 result;
     result.min = min;
@@ -2438,11 +2446,11 @@ RectFromMinDim(Vec2 min, Vec2 dim)
 }
 
 function Rect2
-RectFromMinDim(Vec2 min, f32 dim)
+rect_from_min_dim(Vec2 min, f32 dim)
 {
     Rect2 result;
     result.min = min;
-    result.max = min + Vec2Fill(dim);
+    result.max = min + Vec2(dim);
     return result;
 }
 
@@ -2459,7 +2467,7 @@ function Rect2
 RectFromMaxDim(Vec2 max, f32 dim)
 {
     Rect2 result;
-    result.min = max - Vec2Fill(dim);
+    result.min = max - Vec2(dim);
     result.max = max;
     return result;
 }
@@ -2468,8 +2476,8 @@ function Rect2
 RectFromRectAndMargin(Rect2 original, f32 margin)
 {
     Rect2 result = original;
-    result.min -= Vec2Fill(margin);
-    result.max += Vec2Fill(margin);
+    result.min -= Vec2(margin);
+    result.max += Vec2(margin);
     return result;
 }
 
@@ -2483,16 +2491,16 @@ RectFromRectAndMargin(Rect2 original, Vec2 margin)
 }
 
 function Rect2
-RectFromRectAndOffset(Rect2 original, f32 offset)
+rect_from_rect_offset(Rect2 original, f32 offset)
 {
     Rect2 result;
-    result.min = original.min + Vec2Fill(offset);
-    result.max = original.max + Vec2Fill(offset);
+    result.min = original.min + Vec2(offset);
+    result.max = original.max + Vec2(offset);
     return result;
 }
 
 function Rect2
-RectFromRectAndOffset(Rect2 original, Vec2 offset)
+rect_from_rect_offset(Rect2 original, Vec2 offset)
 {
     Rect2 result;
     result.min = original.min + offset;
@@ -2501,14 +2509,14 @@ RectFromRectAndOffset(Rect2 original, Vec2 offset)
 }
 
 function Vec2
-GetCenter(Rect2 rect)
+rect_center(Rect2 rect)
 {
     Vec2 result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
 function Vec2
-GetDim(Rect2 rect)
+rect_dim(Rect2 rect)
 {
     Vec2 result = rect.max - rect.min;
     return result;
@@ -2522,7 +2530,7 @@ IsDimZeroOrNegative(Rect2 rect)
 }
 
 function bool
-TestPointInRect(Rect2 rect, Vec2 testPoint)
+rect_contains_point(Rect2 rect, Vec2 testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2585,20 +2593,20 @@ RectFromCenterHalfDim(Vec3 center, Vec3 halfDim)
 }
 
 function Rect3
-RectFromCenterDim(Vec3 center, Vec3 dim)
+rect_from_center_dim(Vec3 center, Vec3 dim)
 {
     Rect3 result = RectFromCenterHalfDim(center, dim * 0.5f);
     return result;
 }
 
 function Rect3
-RectFromCenterDim(Vec3 center, f32 dim)
+rect_from_center_dim(Vec3 center, f32 dim)
 {
-    return RectFromCenterDim(center, Vec3Fill(dim));
+    return rect_from_center_dim(center, Vec3(dim));
 }
 
 function Rect3
-RectFromMinDim(Vec3 min, Vec3 dim)
+rect_from_min_dim(Vec3 min, Vec3 dim)
 {
     Rect3 result;
     result.min = min;
@@ -2607,11 +2615,11 @@ RectFromMinDim(Vec3 min, Vec3 dim)
 }
 
 function Rect3
-RectFromMinDim(Vec3 min, f32 dim)
+rect_from_min_dim(Vec3 min, f32 dim)
 {
     Rect3 result;
     result.min = min;
-    result.max = min + Vec3Fill(dim);
+    result.max = min + Vec3(dim);
     return result;
 }
 
@@ -2628,7 +2636,7 @@ function Rect3
 RectFromMaxDim(Vec3 max, f32 dim)
 {
     Rect3 result;
-    result.min = max - Vec3Fill(dim);
+    result.min = max - Vec3(dim);
     result.max = max;
     return result;
 }
@@ -2637,8 +2645,8 @@ function Rect3
 RectFromRectAndMargin(Rect3 original, f32 margin)
 {
     Rect3 result = original;
-    result.min -= Vec3Fill(margin);
-    result.max += Vec3Fill(margin);
+    result.min -= Vec3(margin);
+    result.max += Vec3(margin);
     return result;
 }
 
@@ -2652,16 +2660,16 @@ RectFromRectAndMargin(Rect3 original, Vec3 margin)
 }
 
 function Rect3
-RectFromRectAndOffset(Rect3 original, f32 offset)
+rect_from_rect_offset(Rect3 original, f32 offset)
 {
     Rect3 result;
-    result.min = original.min + Vec3Fill(offset);
-    result.max = original.max + Vec3Fill(offset);
+    result.min = original.min + Vec3(offset);
+    result.max = original.max + Vec3(offset);
     return result;
 }
 
 function Rect3
-RectFromRectAndOffset(Rect3 original, Vec3 offset)
+rect_from_rect_offset(Rect3 original, Vec3 offset)
 {
     Rect3 result;
     result.min = original.min + offset;
@@ -2670,14 +2678,14 @@ RectFromRectAndOffset(Rect3 original, Vec3 offset)
 }
 
 function Vec3
-GetCenter(Rect3 rect)
+rect_center(Rect3 rect)
 {
     Vec3 result = 0.5f * (rect.min + rect.max);
     return result;
 }
 
 function Vec3
-GetDim(Rect3 rect)
+rect_dim(Rect3 rect)
 {
     Vec3 result = rect.max - rect.min;
     return result;
@@ -2691,7 +2699,7 @@ IsDimZeroOrNegative(Rect3 rect)
 }
 
 function bool
-TestPointInRect(Rect3 rect, Vec3 testPoint)
+rect_contains_point(Rect3 rect, Vec3 testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2727,7 +2735,7 @@ struct Rect2i
 };
 
 function Rect2i
-Rect2i_MinAndMax(Vec2i min, Vec2i max)
+rect_from_min_max(Vec2i min, Vec2i max)
 {
     Rect2i result;
     result.min = min;
@@ -2736,7 +2744,7 @@ Rect2i_MinAndMax(Vec2i min, Vec2i max)
 }
 
 function Rect2i
-Rect2i_MinDim(Vec2i min, Vec2i dim)
+rect_from_min_dim(Vec2i min, Vec2i dim)
 {
     Rect2i result;
     result.min = min;
@@ -2745,7 +2753,7 @@ Rect2i_MinDim(Vec2i min, Vec2i dim)
 }
 
 function Vec2i
-GetDim(Rect2i rect)
+rect_dim(Rect2i rect)
 {
     Vec2i result = rect.max - rect.min;
     return result;
@@ -2759,7 +2767,7 @@ IsDimZeroOrNegative(Rect2i rect)
 }
 
 function bool
-TestPointInRect(Rect2i rect, Vec2i testPoint)
+rect_contains_point(Rect2i rect, Vec2i testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2810,7 +2818,7 @@ Rect2uFromMinDim(Vec2u min, Vec2u dim)
 }
 
 function Vec2u
-GetDim(Rect2u rect)
+rect_dim(Rect2u rect)
 {
     Vec2u result = rect.max - rect.min;
     return result;
@@ -2824,7 +2832,7 @@ IsDimZeroOrNegative(Rect2u rect)
 }
 
 function bool
-TestPointInRect(Rect2u rect, Vec2u testPoint)
+rect_contains_point(Rect2u rect, Vec2u testPoint)
 {
     bool result =
         testPoint.x >= rect.min.x &&
@@ -2932,3 +2940,5 @@ enum class WindingOrder : u8
 
     ENUM_COUNT
 };
+
+#endif
