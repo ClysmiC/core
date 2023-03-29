@@ -69,14 +69,13 @@ SignOf(T value)
     return result;
 }
 
-#if !CRT_DISABLED
 TODO_MATH_CONSTEXPR f32
 Sqrt(f32 value)
 {
-    f32 result = sqrtf(value);
-    return result;
+    // @SSE
+    f32 Result = _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(value)));
+    return(Result);
 }
-#endif
 
 #if 0
 

@@ -1,7 +1,12 @@
 #pragma once
 
-#define IncrementIfZero(value) do { (value) = (decltype(value))((value) + !bool(value)); } while(0)
-#define DecrementIfNonZero(value) do { (value) = (decltype(value))((value) - bool(value)); } while(0)
+// TODO
+// options for trig, pow, etc.
+// - cephes
+// - sollya
+
+#define IncrementIfZero(value) DoWhile0((value) = (decltype(value))((value) + !bool(value));)
+#define DecrementIfNonZero(value) DoWhile0((value) = (decltype(value))((value) - bool(value));)
 
 function bool
 f32_eq_approx(
@@ -16,7 +21,7 @@ f32_eq_approx(
 
 template <class T>
 constexpr auto
-lerp(T a, T b, f32 u)
+lerp(T const& a, T const& b, f32 u)
 {
     auto result = ((1 - u) * a) + (u * b);
     return result;
@@ -24,7 +29,7 @@ lerp(T a, T b, f32 u)
 
 template <class T>
 function T
-min(T a, T b)
+min(T const& a, T const& b)
 {
     T result = ((a) <  (b)) ? (a) : (b);
     return result;
@@ -32,7 +37,7 @@ min(T a, T b)
 
 template <class T>
 function T
-max(T a, T b)
+max(T const& a, T const& b)
 {
     T result = ((a) >  (b)) ? (a) : (b);
     return result;
@@ -40,7 +45,7 @@ max(T a, T b)
 
 template <class T>
 constexpr T
-clamp(T value, T minimum, T maximum)
+clamp(T const& value, T const& minimum, T const& maximum)
 {
     T result;
     if (value < minimum)
@@ -60,9 +65,9 @@ clamp(T value, T minimum, T maximum)
 
 template <class T>
 function T
-clamp_01(T value)
+clamp_01(T const& value)
 {
-    T result = clamp(value, 0, 1);
+    T result = clamp(value, (T)0, (T)1);
     return result;
 }
 
@@ -391,6 +396,12 @@ Vec2Abs(Vec2 v)
 }
 
 function Vec2
+operator+(Vec2 const& rhs)
+{
+    return rhs;
+}
+
+function Vec2
 operator-(Vec2 rhs)
 {
     Vec2 result;
@@ -408,8 +419,8 @@ operator+(Vec2 lhs, Vec2 rhs)
     return result;
 }
 
-function Vec2 &
-operator+=(Vec2 & lhs, Vec2 rhs)
+function Vec2&
+operator+=(Vec2& lhs, Vec2 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -424,8 +435,8 @@ operator-(Vec2 lhs, Vec2 rhs)
     return result;
 }
 
-function Vec2 &
-operator-=(Vec2 & lhs, Vec2 rhs)
+function Vec2&
+operator-=(Vec2& lhs, Vec2 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -447,8 +458,8 @@ operator*(f32 lhs, Vec2 rhs)
     return result;
 }
 
-function Vec2 &
-operator*=(Vec2 & lhs, f32 rhs)
+function Vec2&
+operator*=(Vec2& lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -463,8 +474,8 @@ operator/(Vec2 lhs, f32 rhs)
     return result;
 }
 
-function Vec2 &
-operator/=(Vec2 & lhs, f32 rhs)
+function Vec2&
+operator/=(Vec2& lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -718,8 +729,8 @@ operator+(Vec3 lhs, Vec3 rhs)
     return result;
 }
 
-function Vec3 &
-operator+=(Vec3 & lhs, Vec3 rhs)
+function Vec3&
+operator+=(Vec3& lhs, Vec3 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -735,8 +746,8 @@ operator-(Vec3 lhs, Vec3 rhs)
     return result;
 }
 
-function Vec3 &
-operator-=(Vec3 & lhs, Vec3 rhs)
+function Vec3&
+operator-=(Vec3& lhs, Vec3 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -759,8 +770,8 @@ operator*(f32 lhs, Vec3 rhs)
     return result;
 }
 
-function Vec3 &
-operator*=(Vec3 & lhs, f32 rhs)
+function Vec3&
+operator*=(Vec3& lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -776,8 +787,8 @@ operator/(Vec3 lhs, f32 rhs)
     return result;
 }
 
-function Vec3 &
-operator/=(Vec3 & lhs, f32 rhs)
+function Vec3&
+operator/=(Vec3& lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1012,8 +1023,8 @@ operator+(Vec4 lhs, Vec4 rhs)
     return result;
 }
 
-function Vec4 &
-operator+=(Vec4 & lhs, Vec4 rhs)
+function Vec4&
+operator+=(Vec4& lhs, Vec4 rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1030,8 +1041,8 @@ operator-(Vec4 lhs, Vec4 rhs)
     return result;
 }
 
-function Vec4 &
-operator-=(Vec4 & lhs, Vec4 rhs)
+function Vec4&
+operator-=(Vec4& lhs, Vec4 rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1055,8 +1066,8 @@ operator*(f32 lhs, Vec4 rhs)
     return result;
 }
 
-function Vec4 &
-operator*=(Vec4 & lhs, f32 rhs)
+function Vec4&
+operator*=(Vec4& lhs, f32 rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1073,8 +1084,8 @@ operator/(Vec4 lhs, f32 rhs)
     return result;
 }
 
-function Vec4 &
-operator/=(Vec4 & lhs, f32 rhs)
+function Vec4&
+operator/=(Vec4& lhs, f32 rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1368,8 +1379,8 @@ operator+(Vec2i lhs, Vec2i rhs)
     return result;
 }
 
-function Vec2i &
-operator+=(Vec2i & lhs, Vec2i rhs)
+function Vec2i&
+operator+=(Vec2i& lhs, Vec2i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1384,8 +1395,8 @@ operator-(Vec2i lhs, Vec2i rhs)
     return result;
 }
 
-function Vec2i &
-operator-=(Vec2i & lhs, Vec2i rhs)
+function Vec2i&
+operator-=(Vec2i& lhs, Vec2i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1407,8 +1418,8 @@ operator*(int lhs, Vec2i rhs)
     return result;
 }
 
-function Vec2i &
-operator*=(Vec2i & lhs, int rhs)
+function Vec2i&
+operator*=(Vec2i& lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1423,8 +1434,8 @@ operator/(Vec2i lhs, int rhs)
     return result;
 }
 
-function Vec2i &
-operator/=(Vec2i & lhs, int rhs)
+function Vec2i&
+operator/=(Vec2i& lhs, int rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1465,8 +1476,8 @@ operator+(Vec2u lhs, Vec2u rhs)
     return result;
 }
 
-function Vec2u &
-operator+=(Vec2u & lhs, Vec2u rhs)
+function Vec2u&
+operator+=(Vec2u& lhs, Vec2u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1481,8 +1492,8 @@ operator-(Vec2u lhs, Vec2u rhs)
     return result;
 }
 
-function Vec2u &
-operator-=(Vec2u & lhs, Vec2u rhs)
+function Vec2u&
+operator-=(Vec2u& lhs, Vec2u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1504,8 +1515,8 @@ operator*(uint lhs, Vec2u rhs)
     return result;
 }
 
-function Vec2u &
-operator*=(Vec2u & lhs, uint rhs)
+function Vec2u&
+operator*=(Vec2u& lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1520,8 +1531,8 @@ operator/(Vec2u lhs, uint rhs)
     return result;
 }
 
-function Vec2u &
-operator/=(Vec2u & lhs, uint rhs)
+function Vec2u&
+operator/=(Vec2u& lhs, uint rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1555,8 +1566,8 @@ operator+(Vec3i lhs, Vec3i rhs)
     return result;
 }
 
-function Vec3i &
-operator+=(Vec3i & lhs, Vec3i rhs)
+function Vec3i&
+operator+=(Vec3i& lhs, Vec3i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1572,8 +1583,8 @@ operator-(Vec3i lhs, Vec3i rhs)
     return result;
 }
 
-function Vec3i &
-operator-=(Vec3i & lhs, Vec3i rhs)
+function Vec3i&
+operator-=(Vec3i& lhs, Vec3i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1596,8 +1607,8 @@ operator*(int lhs, Vec3i rhs)
     return result;
 }
 
-function Vec3i &
-operator*=(Vec3i & lhs, int rhs)
+function Vec3i&
+operator*=(Vec3i& lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1613,8 +1624,8 @@ operator/(Vec3i lhs, int rhs)
     return result;
 }
 
-function Vec3i &
-operator/=(Vec3i & lhs, int rhs)
+function Vec3i&
+operator/=(Vec3i& lhs, int rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1648,8 +1659,8 @@ operator+(Vec3u lhs, Vec3u rhs)
     return result;
 }
 
-function Vec3u &
-operator+=(Vec3u & lhs, Vec3u rhs)
+function Vec3u&
+operator+=(Vec3u& lhs, Vec3u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1665,8 +1676,8 @@ operator-(Vec3u lhs, Vec3u rhs)
     return result;
 }
 
-function Vec3u &
-operator-=(Vec3u & lhs, Vec3u rhs)
+function Vec3u&
+operator-=(Vec3u& lhs, Vec3u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1689,8 +1700,8 @@ operator*(uint lhs, Vec3u rhs)
     return result;
 }
 
-function Vec3u &
-operator*=(Vec3u & lhs, uint rhs)
+function Vec3u&
+operator*=(Vec3u& lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1706,8 +1717,8 @@ operator/(Vec3u lhs, uint rhs)
     return result;
 }
 
-function Vec3u &
-operator/=(Vec3u & lhs, uint rhs)
+function Vec3u&
+operator/=(Vec3u& lhs, uint rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1743,8 +1754,8 @@ operator+(Vec4i lhs, Vec4i rhs)
     return result;
 }
 
-function Vec4i &
-operator+=(Vec4i & lhs, Vec4i rhs)
+function Vec4i&
+operator+=(Vec4i& lhs, Vec4i rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1761,8 +1772,8 @@ operator-(Vec4i lhs, Vec4i rhs)
     return result;
 }
 
-function Vec4i &
-operator-=(Vec4i & lhs, Vec4i rhs)
+function Vec4i&
+operator-=(Vec4i& lhs, Vec4i rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1786,8 +1797,8 @@ operator*(int lhs, Vec4i rhs)
     return result;
 }
 
-function Vec4i &
-operator*=(Vec4i & lhs, int rhs)
+function Vec4i&
+operator*=(Vec4i& lhs, int rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1804,8 +1815,8 @@ operator/(Vec4i lhs, int rhs)
     return result;
 }
 
-function Vec4i &
-operator/=(Vec4i & lhs, int rhs)
+function Vec4i&
+operator/=(Vec4i& lhs, int rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -1841,8 +1852,8 @@ operator+(Vec4u lhs, Vec4u rhs)
     return result;
 }
 
-function Vec4u &
-operator+=(Vec4u & lhs, Vec4u rhs)
+function Vec4u&
+operator+=(Vec4u& lhs, Vec4u rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -1859,8 +1870,8 @@ operator-(Vec4u lhs, Vec4u rhs)
     return result;
 }
 
-function Vec4u &
-operator-=(Vec4u & lhs, Vec4u rhs)
+function Vec4u&
+operator-=(Vec4u& lhs, Vec4u rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -1884,8 +1895,8 @@ operator*(uint lhs, Vec4u rhs)
     return result;
 }
 
-function Vec4u &
-operator*=(Vec4u & lhs, uint rhs)
+function Vec4u&
+operator*=(Vec4u& lhs, uint rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -1902,8 +1913,8 @@ operator/(Vec4u lhs, uint rhs)
     return result;
 }
 
-function Vec4u &
-operator/=(Vec4u & lhs, uint rhs)
+function Vec4u&
+operator/=(Vec4u& lhs, uint rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -2019,7 +2030,7 @@ Mat3Scale(Vec2 s)
 }
 
  Mat3
-operator*(Mat3 & lhs, Mat3 & rhs)
+operator*(Mat3& lhs, Mat3& rhs)
 {
     // TODO - simd-ize?
     // https://tavianator.com/2016/matrix_multiply.html
@@ -2063,7 +2074,7 @@ struct Mat4
 };
 
 function Mat4
-operator*(const Mat4 & lhs, const Mat4 & rhs)
+operator*(const Mat4& lhs, const Mat4& rhs)
 {
     // TODO - simd-ize?
     // https://tavianator.com/2016/matrix_multiply.html
@@ -2084,7 +2095,7 @@ operator*(const Mat4 & lhs, const Mat4 & rhs)
 }
 
 function Vec4
-operator*(const Mat4 & m, const Vec4 & v)
+operator*(const Mat4& m, const Vec4& v)
 {
     Vec4 result;
     result.x = m.e[0][0] * v.x   +   m.e[0][1] * v.y   +   m.e[0][2] * v.z   +   m.e[0][3] * v.w;

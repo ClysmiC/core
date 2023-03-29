@@ -23,12 +23,16 @@
 #endif
 
 // TODO - Better way to force breakpoint
-#ifndef ForceBreakpoint
+#if COMPILER_MSVC
+ #define ForceBreakpoint() __debugbreak()
+#else
  #define ForceBreakpoint() (*(int*)0 = 0)
 #endif
 
+#define DoWhile0(STATEMENT) do { STATEMENT } while(0)
+
 #if BUILD_DEBUG && ENABLE_ASSERT
- #define Assert(EXPRESSION) if (!(EXPRESSION)) { ForceBreakpoint(); }
+ #define Assert(EXPRESSION) DoWhile0(if (!(EXPRESSION)) { ForceBreakpoint(); })
 #else
  #define Assert(EXPRESSION)
 #endif

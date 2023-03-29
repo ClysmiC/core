@@ -74,13 +74,13 @@ Rect2::Rect2(Rect2i r)
 
 
 
+// --- Vector
 
-
-template<class T, int N>
+template<class T, uint N>
 struct Vec
 {
     StaticAssert(N > 0);
-    static int constexpr COUNT = N;
+    static uint constexpr COUNT = N;
 
     T elements[N];
 
@@ -190,7 +190,7 @@ operator/=(Vec<T, N>& lhs, O const& rhs)
     return lhs;
 }
 
-
+// --- Specialize for 2, 3, 4, to provide aliases like x, y, xy, z, etc.
 
 template<class T>
 struct Vec<T, 2>
@@ -242,3 +242,16 @@ using Vector3 = Vec<f32, 3>;
 using Vector4 = Vec<f32, 4>;
 
 using Vector2x = Vec<fxp::Distance, 2>;
+
+
+// --- Rectangle
+
+template<class T, uint N>
+struct Bounds
+{
+    Vec<T, N> min;
+    Vec<T, N> max;
+};
+
+template<class T>
+using Rect = Bounds<T, 2>;
