@@ -154,7 +154,7 @@ function Vec<T, N>
 vec_max(Vec<T, N> v0, Vec<T, N> v1)
 {
     Vec<T, N> result;
-    for (int i = 0; i < N; i++) result[i] = min(v0[i], v1[i]);
+    for (int i = 0; i < N; i++) result[i] = max(v0[i], v1[i]);
 
     return result;
 }
@@ -194,7 +194,7 @@ function T
 vec_dot(Vec<T, N> lhs, Vec<T, N> rhs)
 {
     f32 result = 0;
-    for (int i = 0; i < N; i++) result += lhs[0] * rhs[0];
+    for (int i = 0; i < N; i++) result += lhs[i] * rhs[i];
 
     return result;
 }
@@ -379,7 +379,6 @@ struct Rgba
     , b(((hex & 0x0000FF00) >>  8) / 255.0f)
     , a(((hex & 0x000000FF) >>  0) / 255.0f)
         {}
-
 };
 
 namespace RGBA
