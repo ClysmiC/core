@@ -8,6 +8,15 @@ struct Vec
 
     inline T& operator[](int i) { return elements[i]; }
     inline T const& operator[](int i) const { return elements[i]; }
+
+    Vec() = default;
+
+    // Constructable from vector of any type that can cast to T
+    template <class U>
+    explicit constexpr Vec(Vec<U, N> v)
+    {
+        for (int i = 0; i < N; i++) (*this)[i] = T(v[i]);
+    }
 };
 
 
@@ -266,7 +275,7 @@ struct Vec<T, 2>
     explicit constexpr  Vec(T x, T y) :     x(x),       y(y)        {}
 
     template <class U>
-    explicit constexpr Vec(Vec<U, 2> v) :   x((T)v.x),  y((T)v.y)   {}
+    explicit constexpr Vec(Vec<U, 2> v) :   x(T(v.x)),  y(T(v.y))   {}
 };
 
 template<class T>
@@ -288,7 +297,7 @@ struct Vec<T, 3>
     explicit constexpr  Vec(T x, T y, T z) :        x(x),       y(y),       z(z)        {}
 
     template <class U>
-    explicit constexpr Vec(Vec<U, 3> v) :           x((T)v.x),  y((T)v.y),   z((T)v.z)  {}
+    explicit constexpr Vec(Vec<U, 3> v) :           x(T(v.x)),  y(T(v.y)),   z(T(v.z))  {}
 };
 
 template<class T>
@@ -312,7 +321,7 @@ struct Vec<T, 4>
     explicit constexpr  Vec(T x, T y, T z, T w)     :   x(x),       y(y),       z(z),       w(w)        {}
 
     template <class U>
-    explicit constexpr  Vec(Vec<U, 4> v) :              x((T)v.x),  y((T)v.y),  z((T)v.z),  w((T)v.w)   {}
+    explicit constexpr  Vec(Vec<U, 4> v) :              x(T(v.x)),  y(T(v.y)),  z(T(v.z)),  w(T(v.w))   {}
 };
 
 using Vec2 = Vec<f32, 2>;

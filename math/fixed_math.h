@@ -23,12 +23,15 @@ struct Value
     StaticAssert(integer_type<T>::is_supported);
 
     static denom_t constexpr d = D;
-
     T n;
 
     // --- Implicitly convert from...
 
     constexpr Value() = default;
+
+    template <class T_OTHER>
+    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n)) {}
+
     constexpr Value(i8 v)   : n(T(v * D)) {}
     constexpr Value(i16 v)  : n(T(v * D)) {}
     constexpr Value(i32 v)  : n(T(v * D)) {}
@@ -41,13 +44,10 @@ struct Value
     FXPCONSTEVAL Value(f32 v)   : n(T(v * D)) {}
     FXPCONSTEVAL Value(f64 v)   : n(T(v * D)) {}
 
-    constexpr Value(Value<i32, D> const& other) : n(T(other.n)) {}
-    constexpr Value(Value<i64, D> const& other) : n(T(other.n)) {}
-
     // --- Explicitly convert from...
 
     template <class T_OTHER, denom_t D_OTHER>
-    explicit constexpr Value(Value<T_OTHER, D_OTHER> const& other) : n(T(other.n * D / D_OTHER)) {}
+    explicit constexpr Value(Value<T_OTHER, D_OTHER> const& v) : n(T(v.n * D / D_OTHER)) {}
 
     // --- Explicitly convert to...
 
@@ -72,7 +72,7 @@ template <denom_t D> using Intermediate = Value<i64, D>;
 //  when applicable.
 
 template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
-constexpr Intermediate<D_RESULT>
+Intermediate<D_RESULT> constexpr
 add(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -92,7 +92,7 @@ add(
 }
 
 template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
-constexpr Intermediate<D_RESULT>
+Intermediate<D_RESULT> constexpr
 subtract(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -112,7 +112,7 @@ subtract(
 }
 
 template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
-constexpr Intermediate<D_RESULT>
+Intermediate<D_RESULT> constexpr
 multiply(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -131,7 +131,7 @@ multiply(
 }
 
 template<denom_t D_RESULT, class T0, denom_t D0, class T1, denom_t D1>
-constexpr Intermediate<D_RESULT>
+Intermediate<D_RESULT> constexpr
 divide(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -150,7 +150,7 @@ divide(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator==(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -162,7 +162,7 @@ operator==(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator!=(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -174,7 +174,7 @@ operator!=(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator>(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -186,7 +186,7 @@ operator>(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator>=(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -198,7 +198,7 @@ operator>=(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator<(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -210,7 +210,7 @@ operator<(
 }
 
 template<class T0, denom_t D0, class T1, denom_t D1>
-constexpr bool
+bool constexpr
 operator<=(
     Value<T0, D0> v0,
     Value<T1, D1> v1)
@@ -229,7 +229,8 @@ operator<=(
 
 enum class Unit_Type : u64
 {
-    SCALAR = 0,     // unitless
+    SCALAR = 0,     // unitless fixed point
+    // SCALAR_INT,     // unitless integer (fixed point with divisor 1)
 
     DISTANCE,
     ROTATIONS,
@@ -249,6 +250,7 @@ template <denom_t D> using Value32 = Value<i32, D>;
 // Default underlying type of a unit.
 // Can be overridden with a Unit<..> specialization
 template<Unit_Type> struct Unit { using Value = Value32<1024>; };
+// template<> struct Unit<Unit_Type::SCALAR_INT> { using Value = Value32<1>; }
 
 // Predefined conversions between unit types
 //  Users can add their own template specializations to define their own conversions
@@ -288,14 +290,12 @@ struct Quantity
     FXPCONSTEVAL Quantity(f32 v) : value(v) {}
     FXPCONSTEVAL Quantity(f64 v) : value(v) {}
 
-    // --- Explicitly convert from...
-    explicit constexpr Quantity(Quantity<Unit_Type::SCALAR> const& scalar) : value(scalar.value) {}
-
-    template<Unit_Type OTHER_TYPE>
-    explicit constexpr Quantity(Quantity<OTHER_TYPE> const& other) : value(other.value)
+    template<Unit_Type OTHER_UNIT_TYPE>
+    constexpr Quantity(Quantity<OTHER_UNIT_TYPE> const& v) : value(v.value)
     {
-        // Non-scalar types can only be converted to to scalars
-        StaticAssert(UNIT_TYPE == Unit_Type::SCALAR);
+        StaticAssert(UNIT_TYPE == OTHER_UNIT_TYPE ||
+                     UNIT_TYPE == Unit_Type::SCALAR ||
+                     OTHER_UNIT_TYPE == Unit_Type::SCALAR);
     }
 
     // --- Explicitly convert to...
@@ -317,6 +317,7 @@ struct Quantity
 // --- Quantity aliases. Users should use these.
 
 using Scalar            = Quantity<Unit_Type::SCALAR>;
+// using Scalar_Int        = Quantity<Unit_Type::SCALAR_INT>;
 using Distance          = Quantity<Unit_Type::DISTANCE>;
 using Rotations         = Quantity<Unit_Type::ROTATIONS>;
 using Time              = Quantity<Unit_Type::TIME>;
@@ -324,12 +325,53 @@ using Speed             = Quantity<Unit_Type::SPEED>;
 using Acceleration      = Quantity<Unit_Type::ACCELERATION>;
 using Rotation_Speed    = Quantity<Unit_Type::ROTATION_SPEED>;
 
+// --- Quantities can always same units can always operate with integers
 
+// template<Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator+(Quantity<UNIT> lhs, int rhs)
+// {
+//     Quantity<UNIT> result;
+
+//     result.value = add<Quantity<UNIT>::Value::d>(lhs.value, Scalar_Int(rhs));
+//     return result;
+// }
+// template<Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator+(int lhs, Quantity<UNIT> rhs)
+// {
+//     Quantity<UNIT> result;
+
+//     result.value = add<Quantity<UNIT>::Value::d>(Scalar_Int(lhs), rhs.value);
+//     return result;
+// }
+// template<Unit_Type UNIT>
+// Quantity<UNIT> constexpr&
+// operator+=(Quantity<UNIT>& lhs, int rhs)
+// {
+//     lhs = lhs + rhs;
+//     return lhs;
+// }
+// template<class FXP, Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+// {
+//     Quantity<UNIT> result;
+//     result.value = subtract<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
+//     return result;
+// }
+// template<Unit_Type UNIT>
+// Quantity<UNIT> constexpr&
+// operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
+// {
+//     lhs = lhs - rhs;
+//     return lhs;
+// }
 
 // --- Quantities with same units can always add/subtract together
 
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>
+Quantity<UNIT> constexpr
 operator+(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Quantity<UNIT> result;
@@ -337,14 +379,14 @@ operator+(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>&
+Quantity<UNIT> constexpr&
 operator+=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
 template<class FXP, Unit_Type UNIT>
-constexpr Quantity<UNIT>
+Quantity<UNIT> constexpr
 operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Quantity<UNIT> result;
@@ -352,7 +394,7 @@ operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>&
+Quantity<UNIT> constexpr&
 operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
     lhs = lhs - rhs;
@@ -363,7 +405,7 @@ operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 // --- Quantities with same units can always divide and get a scalar result
 
 template<Unit_Type UNIT>
-constexpr Scalar
+Scalar constexpr
 operator/(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
     Scalar result;
@@ -371,7 +413,7 @@ operator/(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>&
+Quantity<UNIT> constexpr&
 operator/=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
     lhs = lhs / rhs;
@@ -383,7 +425,7 @@ operator/=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 // --- Quantities can always multiply and divide by a scalar
 
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>
+Quantity<UNIT> constexpr
 operator*(Quantity<UNIT> const& lhs, Scalar const& rhs)
 {
     Quantity<UNIT> result;
@@ -391,7 +433,7 @@ operator*(Quantity<UNIT> const& lhs, Scalar const& rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>
+Quantity<UNIT> constexpr
 operator*(Scalar const& lhs, Quantity<UNIT> const& rhs)
 {
     Quantity<UNIT> result;
@@ -399,7 +441,7 @@ operator*(Scalar const& lhs, Quantity<UNIT> const& rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>&
+Quantity<UNIT> constexpr&
 operator*=(Quantity<UNIT>& lhs, Scalar const& rhs)
 {
     lhs = lhs * rhs;
@@ -407,7 +449,7 @@ operator*=(Quantity<UNIT>& lhs, Scalar const& rhs)
 }
 
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>
+Quantity<UNIT> constexpr
 operator/(Quantity<UNIT> const& lhs, Scalar const& rhs)
 {
     Quantity<UNIT> result;
@@ -415,8 +457,8 @@ operator/(Quantity<UNIT> const& lhs, Scalar const& rhs)
     return result;
 }
 template<Unit_Type UNIT>
-constexpr Quantity<UNIT>&
-operator+=(Quantity<UNIT>& lhs, Scalar const& rhs)
+Quantity<UNIT> constexpr&
+operator/=(Quantity<UNIT>& lhs, Scalar const& rhs)
 {
     lhs = lhs / rhs;
     return lhs;
@@ -424,10 +466,12 @@ operator+=(Quantity<UNIT>& lhs, Scalar const& rhs)
 
 
 
+
+
 // --- Any 2 quantities whose units have Product/Quotient defined can multiply/divide
 
 template<Unit_Type UNIT0, Unit_Type UNIT1>
-constexpr auto
+auto constexpr
 operator*(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 {
     static Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
@@ -440,7 +484,7 @@ operator*(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 }
 
 template<Unit_Type UNIT0, Unit_Type UNIT1>
-constexpr auto
+auto constexpr
 operator/(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 {
     static Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
@@ -454,6 +498,3 @@ operator/(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
 #undef FXPCONSTEVAL
 
 } // namespace fxp
-
-using Vec2x = Vec<fxp::Distance, 2>;
-using Rect2x = Rect<fxp::Distance ,2>;

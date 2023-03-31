@@ -199,15 +199,15 @@ static f32 constexpr goldenRatio = 1.61803398875f;
     constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \
     constexpr ENUM operator&(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs & (INT_TYPE)rhs); } \
     constexpr ENUM & operator&=(ENUM & lhs, ENUM rhs) { lhs = lhs & rhs; return lhs; } \
-    constexpr bool IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
-    constexpr bool IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
+    bool constexpr IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
+    bool constexpr IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
     constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
     // ID's often increment/decrement by an integer
 #define DefineIdOps(ENUM, INT_TYPE) \
-    constexpr bool operator==(ENUM lhs, INT_TYPE rhs) { return (INT_TYPE)lhs == rhs; } \
-    constexpr bool operator==(INT_TYPE lhs, ENUM rhs) { return rhs == lhs; } \
+    bool constexpr operator==(ENUM lhs, INT_TYPE rhs) { return (INT_TYPE)lhs == rhs; } \
+    bool constexpr operator==(INT_TYPE lhs, ENUM rhs) { return rhs == lhs; } \
     constexpr ENUM& operator++(ENUM & value) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
     constexpr ENUM& operator++(ENUM & value, int) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
     constexpr ENUM& operator--(ENUM & value) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
@@ -225,12 +225,12 @@ static f32 constexpr goldenRatio = 1.61803398875f;
 
 #define DefineEnumOps(ENUM, INT_TYPE) \
     DefineIdOps(ENUM, INT_TYPE); \
-    constexpr bool IsEnumValid(ENUM value) { return value > ENUM::NIL && value < ENUM::ENUM_COUNT; } \
+    bool constexpr IsEnumValid(ENUM value) { return value > ENUM::NIL && value < ENUM::ENUM_COUNT; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define DefineEnumOpsAllowNil(ENUM, INT_TYPE) \
     DefineIdOps(ENUM, INT_TYPE); \
-    constexpr bool IsEnumValid(ENUM value) { return value >= ENUM::NIL && value < ENUM::ENUM_COUNT; } \
+    bool constexpr IsEnumValid(ENUM value) { return value >= ENUM::NIL && value < ENUM::ENUM_COUNT; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define ForEnum(ENUM, it) for (ENUM it = (ENUM)1; it < ENUM::ENUM_COUNT; it++)
