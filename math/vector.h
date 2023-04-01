@@ -22,14 +22,14 @@ struct Vec
 
 template<class T, uint N>
 function Vec<T, N>
-operator+(Vec<T, N> const& rhs)
+operator+(Vec<T, N> rhs)
 {
     return rhs;
 }
 
 template<class T, uint N>
 function Vec<T, N>
-operator-(Vec<T, N> const& rhs)
+operator-(Vec<T, N> rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = -rhs[i];
@@ -39,7 +39,7 @@ operator-(Vec<T, N> const& rhs)
 
 template<class T, uint N>
 function Vec<T, N>
-operator+(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
+operator+(Vec<T, N> lhs, Vec<T, N> rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = lhs[i] + rhs[i];
@@ -49,7 +49,7 @@ operator+(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N>
 function Vec<T, N>&
-operator+=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
+operator+=(Vec<T, N>& lhs, Vec<T, N> rhs)
 {
     lhs = lhs + rhs;
     return lhs;
@@ -57,7 +57,7 @@ operator+=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N>
 function Vec<T, N>
-operator-(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
+operator-(Vec<T, N> lhs, Vec<T, N> rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = lhs[i] - rhs[i];
@@ -67,7 +67,7 @@ operator-(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N>
 function Vec<T, N>&
-operator-=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
+operator-=(Vec<T, N>& lhs, Vec<T, N> rhs)
 {
     lhs = lhs - rhs;
     return lhs;
@@ -75,7 +75,7 @@ operator-=(Vec<T, N>& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>
-operator*(Vec<T, N> const& lhs, U const& rhs)
+operator*(Vec<T, N> lhs, U rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = lhs[i] * rhs;
@@ -85,7 +85,7 @@ operator*(Vec<T, N> const& lhs, U const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>
-operator*(U const& lhs, Vec<T, N> const& rhs)
+operator*(U lhs, Vec<T, N> rhs)
 {
     // NOTE - assumes commutative property
     Vec<T, N> result = rhs * lhs;
@@ -94,7 +94,7 @@ operator*(U const& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>&
-operator*=(Vec<T, N>& lhs, U const& rhs)
+operator*=(Vec<T, N>& lhs, U rhs)
 {
     lhs = lhs * rhs;
     return lhs;
@@ -102,7 +102,7 @@ operator*=(Vec<T, N>& lhs, U const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>
-operator/(Vec<T, N> const& lhs, U const& rhs)
+operator/(Vec<T, N> lhs, U rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = lhs[i] / rhs;
@@ -112,7 +112,7 @@ operator/(Vec<T, N> const& lhs, U const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>
-operator/(U const& lhs, Vec<T, N> const& rhs)
+operator/(U lhs, Vec<T, N> rhs)
 {
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = lhs / rhs[i];
@@ -122,7 +122,7 @@ operator/(U const& lhs, Vec<T, N> const& rhs)
 
 template<class T, uint N, class U>
 function Vec<T, N>&
-operator/=(Vec<T, N>& lhs, U const& rhs)
+operator/=(Vec<T, N>& lhs, U rhs)
 {
     lhs = lhs / rhs;
     return lhs;

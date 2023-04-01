@@ -385,7 +385,7 @@ operator+=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
     lhs = lhs + rhs;
     return lhs;
 }
-template<class FXP, Unit_Type UNIT>
+template<Unit_Type UNIT>
 Quantity<UNIT> constexpr
 operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
