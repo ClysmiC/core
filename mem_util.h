@@ -119,3 +119,12 @@ mem_set(void* dst, u8 value, uintptr bytes)
         cursor++;
     }
 }
+
+template<class T>
+function void
+mem_swap(T* m0, T* m1)
+{
+    T temp = *m0;
+    *m0 = *m1;
+    *m1 = temp;
+}

@@ -30,7 +30,10 @@ struct Value
     constexpr Value() = default;
 
     template <class T_OTHER>
-    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n)) {}
+    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n))
+    {
+        bool brk = true;
+    }
 
     constexpr Value(i8 v)   : n(T(v * D)) {}
     constexpr Value(i16 v)  : n(T(v * D)) {}
@@ -227,7 +230,7 @@ operator<=(
 //  by adding their own Product<..> and Quotient<..> specializations. The underlying value types and
 //  denominators can be specified/overridden by adding a Unit<..> specialization.
 
-enum class Unit_Type : u64
+enum class Si_Unit_Type : u64
 {
     SCALAR = 0,     // unitless fixed point
     // SCALAR_INT,     // unitless integer (fixed point with divisor 1)
@@ -249,29 +252,37 @@ template <denom_t D> using Value32 = Value<i32, D>;
 
 // Default underlying type of a unit.
 // Can be overridden with a Unit<..> specialization
-template<Unit_Type> struct Unit { using Value = Value32<1024>; };
-// template<> struct Unit<Unit_Type::SCALAR_INT> { using Value = Value32<1>; }
+template<Si_Unit_Type> struct Si_Unit { using Value = Value32<1024>; };
 
-// Predefined conversions between unit types
-//  Users can add their own template specializations to define their own conversions
-template<Unit_Type, Unit_Type> struct Quotient;
-template<> struct Quotient<Unit_Type::DISTANCE, Unit_Type::TIME>        { static auto constexpr RESULT = Unit_Type::SPEED; };
-template<> struct Quotient<Unit_Type::SPEED, Unit_Type::TIME>           { static auto constexpr RESULT = Unit_Type::ACCELERATION; };
-template<> struct Quotient<Unit_Type::ROTATIONS, Unit_Type::TIME>       { static auto constexpr RESULT = Unit_Type::ROTATION_SPEED; };
+// --- Conversions between unit types
+template<Si_Unit_Type, Si_Unit_Type> struct Quotient;
+template<Si_Unit_Type, Si_Unit_Type> struct Product;
 
-template<Unit_Type, Unit_Type> struct Product;
-template<> struct Product<Unit_Type::SPEED, Unit_Type::TIME>            { static auto constexpr RESULT = Unit_Type::DISTANCE; };
-template<> struct Product<Unit_Type::TIME, Unit_Type::SPEED>            { static auto constexpr RESULT = Unit_Type::DISTANCE; };
-template<> struct Product<Unit_Type::ACCELERATION, Unit_Type::TIME>     { static auto constexpr RESULT = Unit_Type::SPEED; };
-template<> struct Product<Unit_Type::TIME, Unit_Type::ACCELERATION>     { static auto constexpr RESULT = Unit_Type::SPEED; };
-template<> struct Product<Unit_Type::ROTATION_SPEED, Unit_Type::TIME>   { static auto constexpr RESULT = Unit_Type::ROTATIONS; };
-template<> struct Product<Unit_Type::TIME, Unit_Type::ROTATION_SPEED>   { static auto constexpr RESULT = Unit_Type::ROTATIONS; };
+// Conversions
+template<> struct Quotient<Si_Unit_Type::DISTANCE, Si_Unit_Type::TIME>        { static auto constexpr RESULT = Si_Unit_Type::SPEED; };
+template<> struct Quotient<Si_Unit_Type::ROTATIONS, Si_Unit_Type::TIME>       { static auto constexpr RESULT = Si_Unit_Type::ROTATION_SPEED; };
+template<> struct Quotient<Si_Unit_Type::SPEED, Si_Unit_Type::TIME>           { static auto constexpr RESULT = Si_Unit_Type::ACCELERATION; };
 
-template<Unit_Type UNIT_TYPE>
+template<> struct Product<Si_Unit_Type::SPEED, Si_Unit_Type::TIME>            { static auto constexpr RESULT = Si_Unit_Type::DISTANCE; };
+template<> struct Product<Si_Unit_Type::TIME, Si_Unit_Type::SPEED>            { static auto constexpr RESULT = Si_Unit_Type::DISTANCE; };
+template<> struct Product<Si_Unit_Type::ACCELERATION, Si_Unit_Type::TIME>     { static auto constexpr RESULT = Si_Unit_Type::SPEED; };
+template<> struct Product<Si_Unit_Type::TIME, Si_Unit_Type::ACCELERATION>     { static auto constexpr RESULT = Si_Unit_Type::SPEED; };
+template<> struct Product<Si_Unit_Type::ROTATION_SPEED, Si_Unit_Type::TIME>   { static auto constexpr RESULT = Si_Unit_Type::ROTATIONS; };
+template<> struct Product<Si_Unit_Type::TIME, Si_Unit_Type::ROTATION_SPEED>   { static auto constexpr RESULT = Si_Unit_Type::ROTATIONS; };
+
+// Scalar operations
+template<> struct Quotient<Si_Unit_Type::SCALAR, Si_Unit_Type::SCALAR> { static auto constexpr RESULT = Si_Unit_Type::SCALAR; };
+template<> struct Product<Si_Unit_Type::SCALAR, Si_Unit_Type::SCALAR> { static auto constexpr RESULT = Si_Unit_Type::SCALAR; };
+template<Si_Unit_Type UNIT_TYPE> struct Quotient<UNIT_TYPE, Si_Unit_Type::SCALAR> { static auto constexpr RESULT = UNIT_TYPE; };
+template<Si_Unit_Type UNIT_TYPE> struct Quotient<Si_Unit_Type::SCALAR, UNIT_TYPE> { static auto constexpr RESULT = UNIT_TYPE; };
+template<Si_Unit_Type UNIT_TYPE> struct Product<UNIT_TYPE, Si_Unit_Type::SCALAR> { static auto constexpr RESULT = UNIT_TYPE; };
+template<Si_Unit_Type UNIT_TYPE> struct Product<Si_Unit_Type::SCALAR, UNIT_TYPE> { static auto constexpr RESULT = UNIT_TYPE; };
+
+template<Si_Unit_Type UNIT_TYPE>
 struct Quantity
 {
-    using Value = typename Unit<UNIT_TYPE>::Value;
-    static Unit_Type constexpr unit_type = UNIT_TYPE;
+    using Value = typename Si_Unit<UNIT_TYPE>::Value;
+    static Si_Unit_Type constexpr si_unit_type = UNIT_TYPE;
 
     Value value;
 
@@ -290,12 +301,12 @@ struct Quantity
     FXPCONSTEVAL Quantity(f32 v) : value(v) {}
     FXPCONSTEVAL Quantity(f64 v) : value(v) {}
 
-    template<Unit_Type OTHER_UNIT_TYPE>
+    template<Si_Unit_Type OTHER_UNIT_TYPE>
     constexpr Quantity(Quantity<OTHER_UNIT_TYPE> const& v) : value(v.value)
     {
         StaticAssert(UNIT_TYPE == OTHER_UNIT_TYPE ||
-                     UNIT_TYPE == Unit_Type::SCALAR ||
-                     OTHER_UNIT_TYPE == Unit_Type::SCALAR);
+                     UNIT_TYPE == Si_Unit_Type::SCALAR ||
+                     OTHER_UNIT_TYPE == Si_Unit_Type::SCALAR);
     }
 
     // --- Explicitly convert to...
@@ -316,61 +327,19 @@ struct Quantity
 
 // --- Quantity aliases. Users should use these.
 
-using Scalar            = Quantity<Unit_Type::SCALAR>;
-// using Scalar_Int        = Quantity<Unit_Type::SCALAR_INT>;
-using Distance          = Quantity<Unit_Type::DISTANCE>;
-using Rotations         = Quantity<Unit_Type::ROTATIONS>;
-using Time              = Quantity<Unit_Type::TIME>;
-using Speed             = Quantity<Unit_Type::SPEED>;
-using Acceleration      = Quantity<Unit_Type::ACCELERATION>;
-using Rotation_Speed    = Quantity<Unit_Type::ROTATION_SPEED>;
+using Scalar            = Quantity<Si_Unit_Type::SCALAR>;
+using Distance          = Quantity<Si_Unit_Type::DISTANCE>;
+using Rotations         = Quantity<Si_Unit_Type::ROTATIONS>;
+using Time              = Quantity<Si_Unit_Type::TIME>;
+using Speed             = Quantity<Si_Unit_Type::SPEED>;
+using Acceleration      = Quantity<Si_Unit_Type::ACCELERATION>;
+using Rotation_Speed    = Quantity<Si_Unit_Type::ROTATION_SPEED>;
 
-// --- Quantities can always same units can always operate with integers
 
-// template<Unit_Type UNIT>
-// Quantity<UNIT> constexpr
-// operator+(Quantity<UNIT> lhs, int rhs)
-// {
-//     Quantity<UNIT> result;
-
-//     result.value = add<Quantity<UNIT>::Value::d>(lhs.value, Scalar_Int(rhs));
-//     return result;
-// }
-// template<Unit_Type UNIT>
-// Quantity<UNIT> constexpr
-// operator+(int lhs, Quantity<UNIT> rhs)
-// {
-//     Quantity<UNIT> result;
-
-//     result.value = add<Quantity<UNIT>::Value::d>(Scalar_Int(lhs), rhs.value);
-//     return result;
-// }
-// template<Unit_Type UNIT>
-// Quantity<UNIT> constexpr&
-// operator+=(Quantity<UNIT>& lhs, int rhs)
-// {
-//     lhs = lhs + rhs;
-//     return lhs;
-// }
-// template<class FXP, Unit_Type UNIT>
-// Quantity<UNIT> constexpr
-// operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
-// {
-//     Quantity<UNIT> result;
-//     result.value = subtract<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
-//     return result;
-// }
-// template<Unit_Type UNIT>
-// Quantity<UNIT> constexpr&
-// operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
-// {
-//     lhs = lhs - rhs;
-//     return lhs;
-// }
 
 // --- Quantities with same units can always add/subtract together
 
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Quantity<UNIT> constexpr
 operator+(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
@@ -378,14 +347,14 @@ operator+(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     result.value = add<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
 }
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Quantity<UNIT> constexpr&
 operator+=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
     lhs = lhs + rhs;
     return lhs;
 }
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Quantity<UNIT> constexpr
 operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
@@ -393,7 +362,7 @@ operator-(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     result.value = subtract<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
     return result;
 }
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Quantity<UNIT> constexpr&
 operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
@@ -402,9 +371,62 @@ operator-=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 }
 
 
+
+// --- Quantities with same units can compare for equality, less than, greater than.
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator==(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value == rhs.value);
+    return result;
+}
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator!=(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value != rhs.value);
+    return result;
+}
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator>(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value > rhs.value);
+    return result;
+}
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator>=(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value >= rhs.value);
+    return result;
+}
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator<(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value < rhs.value);
+    return result;
+}
+
+template<Si_Unit_Type UNIT>
+bool constexpr
+operator<=(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
+{
+    bool result = (lhs.value <= rhs.value);
+    return result;
+}
+
+
+
 // --- Quantities with same units can always divide and get a scalar result
 
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Scalar constexpr
 operator/(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
 {
@@ -412,7 +434,7 @@ operator/(Quantity<UNIT> lhs, Quantity<UNIT> rhs)
     result.value = divide<Scalar::Value::d>(lhs.value, rhs.value);
     return result;
 }
-template<Unit_Type UNIT>
+template<Si_Unit_Type UNIT>
 Quantity<UNIT> constexpr&
 operator/=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 {
@@ -424,76 +446,102 @@ operator/=(Quantity<UNIT>& lhs, Quantity<UNIT> rhs)
 
 // --- Quantities can always multiply and divide by a scalar
 
-template<Unit_Type UNIT>
-Quantity<UNIT> constexpr
-operator*(Quantity<UNIT> const& lhs, Scalar const& rhs)
-{
-    Quantity<UNIT> result;
-    result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
-    return result;
-}
-template<Unit_Type UNIT>
-Quantity<UNIT> constexpr
-operator*(Scalar const& lhs, Quantity<UNIT> const& rhs)
-{
-    Quantity<UNIT> result;
-    result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
-    return result;
-}
-template<Unit_Type UNIT>
-Quantity<UNIT> constexpr&
-operator*=(Quantity<UNIT>& lhs, Scalar const& rhs)
-{
-    lhs = lhs * rhs;
-    return lhs;
-}
+// template<Si_Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator*(Quantity<UNIT> const& lhs, Scalar const& rhs)
+// {
+//     Quantity<UNIT> result;
+//     result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
+//     return result;
+// }
+// template<Si_Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator*(Scalar const& lhs, Quantity<UNIT> const& rhs)
+// {
+//     Quantity<UNIT> result;
+//     result.value = multiply<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
+//     return result;
+// }
+// template<Si_Unit_Type UNIT>
+// Quantity<UNIT> constexpr&
+// operator*=(Quantity<UNIT>& lhs, Scalar const& rhs)
+// {
+//     lhs = lhs * rhs;
+//     return lhs;
+// }
 
-template<Unit_Type UNIT>
-Quantity<UNIT> constexpr
-operator/(Quantity<UNIT> const& lhs, Scalar const& rhs)
-{
-    Quantity<UNIT> result;
-    result.value = divide<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
-    return result;
-}
-template<Unit_Type UNIT>
-Quantity<UNIT> constexpr&
-operator/=(Quantity<UNIT>& lhs, Scalar const& rhs)
-{
-    lhs = lhs / rhs;
-    return lhs;
-}
-
-
+// template<Si_Unit_Type UNIT>
+// Quantity<UNIT> constexpr
+// operator/(Quantity<UNIT> const& lhs, Scalar const& rhs)
+// {
+//     Quantity<UNIT> result;
+//     result.value = divide<Quantity<UNIT>::Value::d>(lhs.value, rhs.value);
+//     return result;
+// }
+// template<Si_Unit_Type UNIT>
+// Quantity<UNIT> constexpr&
+// operator/=(Quantity<UNIT>& lhs, Scalar const& rhs)
+// {
+//     lhs = lhs / rhs;
+//     return lhs;
+// }
 
 
 
 // --- Any 2 quantities whose units have Product/Quotient defined can multiply/divide
 
-template<Unit_Type UNIT0, Unit_Type UNIT1>
+template<Si_Unit_Type UNIT0, Si_Unit_Type UNIT1>
 auto constexpr
-operator*(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
+operator*(Quantity<UNIT0> lhs, Quantity<UNIT1> rhs)
 {
-    static Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
-    static Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
+    static Si_Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
+    static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
     StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
 
+    // TODO - This should widen out to a 64-bit intermediate quantity like Value does...
+    //  narrowing to 32 bits in this operator defeats the purpose of the 64 bit intermediates.
     Quantity<RESULT_TYPE> result;
     result.value = multiply<Quantity<RESULT_TYPE>::Value::d>(lhs.value, rhs.value);
     return result;
 }
 
-template<Unit_Type UNIT0, Unit_Type UNIT1>
+template<Si_Unit_Type UNIT0, Si_Unit_Type UNIT1>
 auto constexpr
-operator/(Quantity<UNIT0> const& lhs, Quantity<UNIT1> const& rhs)
+operator*=(Quantity<UNIT0>& lhs, Quantity<UNIT1> rhs)
 {
-    static Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
+    static Si_Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
+    static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
+    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
+    StaticAssert(RESULT_TYPE == UNIT0);
+
+    // TODO - This should widen out to a 64-bit intermediate quantity like Value does...
+    //  narrowing to 32 bits in this operator defeats the purpose of the 64 bit intermediates.
+    lhs = lhs * rhs;
+    return lhs;
+}
+
+template<Si_Unit_Type UNIT0, Si_Unit_Type UNIT1>
+auto constexpr
+operator/(Quantity<UNIT0> lhs, Quantity<UNIT1> rhs)
+{
+    static Si_Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
     Quantity<RESULT_TYPE> result;
     result.value = divide<Quantity<RESULT_TYPE>::Value::d>(lhs.value, rhs.value);
     return result;
 }
 
+template<Si_Unit_Type UNIT0, Si_Unit_Type UNIT1>
+auto constexpr
+operator/=(Quantity<UNIT0>& lhs, Quantity<UNIT1> rhs)
+{
+    static Si_Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
+    static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Quotient<UNIT1, UNIT0>::RESULT;
+    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
+    StaticAssert(RESULT_TYPE == UNIT0);
 
+    lhs = lhs / rhs;
+    return lhs;
+}
 
 #undef FXPCONSTEVAL
 

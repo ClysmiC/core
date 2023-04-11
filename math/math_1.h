@@ -9,7 +9,7 @@
 #define DecrementIfNonZero(value) DoWhile0((value) = (decltype(value))((value) - bool(value));)
 
 function bool
-f32_eq_approx(
+f32_approx_eq(
     f32 lhs,
     f32 rhs,
     f32 epsilon=0.001f)
@@ -132,7 +132,7 @@ function bool
 IsNormalized(Vec2 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
-    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
+    bool result = f32_approx_eq(Length(v), 1.0f, epsilon);
     return result;
 }
 #endif // !CRT_DISABLED
@@ -149,7 +149,7 @@ function bool
 AreOrthogonal(Vec2 v0, Vec2 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = f32_eq_approx(dot, 0);
+    bool result = f32_approx_eq(dot, 0);
     return result;
 }
 
@@ -186,7 +186,7 @@ function bool
 IsNormalized(Vec3 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
-    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
+    bool result = f32_approx_eq(Length(v), 1.0f, epsilon);
     return result;
 }
 #endif // !CRT_DISABLED
@@ -203,7 +203,7 @@ function bool
 AreOrthogonal(Vec3 v0, Vec3 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = f32_eq_approx(dot, 0);
+    bool result = f32_approx_eq(dot, 0);
     return result;
 }
 
@@ -240,7 +240,7 @@ function bool
 IsNormalized(Vec4 v, f32 epsilon=0.001f)
 {
     // TODO - can't I use LengthSq here? 1^2 is just 1...
-    bool result = f32_eq_approx(Length(v), 1.0f, epsilon);
+    bool result = f32_approx_eq(Length(v), 1.0f, epsilon);
     return result;
 }
 #endif // !CRT_DISABLED
@@ -257,7 +257,7 @@ function bool
 AreOrthogonal(Vec4 v0, Vec4 v1)
 {
     f32 dot = Dot(v0, v1);
-    bool result = f32_eq_approx(dot, 0);
+    bool result = f32_approx_eq(dot, 0);
     return result;
 }
 
@@ -569,11 +569,17 @@ Mat4RotateZ(f32 radians)
 //  Z is "backwards"
 
 function Mat4
-Mat4Ortho(f32 height, f32 aspectRatio, f32 farDist)
+Mat4Ortho(f32 height, f32 aspectRatio, f32 farDist, f32 zoom=1.0f)
 {
+    if (f32_approx_eq(zoom, 0)) zoom = 1.0f;
+
     // See FGED Vol 2 - Chapter 6.3.4
     
     f32 width = height * aspectRatio;
+
+    // Apply zoom
+    width /= zoom;
+    height /= zoom;
 
     // The far distance is positive for user convenience, but since Z- is forward
     //  in camera space, the actual Z value is negated.

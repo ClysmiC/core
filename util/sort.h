@@ -79,6 +79,32 @@ void BubbleSort(Slice<T> slice, FN_COMPARATOR compare)
     }
 }
 
+template <class T, class FN_COMPARATOR, class CONTEXT>
+void BubbleSort(Slice<T> slice, FN_COMPARATOR compare, CONTEXT& context)
+{
+    for (int i = 0; i < slice.count - 1; i++)
+    {
+        bool swappedAny = false;
+        for (int j = 0; j < slice.count - 1 - i; j++)
+        {
+            T* t0 = slice + j;
+            T* t1 = slice + j + 1;
+
+            if (compare(*t0, *t1, context) > 0)
+            {
+                T temp = *t0;
+                *t0 = *t1;
+                *t1 = temp;
+                swappedAny = true;
+            }
+        }
+
+        // Early-out if we detect already sorted. Advantage of bubble sort! :)
+        if (!swappedAny)
+            return;
+    }
+}
+
 template <class T, class FN_COMPARATOR>
 function void
 BubbleSort(DynArray<T>* array, FN_COMPARATOR compare)
