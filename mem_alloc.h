@@ -452,6 +452,17 @@ AllocateTracked(
     return result;
 }
 
+template <typename T>
+T*
+AllocateArrayTracked(
+    Memory_Region region,
+    uintptr count,
+    CTZ clearToZero=CTZ::NIL)
+{
+    T* result = (T*)AllocateTracked(region, sizeof(T) * count, clearToZero);
+    return result;
+}
+
 function void
 RemoveFromList(FreeBlockHeader ** ppHead, FreeBlockHeader * pItem)
 {
