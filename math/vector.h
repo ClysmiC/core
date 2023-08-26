@@ -349,6 +349,17 @@ vec_cross(Vec<T, 3> lhs, Vec<T, 3> rhs)
     return result;
 }
 
+template<class T>
+function Vec<T, 3>
+vec_cross_xy(Vec<T, 2> lhs, Vec<T, 2> rhs)
+{
+    Vec<T, 3> result;
+    result.x = 0;
+    result.y = 0;
+    result.z = lhs.x * rhs.y - lhs.y * rhs.x;
+    return result;
+}
+
 struct Rgb
 {
     f32 r, g, b;

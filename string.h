@@ -106,7 +106,7 @@ DuplicateZString(char* src, Memory_Region memory)
     int cBytesSrc = ZStringLength(src);
     int cBytesDst = cBytesSrc + 1;
 
-    char* dst = (char*)Allocate(memory, cBytesDst);
+    char* dst = (char*)allocate(memory, cBytesDst);
     CopyZString(src, dst, cBytesDst);
     return dst;
 }
@@ -116,7 +116,7 @@ DuplicateZStringToString(char* src, Memory_Region memory)
 {
     String dst;
     dst.cBytes = ZStringLength(src);
-    dst.bytes = (char*)Allocate(memory, dst.cBytes);
+    dst.bytes = (char*)allocate(memory, dst.cBytes);
     CopyZString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
     return dst;
 }
@@ -126,7 +126,7 @@ DuplicateString(String src, Memory_Region memory)
 {
     String dst;
     dst.cBytes = src.cBytes;
-    dst.bytes = (char*)Allocate(memory, dst.cBytes);
+    dst.bytes = (char*)allocate(memory, dst.cBytes);
     CopyString(src, dst);
     return dst;
 }
@@ -135,7 +135,7 @@ function char*
 DuplicateStringToZString(String src, Memory_Region memory)
 {
     uint cBytesDst = src.cBytes + 1;
-    char* dst = (char*)Allocate(memory, cBytesDst);
+    char* dst = (char*)allocate(memory, cBytesDst);
     CopyString(src, dst, cBytesDst, Null_Terminate::YES);
     return dst;
 }
@@ -156,7 +156,7 @@ StringFromZString(
     }
     else if (dst.cBytes > 0)
     {
-        dst.bytes = (char*)Allocate(memory, dst.cBytes);
+        dst.bytes = (char*)allocate(memory, dst.cBytes);
         CopyZString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
     }
 
@@ -167,7 +167,7 @@ function char*
 ZStringFromString(String src, Memory_Region memory)
 {
     int cBytesDst = src.cBytes + 1;
-    char* dst = (char*)Allocate(memory, cBytesDst);
+    char* dst = (char*)allocate(memory, cBytesDst);
     CopyString(src, dst, cBytesDst, Null_Terminate::YES);
     return dst;
 }
@@ -265,7 +265,7 @@ StringInsert(
 
     String result;
     result.cBytes = srcA.cBytes + srcB.cBytes;
-    result.bytes = (char*)Allocate(memory, result.cBytes);
+    result.bytes = (char*)allocate(memory, result.cBytes);
     mem_copy(result.bytes, srcA.bytes, iInsert);
     mem_copy(result.bytes + iInsert, srcB.bytes, srcB.cBytes);
     mem_copy(result.bytes + iInsert + srcB.cBytes, srcA.bytes + iInsert, srcA.cBytes - iInsert);
@@ -277,7 +277,7 @@ StringConcat(String srcA, String srcB, Memory_Region memory)
 {
     String result;
     result.cBytes = srcA.cBytes + srcB.cBytes;
-    result.bytes = (char*)Allocate(memory, result.cBytes);
+    result.bytes = (char*)allocate(memory, result.cBytes);
     mem_copy(result.bytes, srcA.bytes, srcA.cBytes);
     mem_copy(result.bytes + srcA.cBytes, srcB.bytes, srcB.cBytes);
     return result;
@@ -557,7 +557,7 @@ StringFromPrintf_v(Memory_Region memory, int cBytesBuffer, char const* fmt, va_l
     //  to work on arbitrarily sized strings...
 
     String result;
-    result.bytes = (char*)Allocate(memory, sizeof(char) * cBytesBuffer);
+    result.bytes = (char*)allocate(memory, sizeof(char) * cBytesBuffer);
     result.cBytes = stbsp_vsnprintf(result.bytes, cBytesBuffer, fmt, varargs);
     return result;
 }

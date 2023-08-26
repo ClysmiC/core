@@ -70,9 +70,8 @@
 
 // --- Undefine conflicting platform macros. core.h should always be included *after* system headers, for this reason.
 
-#undef min          // Conflicts with U32/I32/etc. namespace constant values, and provided min(..) and max(..) functions.
+#undef min          // Conflicts with common variable names
 #undef max          // ...
-
 
 
 // --- Type definitions
@@ -98,67 +97,67 @@ using f64 = double;
 
 namespace U64
 {
-static u64 constexpr min = 0;
-static u64 constexpr max = 0xFF'FF'FF'FF'FF'FF'FF'FF;
+static u64 constexpr MIN = 0;
+static u64 constexpr MAX = 0xFF'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace U32
 {
-static u32 constexpr min = 0;
-static u32 constexpr max = 0xFF'FF'FF'FF;
+static u32 constexpr MIN = 0;
+static u32 constexpr MAX = 0xFF'FF'FF'FF;
 }
 
 namespace U16
 {
-static u16 constexpr min = 0;
-static u16 constexpr max = 0xFF'FF;
+static u16 constexpr MIN = 0;
+static u16 constexpr MAX = 0xFF'FF;
 }
 
 namespace U8
 {
-static u8 constexpr min = 0;
-static u8 constexpr max = 0xFF;
+static u8 constexpr MIN = 0;
+static u8 constexpr MAX = 0xFF;
 }
 
 namespace I64
 {
-static i64 constexpr min = 0x80'00'00'00'00'00'00'00;
-static i64 constexpr max = 0x7F'FF'FF'FF'FF'FF'FF'FF;
+static i64 constexpr MIN = 0x80'00'00'00'00'00'00'00;
+static i64 constexpr MAX = 0x7F'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace I32
 {
-static i32 constexpr min = 0x80'00'00'00;
-static i32 constexpr max = 0x7F'FF'FF'FF;
+static i32 constexpr MIN = 0x80'00'00'00;
+static i32 constexpr MAX = 0x7F'FF'FF'FF;
 }
 
 namespace I16
 {
-static i16 constexpr min = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
-static i16 constexpr max = 0x7F'FF;
+static i16 constexpr MIN = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
+static i16 constexpr MAX = 0x7F'FF;
 }
 
 namespace I8
 {
-static i8 constexpr min = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
-static i8 constexpr max = 0x7F;
+static i8 constexpr MIN = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
+static i8 constexpr MAX = 0x7F;
 }
 
 namespace F32
 {
 
-static f32 constexpr halfPi = 1.57079632679f;
-static f32 constexpr pi = 3.14159265359f;
-static f32 constexpr threeHalvesPi = 4.71238898038f;
-static f32 constexpr twoPi = 6.28318530718f;
+static f32 constexpr HALF_PI = 1.57079632679f;
+static f32 constexpr PI = 3.14159265359f;
+static f32 constexpr THREE_HALVES_PI = 4.71238898038f;
+static f32 constexpr TWO_PI = 6.28318530718f;
 
-static f32 constexpr toDeg = 57.2958f;
-static f32 constexpr toRad = 0.0174533f;
+static f32 constexpr TO_DEG = 57.2958f;
+static f32 constexpr TO_RAD = 0.0174533f;
 
-static f32 constexpr sqrt2 = 1.41421356237f;
-static f32 constexpr halfSqrt2 = 0.70710678118f;
+static f32 constexpr SQRT2 = 1.41421356237f;
+static f32 constexpr HALF_SQRT2 = 0.70710678118f;
 
-static f32 constexpr goldenRatio = 1.61803398875f;
+static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
 
 } // namespace F32
 

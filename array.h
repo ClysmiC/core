@@ -146,7 +146,7 @@ EnsureCapacity(DynArray<T>* array, int capacity)
             newCapacity *= 2;
         }
         
-        array->items = (T*)ReallocateTracked(array->memory, array->items, sizeof(T) * newCapacity);
+        array->items = (T*)reallocate_tracked(array->memory, array->items, sizeof(T) * newCapacity);
         array->capacity = newCapacity;
     }
 }
@@ -267,7 +267,7 @@ Clear(DynArray<T>* array, bool shouldFreeMemory=false)
     array->count = 0;
     if (array->count > 0 && shouldFreeMemory)
     {
-        FreeTrackedAllocation(array->memory, array->items);
+        free_tracked_allocation(array->memory, array->items);
 
         Memory_Region memoryCopy = array->memory;
         *array = {};
@@ -374,7 +374,7 @@ struct PushBuffer
 {
     struct PageHeader
     {
-        uintptr cBytesAllocated; // Includes header
+        uintptr cBytesallocated; // Includes header
         uintptr cBytesCapacity;  // ...
         PageHeader* pNext;
     };
@@ -392,8 +392,8 @@ struct PushBuffer
 
         cBytesPerPage += sizeof(PageHeader);
         
-        PageHeader* page = (PageHeader *)Allocate(this->memory, cBytesPerPage);
-        page->cBytesAllocated = sizeof(PageHeader);
+        PageHeader* page = (PageHeader *)allocate(this->memory, cBytesPerPage);
+        page->cBytesallocated = sizeof(PageHeader);
         page->cBytesCapacity = cBytesPerPage;
         page->pNext = nullptr;
 
@@ -407,13 +407,13 @@ AppendNewBytes(PushBuffer* buffer, uintptr cBytes)
 {
     auto* page = buffer->pageTail;
 
-    uintptr cBytesFree = page->cBytesCapacity - page->cBytesAllocated;
+    uintptr cBytesFree = page->cBytesCapacity - page->cBytesallocated;
     if (cBytesFree < cBytes)
     {
         uintptr cBytesNewPage = max(page->cBytesCapacity, cBytes + sizeof(PushBuffer::PageHeader));
 
-        page = (PushBuffer::PageHeader*)Allocate(buffer->memory, cBytesNewPage);
-        page->cBytesAllocated = sizeof(PushBuffer::PageHeader);
+        page = (PushBuffer::PageHeader*)allocate(buffer->memory, cBytesNewPage);
+        page->cBytesallocated = sizeof(PushBuffer::PageHeader);
         page->cBytesCapacity = cBytesNewPage;
         page->pNext = nullptr;
 
@@ -421,11 +421,11 @@ AppendNewBytes(PushBuffer* buffer, uintptr cBytes)
         buffer->pageTail = page;
     }
 
-    void* result = (u8*)page + page->cBytesAllocated;
+    void* result = (u8*)page + page->cBytesallocated;
 
-    page->cBytesAllocated += cBytes;
+    page->cBytesallocated += cBytes;
     buffer->cBytesPushed += cBytes;
-    Assert(page->cBytesAllocated <= page->cBytesCapacity);
+    Assert(page->cBytesallocated <= page->cBytesCapacity);
 
     return result;
 }
@@ -495,7 +495,7 @@ Read(PushBufferReader* reader)
     //  can usually detect if that assumption breaks.
     
     Assert(!IsFinishedReading(reader));
-    Assert(reader->page->cBytesAllocated - reader->iByteInPage >= sizeof(T));
+    Assert(reader->page->cBytesallocated - reader->iByteInPage >= sizeof(T));
     
     T* result = (T*)((u8*)reader->page + reader->iByteInPage);
     AdvanceByteCursor(reader, sizeof(T));
@@ -513,11 +513,11 @@ ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
     i32 cBytes = *Read<i32>(reader);
 
     Assert(!IsFinishedReading(reader));
-    Assert(reader->page->cBytesAllocated - reader->iByteInPage >= cBytes);
+    Assert(reader->page->cBytesallocated - reader->iByteInPage >= cBytes);
 
     String result;
     result.cBytes = cBytes;
-    result.bytes = (char*)Allocate(memory, cBytes);
+    result.bytes = (char*)allocate(memory, cBytes);
     mem_copy(result.bytes, reader->page + reader->iByteInPage, cBytes);
     AdvanceByteCursor(reader, cBytes);
 
@@ -529,9 +529,9 @@ AdvanceByteCursor(PushBufferReader* reader, int advance)
 {
     reader->iByteInPage += advance;
 
-    if (reader->iByteInPage >= reader->page->cBytesAllocated)
+    if (reader->iByteInPage >= reader->page->cBytesallocated)
     {
-        Assert(reader->iByteInPage == reader->page->cBytesAllocated); // Should end exactly on the boundary, not past it...
+        Assert(reader->iByteInPage == reader->page->cBytesallocated); // Should end exactly on the boundary, not past it...
         reader->page = reader->page->pNext;
         reader->iByteInPage = sizeof(PushBuffer::PageHeader);
     }
