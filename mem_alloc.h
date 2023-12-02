@@ -20,15 +20,15 @@ Fn_System_Free system_free = {};
 
 enum class Tracked_State : u8
 {
-    FreeUnshared,
-    FreeShared,
-    allocated,
+    FREE_UNSHARED,
+    FREE_SHARED,
+    ALLOCATED,
 };
 
 struct Tracked_Block_Header
 {
     uintptr byte_count;             // Includes header
-    Tracked_Block_Header* left;     // Physically adjacent in memory
+    Tracked_Block_Header* left;     // Physically adjacent in memory, in same memory arena
     Tracked_Block_Header* right;    // ...
     Tracked_State state;
 };
@@ -46,6 +46,7 @@ struct Overflow_Header
 };
 
 #define MEM_DEBUG_HISTORY_ENABLE 0
+#define MEM_DEBUG_NAMES_ENABLE 1
 
 #if MEM_DEBUG_HISTORY_ENABLE
 struct Debug_History
@@ -54,8 +55,8 @@ struct Debug_History
     {
         enum Type
         {
-            Free,
-            allocate
+            FREE,
+            ALLOCATE
         };
 
         Type type;
@@ -81,21 +82,73 @@ struct Region_Header
     Debug_History Debug_History;
 #endif
 
-    uintptr byte_countBudget;
+#if MEM_DEBUG_NAMES_ENABLE
+    char name[8];
+    u32 id;
+#endif
+
+    uintptr byte_budget;
 
     Region_Header* parent;
     Region_Header* first_child;
     Region_Header* next_sibling;
     Region_Header* prev_sibling;
     Overflow_Header* overflow;
-    Free_Block_Header* trackedList;
-    Free_Block_Header* sharedList;
+    Free_Block_Header* tracked_list;
+    Free_Block_Header* shared_list;
 };
 
 namespace BYTE_COUNT
 {
 static constexpr uintptr TOO_SMALL_TO_BOTHER_TRACKING = sizeof(Free_Block_Header) + 63;
 static constexpr uintptr MINIMUM_REGION = sizeof(Region_Header) + 256;
+}
+
+function u32
+debug_id_from_name(char const * name)
+{
+#if MEM_DEBUG_NAMES_ENABLE
+    if (!name)
+        return 0;
+
+    char const * c = name;
+    u32 constexpr magic = 2147463569;   // big prime number to "distribute" characters to 0-2^32 before x-oring for debug id
+    u32 result = 0;
+    while (*c)
+    {
+        result ^= (u32)(*c * magic);
+        c++;
+    }
+
+    return result;
+#else
+    return 0;
+#endif
+}
+
+function void
+debug_region_name_set(MEM::Region_Header * region, char const * name)
+{
+#if MEM_DEBUG_NAMES_ENABLE
+    if (name)
+    {
+        char const * c = name;
+        int i = 0;
+        while (*c && i < ArrayLen(region->name))
+        {
+            region->name[i] = *c;
+            c++;
+            i++;
+        }
+        region->name[ArrayLen(region->name) - 1] = '\0';
+        region->id = debug_id_from_name(name);
+    }
+    else
+    {
+        ZeroArray(region->name);
+        region->id = 0;
+    }
+#endif
 }
 
 } // namespace MEM
@@ -143,14 +196,14 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
     else
     {
         Assert(byte_countNew > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
-        uintptr byte_countOrig_debug = pHeadOrig->byte_count; // NOTE - only used for an assert
+        uintptr byte_count_orig_debug = pHeadOrig->byte_count; // NOTE - only used for an assert
 
         pHeadOrig->byte_count = byte_countNew;
         bool isHeadTooSmall = pHeadOrig->next && pHeadOrig->next->byte_count > pHeadOrig->byte_count;
 
         if (isHeadTooSmall)
         {
-            Assert(byte_countNew < byte_countOrig_debug);
+            Assert(byte_countNew < byte_count_orig_debug);
 
             // Set the head to the bigger node
             *ppHead = pHeadOrig->next;
@@ -170,7 +223,9 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
 
                 // Insert the old head after the found node
                 pHeadOrig->prev = biggerThanOrig;
+
                 pHeadOrig->next = biggerThanOrig->next;
+
                 biggerThanOrig->next = pHeadOrig;
 
                 if (pHeadOrig->next)
@@ -183,31 +238,35 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
 }
 
 function Free_Block_Header*
-ensure_block_with_size(Region_Header* regionHeader, uintptr byte_count, AllocType allocType)
+ensure_block_with_size(Region_Header* region_header, uintptr byte_count, AllocType allocType)
 {
-    // --- Return tracked block if we've got one (and it's what was asked for)
+    // --- Return tracked block if we've got one big enough (and we asked for tracked)
 
     if (allocType == AllocType::Tracked &&
-        regionHeader->trackedList &&
-        regionHeader->trackedList->byte_count >= byte_count)
+        region_header->tracked_list &&
+        region_header->tracked_list->byte_count >= byte_count)
     {
-        return regionHeader->trackedList;
+        return region_header->tracked_list;
     }
 
-    // --- allocate an overflow region from our parent if shared block is too small
+    // --- Allocate an overflow region from our parent if shared block is too small
 
-    if (!regionHeader->sharedList ||
-        regionHeader->sharedList->byte_count < byte_count)
+    if (!region_header->shared_list ||
+        region_header->shared_list->byte_count < byte_count)
     {
         // HMM - Maybe make regions have more control over how much they grow when they overflow?
-
         byte_count += sizeof(Overflow_Header);
-        byte_count = max(byte_count, regionHeader->byte_countBudget);
+        byte_count = max(byte_count, region_header->byte_budget);
 
         Overflow_Header* overflow;
-        if (regionHeader->parent)
+        if (region_header->parent)
         {
-            overflow = (Overflow_Header*)allocate_tracked(regionHeader->parent, byte_count);
+            if (region_header->id == debug_id_from_name("cnsl-L"))
+            {
+                bool brk = true;
+            }
+
+            overflow = (Overflow_Header*)allocate_tracked(region_header->parent, byte_count);
         }
         else
         {
@@ -217,8 +276,8 @@ ensure_block_with_size(Region_Header* regionHeader, uintptr byte_count, AllocTyp
         // --- Maintain overflow list
 
         overflow->byte_count = byte_count;
-        overflow->next = regionHeader->overflow;
-        regionHeader->overflow = overflow;
+        overflow->next = region_header->overflow;
+        region_header->overflow = overflow;
 
         // --- Initialize free-block and make it the head of the free list
 
@@ -226,16 +285,18 @@ ensure_block_with_size(Region_Header* regionHeader, uintptr byte_count, AllocTyp
         *free = {};
         free->byte_count = byte_count - sizeof(Overflow_Header);
 
-        free->next = regionHeader->sharedList;
+        free->next = region_header->shared_list;
         if (free->next)
         {
             free->next->prev = free;
         }
 
-        regionHeader->sharedList = free;
+        region_header->shared_list = free;
     }
 
-    return regionHeader->sharedList;
+    // --- Give the shared block
+
+    return region_header->shared_list;
 }
 
 function void
@@ -283,6 +344,7 @@ free_list_add(Free_Block_Header** ppHead, Free_Block_Header* pItem)
     }
 
     pItem->next = *ppNextToFix;
+
     if (pItem->next)
     {
         pItem->next->prev = pItem;
@@ -296,7 +358,7 @@ free_subregion_allocation(Region_Header* parent, void* subregion)
 {
     if (parent)
     {
-        bool isInRegion = (subregion >= parent) && (subregion < (u8*)parent + parent->byte_countBudget);
+        bool isInRegion = (subregion >= parent) && (subregion < (u8*)parent + parent->byte_budget);
         if (isInRegion)
         {
             free_tracked_allocation(parent, subregion);
@@ -343,6 +405,11 @@ free_overflow_allocations(Region_Header* region)
     Overflow_Header* overflow = region->overflow;
     while (overflow)
     {
+        if (region->parent && region->parent->id == 2150138239)
+        {
+            bool brk = true;
+        }
+
         Overflow_Header* overflowNext = overflow->next;
         free_subregion_allocation(region->parent, overflow);
 
@@ -419,62 +486,39 @@ allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
 
     Assert(region);
 
-    Region_Header* regionHeader = region;
+    Region_Header* region_header = region;
 
     // --- Make sure our shared block is big enough!
 
-    Free_Block_Header* shared = ensure_block_with_size(regionHeader, byte_count, AllocType::Untracked);
-    Assert(shared == regionHeader->sharedList);
+    Free_Block_Header* shared = ensure_block_with_size(region_header, byte_count, AllocType::Untracked);
+    Assert(shared == region_header->shared_list);
+    Assert(shared->byte_count >= byte_count);
 
-    // --- Split shared block into the untracked allocation (left) and ...
+    // --- Split shared block into the untracked allocation (right) and ...
 
-    void* result = shared;
-
-    Tracked_Block_Header* rightOfShared = shared->right;
+    void* result;
 
     // HMM - Gracefully handle 0 byte allocation?
-    uintptr splitbyte_count = shared->byte_count - byte_count;
-    if (splitbyte_count > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
-    {
-        // ... a smaller shared block (right)
-
-        Free_Block_Header* split = (Free_Block_Header*)((u8*)shared + byte_count);
-
-        // @Slow - Checking these conditions for what should be a simple bump allocate.
-        //  This is more reason to grow the shared portion from high to low.
-        //  It'd move this cost into allocate_tracked, where we are more willing to
-        //  pay allocation overhead costs
-
-        if (shared->prev)
-        {
-            shared->prev->next = split;
-        }
-
-        if (shared->next)
-        {
-            shared->next->prev = split;
-        }
-
-        mem_move(split, shared, sizeof(Free_Block_Header));
-        split->left = nullptr;
-        if (rightOfShared)
-        {
-            rightOfShared->left = split;
-        }
-
-        regionHeader->sharedList = split;
-        resize_free_list_head(&regionHeader->sharedList, splitbyte_count);
-    }
-    else
+    uintptr split_byte_count = shared->byte_count - byte_count;
+    if (split_byte_count <= BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
     {
         // ... nothing! The remaining block is too small to fit anything of use
 
-        if (rightOfShared)
+        if (shared->left)
         {
-            rightOfShared->left = nullptr;
+            shared->left->right = nullptr;
         }
 
-        resize_free_list_head(&regionHeader->sharedList, 0); // 0 removes node altogether
+        resize_free_list_head(&region_header->shared_list, 0);
+
+        result = shared;
+    }
+    else
+    {
+        // ... a smaller shared block (left)
+
+        resize_free_list_head(&region_header->shared_list, split_byte_count);
+        result = (u8*)shared + split_byte_count;
     }
 
     if ((bool)clearToZero)
@@ -513,91 +557,86 @@ allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
 
     Assert(region);
 
-    Region_Header* regionHeader = region;
+    Region_Header* region_header = region;
 
     // Make sure our tracked or free block is big enough!
 
     // HMM - Gracefully handle 0 byte allocation?
-    uintptr byte_countOrig = byte_count;
+    uintptr byte_count_orig = byte_count;
     byte_count += sizeof(Tracked_Block_Header);
     byte_count = max(byte_count, sizeof(Free_Block_Header)); // Make sure the allocation is big enough that if it gets freed, we can store a free block header in place
 
-    Free_Block_Header* free = ensure_block_with_size(regionHeader, byte_count, AllocType::Tracked);
-    Tracked_Block_Header* rightOfFree = free->right;
-    Tracked_Block_Header* leftOfFree = free->left;
+    Free_Block_Header* free = ensure_block_with_size(region_header, byte_count, AllocType::Tracked);
 
-    bool isFreeBlockFromTrackedList = (free == regionHeader->trackedList);
-    Assert(Implies(!isFreeBlockFromTrackedList, free == regionHeader->sharedList));
+    bool is_free_block_from_tracked_list = (free == region_header->tracked_list);
+    Assert(Implies(!is_free_block_from_tracked_list, free == region_header->shared_list));
 
-    // Split free block into the tracked allocation (right) and ...
+    // Split free block into the tracked allocation (left) and ...
 
-    // If we would've split off something
-    //  that is smaller than the metadata we need to do tracking, just lump it in with the
-    //  memory we give back to the user. Otherwise it'd fragment our left/right merging.
+    // If we would've split off something that is smaller than the metadata we need to do tracking,
+    //  just lump it in with the memory we give back to the user. Otherwise it'd fragment our left/right merging.
 
-    uintptr splitbyte_count = free->byte_count - byte_count;
-    if (splitbyte_count <= BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
+    Tracked_Block_Header* result_header = (Tracked_Block_Header*)free;
+    void* result = (u8*)((Tracked_Block_Header*)free + 1);
+
+    uintptr split_byte_count = free->byte_count - byte_count;
+    if (split_byte_count <= BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
     {
-        splitbyte_count = 0;
-        byte_count = free->byte_count; // HMM - Maybe we should have a way to tell the user that they got a little extra memory?
-    }
+        // ... nothing! The remaining block is too small to fit anything of use.
+        byte_count = free->byte_count;
 
-    Tracked_Block_Header* resultHeader = (Tracked_Block_Header*)((u8*)free + splitbyte_count);
-    resultHeader->byte_count = byte_count;
-    resultHeader->right = free->right;
-    resultHeader->state = Tracked_State::allocated;
-
-    if (resultHeader->right)
-    {
-        resultHeader->right->left = resultHeader;
-    }
-
-    void* result = (u8*)(resultHeader + 1);
-
-    if (splitbyte_count > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
-    {
-        // ... a smaller shared block (left)
-
-        Free_Block_Header* split = free;
-        split->right = resultHeader;
-        resultHeader->left = split;
-
-        if (isFreeBlockFromTrackedList)
+        if (is_free_block_from_tracked_list)
         {
-            resize_free_list_head(&regionHeader->trackedList, splitbyte_count);
+            resize_free_list_head(&region_header->tracked_list, 0);
         }
         else
         {
-            resize_free_list_head(&regionHeader->sharedList, splitbyte_count);
+            resize_free_list_head(&region_header->shared_list, 0);
         }
+
     }
     else
     {
-        Assert(splitbyte_count == 0);
+        // ... a smaller shared block (right)
 
-        // ... nothing! The remaining block is too small to fit anything of use.
 
-        if (isFreeBlockFromTrackedList)
+        Free_Block_Header* split = (Free_Block_Header*)((u8*)free + byte_count);
+        mem_move(split, free, sizeof(Free_Block_Header));
+
+        result_header->right = split;
+        split->left = result_header;
+
+        if (is_free_block_from_tracked_list)
         {
-            resize_free_list_head(&regionHeader->trackedList, 0); // 0 removes node altogether
+            region_header->tracked_list = split;
+            resize_free_list_head(&region_header->tracked_list, split_byte_count);
         }
         else
         {
-            resize_free_list_head(&regionHeader->sharedList, 0); // 0 removes node altogether
+            region_header->shared_list = split;
+            resize_free_list_head(&region_header->shared_list, split_byte_count);
         }
     }
 
-    // @Slow - Should be a separate call or compile-time template param?
-    if (clearToZero != CTZ::NIL)
+    result_header->byte_count = byte_count;
+    result_header->state = Tracked_State::ALLOCATED;
+
+    if (result_header->left)
     {
-        mem_zero(result, byte_countOrig);
+        Assert(result_header->left->right == result_header);  // @Temp if this triggers, then free/shared block isn't counted in left/right?
+        // result_header->left->right = result_header;
+    }
+
+    if ((bool)clearToZero)
+    {
+        mem_zero(result, byte_count_orig);
     }
 
 #if MEM_DEBUG_HISTORY_ENABLE
     Debug_History::Entry entry;
-    entry.type = Debug_History::Entry::Type::allocate;
+    entry.type = Debug_History::Entry::Type::ALLOCATE;
     entry.address = result;
-    AddDebugEntry(&regionHeader->Debug_History, entry);
+    AddDebugEntry(&region_header->Debug_History, entry);
 #endif
 
     return result;
@@ -629,81 +668,88 @@ free_tracked_allocation(Memory_Region region, void* allocation)
 {
     using namespace MEM;
 
+    if (region->id == 2150138239)
+    {
+        bool brk = true;
+    }
+
     Assert(region);
 
-    Region_Header* regionHeader = region;
-    Tracked_Block_Header* trackedHeader = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
-    Assert(trackedHeader->state == Tracked_State::allocated);
+    Region_Header* region_header = region;
+    Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
+    Assert(tracked_header->state == Tracked_State::ALLOCATED);
 
-    Tracked_Block_Header* left = trackedHeader->left;
-    Tracked_Block_Header* right = trackedHeader->right;
-    if (right && right->state == Tracked_State::FreeUnshared)
+    Tracked_Block_Header* left = tracked_header->left;
+    Tracked_Block_Header* right = tracked_header->right;
+    if (left && left->state == Tracked_State::FREE_UNSHARED)
     {
-        // Merge w/ free right
+        // --- Merge w/ free left (unshared)
 
-        trackedHeader->byte_count += right->byte_count;
+        left->byte_count += tracked_header->byte_count;
+        left->right = tracked_header->right;
 
-        trackedHeader->right = right->right;
-        if (trackedHeader->right)
-        {
-            trackedHeader->right->left = trackedHeader;
-        }
-
-        free_list_remove(&regionHeader->trackedList, (Free_Block_Header*)right);
-    }
-
-    bool mergedIntoShared = false;
-
-    if (left && left->state == Tracked_State::FreeUnshared)
-    {
-        // Merge w/ free left
-
-        left->byte_count += trackedHeader->byte_count;
-
-        left->right = trackedHeader->right;
         if (left->right)
         {
             left->right->left = left;
         }
 
-        free_list_remove(&regionHeader->trackedList, (Free_Block_Header*)left);
-
-        trackedHeader = left;
+        // Remove for now, and...
+        free_list_remove(&region_header->tracked_list, (Free_Block_Header*)left);
+        // ... consider the merged result the new "tracked header" that we will add back in.
+        tracked_header = left;
     }
-    else if (left && left->state == Tracked_State::FreeShared)
+
+    bool merged_with_shared = false;
+
+    if (right)
     {
-        // Merge w/ shared left
-
-        left->byte_count += trackedHeader->byte_count;
-
-        left->right = trackedHeader->right;
-        if (left->right)
+        if (right->state == Tracked_State::FREE_UNSHARED)
         {
-            left->right->left = left;
+            // --- Merge w/ free right (unshared)
+
+            tracked_header->byte_count += right->byte_count;
+
+            tracked_header->right = right->right;
+            if (tracked_header->right)
+            {
+                tracked_header->right->left = tracked_header;
+            }
+
+            // Remove for now. We'll add the merged result back in.
+            free_list_remove(&region_header->tracked_list, (Free_Block_Header*)right);
         }
+        else if (right->state == Tracked_State::FREE_SHARED)
+        {
+            merged_with_shared = true;
 
-        free_list_remove(&regionHeader->sharedList, (Free_Block_Header*)left);
+            // --- Merge w/ free right (shared)
 
-        trackedHeader = left;
-        mergedIntoShared = true;
+            tracked_header->byte_count += right->byte_count;
+
+            Assert(right->right == nullptr);     // right of shared is never tracked, by definition
+            tracked_header->right = nullptr;
+
+            // Remove for now. We'll add the merged result back in.
+            free_list_remove(&region_header->shared_list, (Free_Block_Header*)right);
+        }
     }
 
-    if (mergedIntoShared)
+    if (merged_with_shared)
     {
-        trackedHeader->state = Tracked_State::FreeShared;
-        free_list_add(&regionHeader->sharedList, (Free_Block_Header*)trackedHeader);
+        tracked_header->state = Tracked_State::FREE_SHARED;
+        free_list_add(&region_header->shared_list, (Free_Block_Header*)tracked_header);
     }
     else
     {
-        trackedHeader->state = Tracked_State::FreeUnshared;
-        free_list_add(&regionHeader->trackedList, (Free_Block_Header*)trackedHeader);
+        tracked_header->state = Tracked_State::FREE_UNSHARED;
+        free_list_add(&region_header->tracked_list, (Free_Block_Header*)tracked_header);
     }
 
 #if MEM_DEBUG_HISTORY_ENABLE
     Debug_History::Entry entry;
-    entry.type = Debug_History::Entry::Type::Free;
+    entry.type = Debug_History::Entry::Type::FREE;
     entry.address = allocation;
-    AddDebugEntry(&regionHeader->Debug_History, entry);
+    AddDebugEntry(&region_header->Debug_History, entry);
 #endif
 }
 
@@ -721,10 +767,10 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
     }
     else
     {
-        Tracked_Block_Header* trackedHeader = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
-        Assert(trackedHeader->state == Tracked_State::allocated);
+        Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
+        Assert(tracked_header->state == Tracked_State::ALLOCATED);
 
-        uintptr byte_countOld = trackedHeader->byte_count - sizeof(Tracked_Block_Header);
+        uintptr byte_countOld = tracked_header->byte_count - sizeof(Tracked_Block_Header);
         if (byte_countOld >= byte_countNew)
         {
             result = allocation;
@@ -758,10 +804,16 @@ mem_region_reset(Memory_Region region)
 {
     using namespace MEM;
 
+    Region_Header* header = region;
+
+    if (header->id == debug_id_from_name("cnsl-L"))
+    {
+        bool brk = true;
+    }
+
     free_overflow_allocations(region);
     free_child_allocations(region);
 
-    Region_Header* header = region;
     header->first_child = nullptr;
     header->overflow = nullptr;
 
@@ -772,7 +824,7 @@ mem_region_reset(Memory_Region region)
 // Initialize a root memory initially backed by the provided memory.
 // If a an allocation would "overflow" a memory region, it will use MEM::system_allocate(..) to get more.
 function Memory_Region
-mem_region_root_begin(u8* bytes, uintptr byte_count)
+mem_region_root_begin(u8* bytes, uintptr byte_count, char const* debug_name = nullptr)
 {
     using namespace MEM;
 
@@ -780,18 +832,19 @@ mem_region_root_begin(u8* bytes, uintptr byte_count)
 
     Region_Header* header = (Region_Header*)bytes;
     *header = {};
-    header->byte_countBudget = byte_count;
-    header->sharedList = (Free_Block_Header*)(header + 1);
-    *header->sharedList = {};
-    header->sharedList->byte_count = header->byte_countBudget - sizeof(Region_Header);
-    header->sharedList->state = Tracked_State::FreeShared;
+    header->byte_budget = byte_count;
+    header->shared_list = (Free_Block_Header*)(header + 1);
+    *header->shared_list = {};
+    header->shared_list->byte_count = header->byte_budget - sizeof(Region_Header);
+    header->shared_list->state = Tracked_State::FREE_SHARED;
+    debug_region_name_set(header, debug_name);
     return header;
 }
 
 // Initialize a sub-region within the provided parent region.
 // If parent is nullptr, initializes a root memory region by calling MEM::system_allocate(..)
 function Memory_Region
-mem_region_begin(Memory_Region parent, uintptr byte_count)
+mem_region_begin(Memory_Region parent, uintptr byte_count, char const* debug_name = nullptr)
 {
     using namespace MEM;
 
@@ -808,14 +861,15 @@ mem_region_begin(Memory_Region parent, uintptr byte_count)
     }
 
     *result = {};
-    result->byte_countBudget = byte_count;
-    result->sharedList = (Free_Block_Header*)(result + 1);
-    *result->sharedList = {};
-    result->sharedList->byte_count = result->byte_countBudget - sizeof(Region_Header);
-    result->sharedList->state = Tracked_State::FreeShared;
+    result->byte_budget = byte_count;
+    result->shared_list = (Free_Block_Header*)(result + 1);
+    *result->shared_list = {};
+    result->shared_list->byte_count = result->byte_budget - sizeof(Region_Header);
+    result->shared_list->state = Tracked_State::FREE_SHARED;
     result->parent = parent;
     result->next_sibling = parent->first_child;
     result->prev_sibling = nullptr;
+    debug_region_name_set(result, debug_name);
 
     if (parent)
     {
