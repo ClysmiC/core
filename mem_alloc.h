@@ -43,45 +43,13 @@ struct Overflow_Header
 {
     uintptr byte_count;             // Includes header
     Overflow_Header* next;
+    // Region_Header* patron;          // Which region ultimately allocated us?
 };
 
-#define MEM_DEBUG_HISTORY_ENABLE 0
 #define MEM_DEBUG_NAMES_ENABLE 1
-
-#if MEM_DEBUG_HISTORY_ENABLE
-struct Debug_History
-{
-    struct Entry
-    {
-        enum Type
-        {
-            FREE,
-            ALLOCATE
-        };
-
-        Type type;
-        void* address;
-    };
-
-    int iEntryNext;
-    Entry entries[64];
-};
-
-void
-debug_entry_add(Debug_History* history, Debug_History::Entry entry)
-{
-    history->entries[history->iEntryNext] = entry;
-    history->iEntryNext++;
-    history->iEntryNext %= ArrayLen(history->entries);
-}
-#endif
 
 struct Region_Header
 {
-#if MEM_DEBUG_HISTORY_ENABLE
-    Debug_History Debug_History;
-#endif
-
 #if MEM_DEBUG_NAMES_ENABLE
     char name[8];
     u32 id;
@@ -258,20 +226,7 @@ ensure_block_with_size(Region_Header* region_header, uintptr byte_count, AllocTy
         byte_count += sizeof(Overflow_Header);
         byte_count = max(byte_count, region_header->byte_budget);
 
-        Overflow_Header* overflow;
-        if (region_header->parent)
-        {
-            if (region_header->id == debug_id_from_name("cnsl-L"))
-            {
-                bool brk = true;
-            }
-
-            overflow = (Overflow_Header*)allocate_tracked(region_header->parent, byte_count);
-        }
-        else
-        {
-            overflow = (Overflow_Header*)MEM::system_allocate(byte_count);
-        }
+        Overflow_Header* overflow = (Overflow_Header*)allocate_tracked(region_header->parent, byte_count);
 
         // --- Maintain overflow list
 
@@ -353,208 +308,9 @@ free_list_add(Free_Block_Header** ppHead, Free_Block_Header* pItem)
     *ppNextToFix = pItem;
 }
 
-function void
-free_subregion_allocation(Region_Header* parent, void* subregion)
-{
-    if (parent)
-    {
-        bool isInRegion = (subregion >= parent) && (subregion < (u8*)parent + parent->byte_budget);
-        if (isInRegion)
-        {
-            free_tracked_allocation(parent, subregion);
-        }
-        else
-        {
-            // TODO - this doesn't work, because the region is a tracked allocation which means comes from the
-            //  right end of the overflow region. +1 reason to put tracked allocations on the left and untracked on the right.
-            //  Then, I think this will work
-#if 0
-            // Check if the subregion itself was an overflow allocation in the parent.
-            // If so, we want to the deallocation to include the overflow header.
-            Overflow_Header* overflow = parent->overflow;
-            while (overflow)
-            {
-                // @Slow, maybe we should store this on the Memory_Region header rather than walking this list?
-                if (overflow == ((Overflow_Header*)subregion) - 1)
-                {
-                    FreeSubRegionAllocation(parent->parent, overflow);
-                    break;
-                }
-
-                overflow = overflow->next;
-            }
-
-            if (bool not_found = !overflow)
-#endif
-            {
-                // Recurse
-                free_subregion_allocation(parent->parent, subregion);
-            }
-        }
-    }
-    else
-    {
-        system_free(subregion);
-    }
-
-}
-
-function void
-free_overflow_allocations(Region_Header* region)
-{
-    Overflow_Header* overflow = region->overflow;
-    while (overflow)
-    {
-        if (region->parent && region->parent->id == 2150138239)
-        {
-            bool brk = true;
-        }
-
-        Overflow_Header* overflowNext = overflow->next;
-        free_subregion_allocation(region->parent, overflow);
-
-        overflow = overflowNext;
-    }
-}
-
-function bool mem_region_end(Region_Header* region, bool unlink);
-
-function void
-free_child_allocations(Region_Header* region)
-{
-    Region_Header* child = region->first_child;
-    while (child)
-    {
-        Region_Header* childNext = child->next_sibling;
-        mem_region_end(child, false /* unlink */); // Don't bother unlinking, since metadata is being de-allocated too
-        child = childNext;
-    }
-}
-
-function bool
-mem_region_end(Region_Header* region, bool unlink)
-{
-    free_overflow_allocations(region);
-    free_child_allocations(region); // NOTE - This recurses back to mem_region_end(..)
-
-    if (unlink)
-    {
-        if (region->parent && (region->parent->first_child == region))
-        {
-            region->parent->first_child = region->next_sibling;
-        }
-
-        if (region->next_sibling)
-        {
-            region->next_sibling->prev_sibling = region->prev_sibling;
-        }
-
-        if (region->prev_sibling)
-        {
-            region->prev_sibling->next_sibling = region->next_sibling;
-        }
-    }
-
-    free_subregion_allocation(region->parent, region);
-
-    // TODO - Maybe add some auditing and return false if it fails? Or just make this return void?
-    return true;
-}
-
-} // namespace MEM
-
-// "Opaque type"
-using Memory_Region = MEM::Region_Header*;
-
-// TODO - remove these non-namespace'd wrappers?
 function void*
-allocate_from_system(uintptr byte_count)
+allocate_tracked_unchecked(Region_Header* region, uintptr byte_count)
 {
-    return MEM::system_allocate(byte_count);
-}
-
-function void
-free_from_system(void* allocation)
-{
-    MEM::system_free(allocation);
-}
-
-function void*
-allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
-{
-    using namespace MEM;
-
-    Assert(region);
-
-    Region_Header* region_header = region;
-
-    // --- Make sure our shared block is big enough!
-
-    Free_Block_Header* shared = ensure_block_with_size(region_header, byte_count, AllocType::Untracked);
-    Assert(shared == region_header->shared_list);
-    Assert(shared->byte_count >= byte_count);
-
-    // --- Split shared block into the untracked allocation (right) and ...
-
-    void* result;
-
-    // HMM - Gracefully handle 0 byte allocation?
-    uintptr split_byte_count = shared->byte_count - byte_count;
-    if (split_byte_count <= BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
-    {
-        // ... nothing! The remaining block is too small to fit anything of use
-
-        if (shared->left)
-        {
-            shared->left->right = nullptr;
-        }
-
-        resize_free_list_head(&region_header->shared_list, 0);
-
-        result = shared;
-    }
-    else
-    {
-        // ... a smaller shared block (left)
-
-        resize_free_list_head(&region_header->shared_list, split_byte_count);
-        result = (u8*)shared + split_byte_count;
-    }
-
-    if ((bool)clearToZero)
-    {
-        mem_zero(result, byte_count);
-    }
-
-    return result;
-}
-
-template <typename T>
-T*
-allocate(
-    Memory_Region region,
-    CTZ clearToZero=CTZ::NIL)
-{
-    T* result = (T*)allocate(region, sizeof(T), clearToZero);
-    return result;
-}
-
-template <typename T>
-T*
-allocate_array(
-    Memory_Region region,
-    uintptr count,
-    CTZ clearToZero=CTZ::NIL)
-{
-    T* result = (T*)allocate(region, sizeof(T) * count, clearToZero);
-    return result;
-}
-
-function void*
-allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
-{
-    using namespace MEM;
-
     Assert(region);
 
     Region_Header* region_header = region;
@@ -562,7 +318,6 @@ allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
     // Make sure our tracked or free block is big enough!
 
     // HMM - Gracefully handle 0 byte allocation?
-    uintptr byte_count_orig = byte_count;
     byte_count += sizeof(Tracked_Block_Header);
     byte_count = max(byte_count, sizeof(Free_Block_Header)); // Make sure the allocation is big enough that if it gets freed, we can store a free block header in place
 
@@ -627,47 +382,12 @@ allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
         // result_header->left->right = result_header;
     }
 
-    if ((bool)clearToZero)
-    {
-        mem_zero(result, byte_count_orig);
-    }
-
-#if MEM_DEBUG_HISTORY_ENABLE
-    Debug_History::Entry entry;
-    entry.type = Debug_History::Entry::Type::ALLOCATE;
-    entry.address = result;
-    AddDebugEntry(&region_header->Debug_History, entry);
-#endif
-
-    return result;
-}
-
-template <typename T>
-T*
-allocate_tracked(
-    Memory_Region region,
-    CTZ clearToZero=CTZ::NIL)
-{
-    T* result = (T*)allocate_tracked(region, sizeof(T), clearToZero);
-    return result;
-}
-
-template <typename T>
-T*
-allocate_array_tracked(
-    Memory_Region region,
-    uintptr count,
-    CTZ clearToZero=CTZ::NIL)
-{
-    T* result = (T*)allocate_tracked(region, sizeof(T) * count, clearToZero);
     return result;
 }
 
 function void
-free_tracked_allocation(Memory_Region region, void* allocation)
+free_tracked_allocation_unchecked(Region_Header* region, void* allocation)
 {
-    using namespace MEM;
-
     if (region->id == 2150138239)
     {
         bool brk = true;
@@ -744,13 +464,232 @@ free_tracked_allocation(Memory_Region region, void* allocation)
         tracked_header->state = Tracked_State::FREE_UNSHARED;
         free_list_add(&region_header->tracked_list, (Free_Block_Header*)tracked_header);
     }
+}
 
-#if MEM_DEBUG_HISTORY_ENABLE
-    Debug_History::Entry entry;
-    entry.type = Debug_History::Entry::Type::FREE;
-    entry.address = allocation;
-    AddDebugEntry(&region_header->Debug_History, entry);
+function bool mem_region_end(Region_Header* region, bool unlink);
+
+function void
+free_child_allocations(Region_Header* region)
+{
+    Region_Header* child = region->first_child;
+    while (child)
+    {
+        Region_Header* childNext = child->next_sibling;
+        mem_region_end(child, false /* unlink */); // Don't bother unlinking, since we are clobbering this list anyways
+        child = childNext;
+    }
+
+    region->first_child = nullptr;
+}
+
+function bool
+mem_region_end(Region_Header* region, bool unlink)
+{
+    // Clean up children before freeing overflow regions,
+    //  since a child could live in an overflow region.
+    free_child_allocations(region); // NOTE - this can recurse back to mem_region_end(..)
+    
+    // --- Free overflow allocations
+    {
+        Overflow_Header* overflow = region->overflow;
+        while (overflow)
+        {
+            Overflow_Header* overflowNext = overflow->next;
+            free_tracked_allocation(region->parent, overflow);
+            overflow = overflowNext;
+        }
+
+        region->overflow = nullptr;
+    }
+
+    if (unlink)
+    {
+        if (region->parent && (region->parent->first_child == region))
+        {
+            region->parent->first_child = region->next_sibling;
+        }
+
+        if (region->next_sibling)
+        {
+            region->next_sibling->prev_sibling = region->prev_sibling;
+        }
+
+        if (region->prev_sibling)
+        {
+            region->prev_sibling->next_sibling = region->next_sibling;
+        }
+    }
+
+    free_tracked_allocation(region->parent, region);
+
+    // TODO - Maybe add some auditing and return false if it fails? Or just make this return void?
+    return true;
+}
+
+} // namespace MEM
+
+// "Opaque type"
+using Memory_Region = MEM::Region_Header*;
+
+function void*
+allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
+{
+    using namespace MEM;
+
+    Assert(region);
+
+    Region_Header* region_header = region;
+
+    // --- Make sure our shared block is big enough!
+
+    Free_Block_Header* shared = ensure_block_with_size(region_header, byte_count, AllocType::Untracked);
+    Assert(shared == region_header->shared_list);
+    Assert(shared->byte_count >= byte_count);
+
+    // --- Split shared block into the untracked allocation (right) and ...
+
+    void* result;
+
+    // HMM - Gracefully handle 0 byte allocation?
+    uintptr split_byte_count = shared->byte_count - byte_count;
+    if (split_byte_count <= BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING)
+    {
+        // ... nothing! The remaining block is too small to fit anything of use
+
+        if (shared->left)
+        {
+            shared->left->right = nullptr;
+        }
+
+        resize_free_list_head(&region_header->shared_list, 0);
+
+        result = shared;
+    }
+    else
+    {
+        // ... a smaller shared block (left)
+
+        resize_free_list_head(&region_header->shared_list, split_byte_count);
+        result = (u8*)shared + split_byte_count;
+    }
+
+    if ((bool)clearToZero)
+    {
+        mem_zero(result, byte_count);
+    }
+
+    return result;
+}
+
+template <typename T>
+T*
+allocate(
+    Memory_Region region,
+    CTZ clearToZero=CTZ::NIL)
+{
+    T* result = (T*)allocate(region, sizeof(T), clearToZero);
+    return result;
+}
+
+template <typename T>
+T*
+allocate_array(
+    Memory_Region region,
+    uintptr count,
+    CTZ clearToZero=CTZ::NIL)
+{
+    T* result = (T*)allocate(region, sizeof(T) * count, clearToZero);
+    return result;
+}
+
+function void*
+allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
+{
+    void* result;
+    if (region)
+    {
+        result = MEM::allocate_tracked_unchecked(region, byte_count);
+    }
+    else
+    {
+        result = MEM::system_allocate(byte_count);
+    }
+
+    if ((bool)clearToZero)
+    {
+        mem_zero(result, byte_count);
+    }
+
+    return result;
+}
+
+template <typename T>
+T*
+allocate_tracked(
+    Memory_Region region,
+    CTZ clearToZero=CTZ::NIL)
+{
+    T* result = (T*)allocate_tracked(region, sizeof(T), clearToZero);
+    return result;
+}
+
+template <typename T>
+T*
+allocate_array_tracked(
+    Memory_Region region,
+    uintptr count,
+    CTZ clearToZero=CTZ::NIL)
+{
+    T* result = (T*)allocate_tracked(region, sizeof(T) * count, clearToZero);
+    return result;
+}
+
+function void
+free_tracked_allocation(Memory_Region region, void* allocation)
+{
+    if (region)
+    {
+#if 1
+        MEM::free_tracked_allocation_unchecked(region, allocation);
+#else
+        bool isInRegion = (subregion >= parent) && (subregion < (u8*)parent + parent->byte_budget);
+        if (isInRegion)
+        {
+            free_tracked_allocation(parent, subregion);
+        }
+        else
+        {
+            // TODO - this doesn't work, because the region is a tracked allocation which means comes from the
+            //  right end of the overflow region. +1 reason to put tracked allocations on the left and untracked on the right.
+            //  Then, I think this will work
+            // Check if the subregion itself was an overflow allocation in the parent.
+            // If so, we want to the deallocation to include the overflow header.
+            Overflow_Header* overflow = parent->overflow;
+            while (overflow)
+            {
+                // @Slow, maybe we should store this on the Memory_Region header rather than walking this list?
+                if (overflow == ((Overflow_Header*)subregion) - 1)
+                {
+                    free_subregion_allocation(parent->parent, overflow);
+                    break;
+                }
+
+                overflow = overflow->next;
+            }
+
+            bool not_found = !overflow;
+            if (not_found)
+            {
+                // Recurse
+                free_subregion_allocation(parent->parent, subregion);
+            }
+        }
 #endif
+    }
+    else
+    {
+        MEM::system_free(allocation);
+    }
 }
 
 function void*
@@ -778,8 +717,7 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
         else
         {
 
-            // TODO - Grow tracked regions from low to highto support possible cheap re-allocs by grabbing more
-            //  from the shared block
+            // TODO - Grow in place if possible
 
             result = allocate_tracked(region, byte_countNew);
 
@@ -811,11 +749,28 @@ mem_region_reset(Memory_Region region)
         bool brk = true;
     }
 
-    free_overflow_allocations(region);
+    // Clean up children before freeing overflow regions,
+    //  since a child could live in an overflow region.
     free_child_allocations(region);
+    
+    // --- Free overflow allocations
+    {
+        Overflow_Header* overflow = region->overflow;
+        while (overflow)
+        {
+            Overflow_Header* overflowNext = overflow->next;
+            free_tracked_allocation(region->parent, overflow);
+            overflow = overflowNext;
+        }
 
-    header->first_child = nullptr;
-    header->overflow = nullptr;
+        region->overflow = nullptr;
+    }
+
+    region->tracked_list = nullptr;
+    region->shared_list = (Free_Block_Header*)(header + 1);
+    *region->shared_list = {};
+    region->shared_list->byte_count = header->byte_budget - sizeof(Region_Header);
+    region->shared_list->state = Tracked_State::FREE_SHARED;
 
     // TODO - Maybe add some auditing and return false if it fails? Or just make this return void?
     return true;
@@ -851,14 +806,7 @@ mem_region_begin(Memory_Region parent, uintptr byte_count, char const* debug_nam
     byte_count = max(byte_count, BYTE_COUNT::MINIMUM_REGION);
 
     Region_Header* result = nullptr;
-    if (parent)
-    {
-        result = (Region_Header*)allocate_tracked(parent, byte_count);
-    }
-    else
-    {
-        result = (Region_Header*)MEM::system_allocate(byte_count);
-    }
+    result = (Region_Header*)allocate_tracked(parent, byte_count);
 
     *result = {};
     result->byte_budget = byte_count;
@@ -994,4 +942,4 @@ recycle(Recycle_Allocator<T>* alloc, T* item)
 #endif
 }
 
-#undef MEM_DEBUG_HISTORY_ENABLE
+#undef MEM_DEBUG_NAMES_ENABLE
