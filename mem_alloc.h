@@ -73,13 +73,13 @@ static constexpr uintptr MINIMUM_REGION = sizeof(Region_Header) + 256;
 }
 
 function u32
-debug_id_from_name(char const * name)
+debug_id_from_name(char const* name)
 {
 #if MEM_DEBUG_NAMES_ENABLE
     if (!name)
         return 0;
 
-    char const * c = name;
+    char const* c = name;
     u32 constexpr magic = 2147463569;   // big prime number to "distribute" characters to 0-2^32 before x-oring for debug id
     u32 result = 0;
     while (*c)
@@ -91,6 +91,26 @@ debug_id_from_name(char const * name)
     return result;
 #else
     return 0;
+#endif
+}
+
+function void
+debug_validate_left_and_right(Tracked_Block_Header* tracked)
+{
+#if BUILD_DEBUG
+    Tracked_Block_Header* left = tracked ? tracked->left : nullptr;
+    if (left)
+    {
+        Assert(left->right == tracked);
+        Assert((u8*)left + left->byte_count == (u8*)tracked);
+
+    }
+    Tracked_Block_Header* right = tracked ? tracked->right : nullptr;
+    if (right)
+    {
+        Assert(right->left == tracked);
+        Assert((u8*)tracked + tracked->byte_count == (u8*)right);
+    }
 #endif
 }
 
@@ -332,6 +352,9 @@ allocate_tracked_unchecked(Region_Header* region, uintptr byte_count)
     //  just lump it in with the memory we give back to the user. Otherwise it'd fragment our left/right merging.
 
     Tracked_Block_Header* result_header = (Tracked_Block_Header*)free;
+    result_header->byte_count = byte_count;
+    result_header->state = Tracked_State::ALLOCATED;
+
     void* result = (u8*)((Tracked_Block_Header*)free + 1);
 
     uintptr split_byte_count = free->byte_count - byte_count;
@@ -348,18 +371,28 @@ allocate_tracked_unchecked(Region_Header* region, uintptr byte_count)
         {
             resize_free_list_head(&region_header->shared_list, 0);
         }
-
     }
     else
     {
         // ... a smaller shared block (right)
 
-
         Free_Block_Header* split = (Free_Block_Header*)((u8*)free + byte_count);
-        mem_move(split, free, sizeof(Free_Block_Header));
+        split->byte_count = split_byte_count;
+        split->left = result_header;
+        split->right = result_header->right;
+        split->state = is_free_block_from_tracked_list ?
+                        Tracked_State::FREE_UNSHARED :
+                        Tracked_State::FREE_SHARED;
+        split->next = free->next;
+        split->prev = nullptr; Assert(!free->prev);
 
         result_header->right = split;
-        split->left = result_header;
+        if (split->right)
+        {
+            split->right->left = split;
+        }
+
+        debug_validate_left_and_right(split);
 
         if (is_free_block_from_tracked_list)
         {
@@ -373,14 +406,8 @@ allocate_tracked_unchecked(Region_Header* region, uintptr byte_count)
         }
     }
 
-    result_header->byte_count = byte_count;
-    result_header->state = Tracked_State::ALLOCATED;
 
-    if (result_header->left)
-    {
-        Assert(result_header->left->right == result_header);  // @Temp if this triggers, then free/shared block isn't counted in left/right?
-        // result_header->left->right = result_header;
-    }
+    debug_validate_left_and_right(result_header);
 
     return result;
 }
@@ -388,21 +415,22 @@ allocate_tracked_unchecked(Region_Header* region, uintptr byte_count)
 function void
 free_tracked_allocation_unchecked(Region_Header* region, void* allocation)
 {
-    if (region->id == 2150138239)
-    {
-        bool brk = true;
-    }
-
     Assert(region);
 
     Region_Header* region_header = region;
     Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
     Assert(tracked_header->state == Tracked_State::ALLOCATED);
+    debug_validate_left_and_right(tracked_header);
 
     Tracked_Block_Header* left = tracked_header->left;
     Tracked_Block_Header* right = tracked_header->right;
+    debug_validate_left_and_right(left);
+    debug_validate_left_and_right(right);
+
     if (left && left->state == Tracked_State::FREE_UNSHARED)
     {
+        Assert(left->right == tracked_header);
+
         // --- Merge w/ free left (unshared)
 
         left->byte_count += tracked_header->byte_count;
@@ -708,6 +736,7 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
     {
         Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
         Assert(tracked_header->state == Tracked_State::ALLOCATED);
+        debug_validate_left_and_right(tracked_header);
 
         uintptr byte_countOld = tracked_header->byte_count - sizeof(Tracked_Block_Header);
         if (byte_countOld >= byte_countNew)
@@ -720,8 +749,8 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
             // TODO - Grow in place if possible
 
             result = allocate_tracked(region, byte_countNew);
-
             mem_copy(result, allocation, byte_countOld);
+
             free_tracked_allocation(region, allocation);
         }
     }
@@ -743,11 +772,6 @@ mem_region_reset(Memory_Region region)
     using namespace MEM;
 
     Region_Header* header = region;
-
-    if (header->id == debug_id_from_name("cnsl-L"))
-    {
-        bool brk = true;
-    }
 
     // Clean up children before freeing overflow regions,
     //  since a child could live in an overflow region.

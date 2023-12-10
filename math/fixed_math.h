@@ -30,11 +30,7 @@ struct Value
     constexpr Value() = default;
 
     template <class T_OTHER>
-    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n))
-    {
-        bool brk = true;
-    }
-
+    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n)) {}
     constexpr Value(i8 v)   : n(T(v * D)) {}
     constexpr Value(i16 v)  : n(T(v * D)) {}
     constexpr Value(i32 v)  : n(T(v * D)) {}
