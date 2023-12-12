@@ -113,6 +113,26 @@ debug_validate_left_and_right(Tracked_Block_Header* tracked)
 }
 
 function void
+debug_validate_prev_and_next(Free_Block_Header* free, bool allow_size_mismatch = false)
+{
+#if BUILD_DEBUG
+    Free_Block_Header* prev = free ? free->prev : nullptr;
+    if (prev)
+    {
+        Assert(prev->next == free);
+        Assert(Implies(!allow_size_mismatch, prev->byte_count >= free->byte_count));
+
+    }
+    Free_Block_Header* next = free ? free->next : nullptr;
+    if (next)
+    {
+        Assert(next->prev == free);
+        Assert(Implies(!allow_size_mismatch, next->byte_count <= free->byte_count));
+    }
+#endif
+}
+
+function void
 debug_region_name_set(MEM::Region_Header * region, char const * name)
 {
 #if MEM_DEBUG_NAMES_ENABLE
@@ -180,6 +200,8 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
         {
             (*ppHead)->prev = nullptr;
         }
+
+        debug_validate_prev_and_next(*ppHead);
     }
     else
     {
@@ -217,7 +239,13 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
                 {
                     pHeadOrig->next->prev = pHeadOrig;
                 }
+
+                debug_validate_prev_and_next(pHeadOrig);
+                debug_validate_prev_and_next(pHeadOrig->next);
+                debug_validate_prev_and_next(pHeadOrig->prev);
             }
+
+            debug_validate_prev_and_next(*ppHead);
         }
     }
 }
@@ -265,6 +293,9 @@ ensure_block_with_size(Region_Header* region_header, uintptr byte_count, AllocTy
             free->next->prev = free;
         }
 
+        debug_validate_prev_and_next(free);
+        debug_validate_prev_and_next(free->next);
+
         region_header->shared_list = free;
     }
 
@@ -283,11 +314,13 @@ free_list_remove(Free_Block_Header** ppHead, Free_Block_Header* pItem)
         {
             (*ppHead)->prev = nullptr;
         }
+
+        debug_validate_prev_and_next(*ppHead);
     }
     else
     {
-        TODO START HERE pItem->prev is pointing from 176 -> 160 even though 160 is allocated...
-        probably need to fix this at the point where we allocate + split 720 into 160 and 560
+        // TODO START HERE pItem->prev is pointing from 176 -> 160 even though 160 is allocated...
+        // probably need to fix this at the point where we allocate + split 720 into 160 and 560
 
         if (pItem->prev)
         {
@@ -298,6 +331,9 @@ free_list_remove(Free_Block_Header** ppHead, Free_Block_Header* pItem)
         {
             pItem->next->prev = pItem->prev;
         }
+
+        debug_validate_prev_and_next(pItem->prev);
+        debug_validate_prev_and_next(pItem->next);
     }
 }
 
@@ -328,6 +364,9 @@ free_list_add(Free_Block_Header** ppHead, Free_Block_Header* pItem)
     }
 
     *ppNextToFix = pItem;
+
+    debug_validate_prev_and_next(pItem);
+    debug_validate_prev_and_next(*ppNextToFix);
 }
 
 function void*
@@ -371,6 +410,10 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
                         Tracked_State::FREE_UNSHARED :
                         Tracked_State::FREE_SHARED;
         split->next = free->next;
+        if (split->next)
+        {
+            split->next->prev = split;
+        }
         split->prev = nullptr; Assert(!free->prev);
 
         result_header->right = split;
@@ -390,17 +433,23 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
             region->shared_list = split;
             resize_free_list_head(&region->shared_list, split_byte_count);
         }
+
+        debug_validate_prev_and_next(split);
     }
     else
     {
+        // ... (nothing)
+
         // --- Update free list
         if (is_free_block_from_tracked_list)
         {
             resize_free_list_head(&region->tracked_list, 0);
+            debug_validate_prev_and_next(region->tracked_list);
         }
         else
         {
             resize_free_list_head(&region->shared_list, 0);
+            debug_validate_prev_and_next(region->shared_list);
         }
     }
 
@@ -570,6 +619,7 @@ allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
         }
 
         resize_free_list_head(&region_header->shared_list, 0);
+        debug_validate_prev_and_next(region_header->shared_list);
 
         result = shared;
     }
@@ -579,6 +629,8 @@ allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
 
         resize_free_list_head(&region_header->shared_list, split_byte_count);
         result = (u8*)shared + split_byte_count;
+
+        debug_validate_prev_and_next(region_header->shared_list);
     }
 
     if ((bool)clearToZero)
@@ -768,12 +820,13 @@ mem_region_init(
 
     if (parent)
     {
-        parent->first_child = result;
         result->next_sibling = parent->first_child;
         if (result->next_sibling)
         {
             result->next_sibling->prev_sibling = result;
         }
+
+        parent->first_child = result;
     }
     else
     {
