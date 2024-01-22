@@ -21,7 +21,6 @@ vec_convert(Vec<U, N> from)
     return result;
 }
 
-
 template<class T, uint N>
 function Vec<T, N>
 operator+(Vec<T, N> rhs)

@@ -46,6 +46,8 @@ struct TreeBuilder
     // HMM - The parameter order here is not obvious
     
     TreeBuilder() = default;
+
+    // @Cleanup... both ctor and init
     TreeBuilder(
         MemberRef<T, T*> mFirstChild,
         MemberRef<T, T*> mNextSibling,
@@ -65,6 +67,28 @@ struct TreeBuilder
         this->mLastChild = mLastChild;
     }
 };
+
+template <typename T>
+function void
+tree_builder_init(
+    TreeBuilder<T>* tree_builder,
+    MemberRef<T, T*> mFirstChild,
+    MemberRef<T, T*> mNextSibling,
+    MemberRef<T, T*> mParent,
+    MemberRef<T, T*> mPrevSibling = MemberRef_Nil<T, T*>(),
+    MemberRef<T, T*> mLastChild = MemberRef_Nil<T, T*>())
+{
+    Assert(mFirstChild.isValid);
+    Assert(mNextSibling.isValid);
+    Assert(mParent.isValid);
+
+    *tree_builder = {};
+    tree_builder->mFirstChild = mFirstChild;
+    tree_builder->mNextSibling = mNextSibling;
+    tree_builder->mParent = mParent;
+    tree_builder->mPrevSibling = mPrevSibling;
+    tree_builder->mLastChild = mLastChild;
+}
 
 template <typename T>
 function void
@@ -97,11 +121,13 @@ EndRoot(TreeBuilder<T> * builder, bool shouldResetBuilder=false)
     if (shouldResetBuilder)
     {
         // NOTE - Only needed if you want to re-use the same TreeBuilder for a new tree
-        
-        new (builder)TreeBuilder<T>(builder->mFirstChild,
-                                    builder->mNextSibling,
-                                    builder->mParent,
-                                    builder->mPrevSibling);
+        tree_builder_init(
+            builder,
+            builder->mFirstChild,
+            builder->mNextSibling,
+            builder->mParent,
+            builder->mPrevSibling
+        );
     }
 }
 

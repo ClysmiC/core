@@ -876,11 +876,21 @@ struct Recycle_Allocator
 #endif
 
     Recycle_Allocator() = default;
+
+    // @Cleanup... both ctor and init
     Recycle_Allocator(Memory_Region memory) { *this = {}; this->memory = memory; }
 };
 
 template <typename T>
-T*
+function void
+recycle_allocator_init(Recycle_Allocator<T>* alloc, Memory_Region memory)
+{
+    *alloc = {};
+    alloc->memory = memory;
+}
+
+template <typename T>
+function T*
 allocate(
     Recycle_Allocator<T> * alloc,
     CTZ clearToZero=CTZ::NIL)
@@ -919,7 +929,7 @@ allocate(
 }
 
 template <typename T>
-void
+function void
 PreallocateRecycleListContiguous(
     Recycle_Allocator<T> * alloc,
     int cntItemPreallocate,
@@ -948,7 +958,7 @@ PreallocateRecycleListContiguous(
 }
 
 template <typename T>
-void
+function void
 recycle(Recycle_Allocator<T>* alloc, T* item)
 {
     auto * slot = (Recycle_Allocator<T>::Slot*)item;

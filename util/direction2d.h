@@ -35,9 +35,9 @@ rect_corner(Rect2 rect, OrdinalDir dir)
     switch (dir)
     {
         case OrdinalDir::NE:    result = rect.max; break;
-        case OrdinalDir::SE:    result = { rect.max.x, rect.min.y }; break;
+        case OrdinalDir::SE:    result = Vec2(rect.max.x, rect.min.y); break;
         case OrdinalDir::SW:    result = rect.min; break;
-        case OrdinalDir::NW:    result = { rect.min.x, rect.max.y }; break;
+        case OrdinalDir::NW:    result = Vec2(rect.min.x, rect.max.y); break;
 
         DefaultNilInvalidEnum(OrdinalDir);
     }
