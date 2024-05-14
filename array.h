@@ -1,4 +1,3 @@
-// --- IterByPtr
 //  Helper for iterating a packed array by pointer using for-each syntax.
 //  usage:
 //      for (Child* child : IterByPtr(children, child_count))
@@ -33,7 +32,6 @@ struct IterByPtr
     Ptr end()   { return Ptr(items + count); }
 };
 
-// --- Slice
 //  Array that retains size information. Same as a "slice" in Go-lang.
 
 template <typename T>
@@ -65,6 +63,16 @@ MakeSlice(T* ptr, int count)
 }
 
 template <typename T>
+function Slice<T>
+MakeSlice(T* ptr, uintptr count)
+{
+    Slice<T> result;
+    result.items = ptr;
+    result.count = (int)count;
+    return result;
+}
+
+template <typename T>
 function IterByPtr<T>
 ByPtr(Slice<T> slice)
 {
@@ -90,7 +98,58 @@ MakeString(Slice<u8> slice)
     return result;
 }
 
-// --- DynArray
+// Utility for reading values sequentially out of a buffer
+
+struct Buffer_Reader
+{
+    Slice<u8> buffer;
+    uintptr bytes_read;
+};
+
+function Buffer_Reader
+buffer_reader_create(Slice<u8> const& buffer)
+{
+    Buffer_Reader result = {};
+    result.buffer = buffer;
+    return result;
+}
+
+function bool
+IsFinishedReading(Buffer_Reader* reader)
+{
+    bool result = (reader->bytes_read >= reader->buffer.count);
+    return result;
+}
+
+function void*
+Read(Buffer_Reader* reader, uintptr byte_count)
+{
+    // TODO - return null here?
+    //  As long as I'm not hitting these asserts, just leave these as asserts.... for speed reading :)
+    Assert(!IsFinishedReading(reader));
+    Assert(reader->buffer.count - reader->bytes_read >= byte_count);
+
+    void* result = (void*)((u8*)reader->buffer + reader->bytes_read);
+    reader->bytes_read += byte_count;
+    return result;
+}
+
+template <typename T>
+function T*
+Read(Buffer_Reader* reader)
+{
+    T* result = (T*)Read(reader, sizeof(T));
+    return result;
+}
+
+template <typename T>
+function T*
+ReadArray(Buffer_Reader* reader, uintptr count)
+{
+    T* result = (T*)Read(reader, sizeof(T) * count);
+    return result;
+}
+
 //  Simple dynamic array. Wraps a tracked allocation in a Memory_Region.
 
 template <typename T>
@@ -439,6 +498,14 @@ AppendNew(PushBuffer* buffer)
 }
 
 template <typename T>
+function T*
+AppendNewArray(PushBuffer* buffer, uintptr count)
+{
+    T* result = (T*)AppendNewBytes(buffer, sizeof(T) * count);
+    return result;
+}
+
+template <typename T>
 function void
 Append(PushBuffer* buffer, T const& t)
 {
@@ -463,16 +530,13 @@ function void AdvanceByteCursor(struct PushBufferReader* reader, int advance); /
 
 struct PushBufferReader
 {
-    PushBuffer* pb;
-
     PushBuffer::PageHeader* page;
     int iByteInPage;
 
     PushBufferReader() = default;
-    PushBufferReader(PushBuffer* pb)
+    PushBufferReader(PushBuffer* push_buffer)
     {
-        this->pb = pb;
-        this->page = pb->pages;
+        this->page = push_buffer->pages;
         this->iByteInPage = 0;
         AdvanceByteCursor(this, sizeof(PushBuffer::PageHeader));
     }
@@ -497,6 +561,7 @@ Read(PushBufferReader* reader)
     Assert(!IsFinishedReading(reader));
     Assert(reader->page->cBytesallocated - reader->iByteInPage >= sizeof(T));
     
+    // TODO - endianness?
     T* result = (T*)((u8*)reader->page + reader->iByteInPage);
     AdvanceByteCursor(reader, sizeof(T));
 

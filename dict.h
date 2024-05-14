@@ -86,10 +86,10 @@ struct HashMap
 {
     struct Bucket
     {
+        uint8_t infoBits;
+
         K key;
         V value;
-
-        uint8_t infoBits;
     };
 
     Bucket* pBuffer;
@@ -98,6 +98,18 @@ struct HashMap
     uint32_t (*hashFn)(const K & key);
     bool (*equalFn)(const K & key0, const K & key1);
 };
+
+template <typename K, typename V>
+function void
+Clear(HashMap<K, V>* hashmap)
+{
+
+    for (int i = 0; i < hashmap->cCapacity; i++)
+    {
+        HashMap<K, V>::Bucket* bucket = hashmap->pBuffer + i;
+        bucket->infoBits = 0;
+    }
+}
 
 template <typename K, typename V>
 struct HashMapIter

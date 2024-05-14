@@ -69,7 +69,7 @@ mem_zero(void* memory, uintptr cBytes)
 #define FillArray(array, value) for (int i = 0; i < ArrayLen(array); i++) { (array)[i] = value; }
 
 function void
-mem_copy(void* dst, void* src, uintptr bytes)
+mem_copy(void* dst, void const* src, uintptr bytes)
 {
     // NOTE - Does not try to handle overlapping src / dst
     // TODO - Copy multi-byte chunks for performance (like mem_zero does...)
@@ -82,6 +82,13 @@ mem_copy(void* dst, void* src, uintptr bytes)
         d++;
         s++;
     }
+}
+
+template<typename T>
+function void
+mem_copy_array(T* dst, T const* src, uintptr count)
+{
+    mem_copy((void*)dst, (void*)src, sizeof(T) * count);
 }
 
 function void

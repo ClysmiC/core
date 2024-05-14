@@ -25,8 +25,8 @@ struct String
 {
     // NOTE - Unicode compatible via UTF-8
 
-    char* bytes;
-    int cBytes;
+    char* bytes;    // TODO - rename to data
+    int cBytes;     // TODO - rename to length
 
     // TODO - Capacity? String "building" capabilities?
 
