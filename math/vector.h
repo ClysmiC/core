@@ -130,6 +130,24 @@ operator/=(Vec<T, N>& lhs, U rhs)
 }
 
 template<class T, uint N>
+function bool
+operator==(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
+{
+    bool result = true;
+    for (int i = 0; i < N; i++) result &= (lhs[i] == rhs[i]);
+
+    return result;
+}
+
+template<class T, uint N>
+function bool
+operator!=(Vec<T, N> const& lhs, Vec<T, N> const& rhs)
+{
+    bool result = !(lhs == rhs);
+    return result;
+}
+
+template<class T, uint N>
 function Vec<T, N>
 vec_hadamard(Vec<T, N> lhs, Vec<T, N> rhs)
 {
@@ -248,7 +266,7 @@ function Vec<T, N>
 vec_normalize_safe_or(Vec<T, N> v, Vec<T, N> fallback)
 {
     T length = vec_length(v);
-    if (length == 0)
+    if (length == T(0))
         return fallback;
 
     Vec<T, N> result = v / length;
@@ -263,6 +281,22 @@ vec_normalize_safe_0(Vec<T, N> v)
     return result;
 }
 #endif
+
+template<class T, uint N>
+function Vec<T, N>
+vec_project(Vec<T, N> vec, Vec<T, N> onto)
+{
+    Vec<T, N> result = onto * vec_dot(vec, onto) / vec_length_sq(onto);
+    return result;
+}
+
+template<class T, uint N>
+function Vec<T, N>
+vec_reject(Vec<T, N> vec, Vec<T, N> onto)
+{
+    Vec<T, N> result = vec - vec_project(vec, onto);
+    return result;
+}
 
 // --- Specialize for 2, 3, 4, to provide aliases like x, y, xy, z, etc.
 
@@ -295,8 +329,6 @@ struct Vec<T, 3>
         Vec<T, 2> xy;
     };
 
-    enum from_vec_t{};
-
     inline T& operator[](int i) { return elements[i]; }
     inline T const& operator[](int i) const { return elements[i]; }
 
@@ -305,37 +337,6 @@ struct Vec<T, 3>
     explicit constexpr  Vec(Vec<T, 2> xy, T z) :    x(xy.x),    y(xy.y),    z(z)        {}
     explicit constexpr  Vec(T x, T y, T z) :        x(x),       y(y),       z(z)        {}
 };
-
-template<class T>
-struct Vec<T, 4>
-{
-    union
-    {
-        struct { T x, y, z, w; };
-        T elements[4];
-        Vec<T, 2> xy;
-        Vec<T, 3> xyz;
-    };
-
-    enum from_vec{};
-
-    inline T& operator[](int i) { return elements[i]; }
-    inline T const& operator[](int i) const { return elements[i]; }
-
-    Vec() = default;
-    explicit constexpr  Vec(T xyzw) :                   x(xyzw),    y(xyzw),    z(xyzw),    w(xyzw)     {}
-    explicit constexpr  Vec(Vec<T, 2> xy, T z, T w) :   x(xy.x),    y(xy.y),    z(z),       w(w)        {}
-    explicit constexpr  Vec(Vec<T, 3> xyz, T w)     :   x(xyz.x),   y(xyz.y),   z(xyz.z),   w(w)        {}
-    explicit constexpr  Vec(T x, T y, T z, T w)     :   x(x),       y(y),       z(z),       w(w)        {}
-};
-
-using Vec2 = Vec<f32, 2>;
-using Vec3 = Vec<f32, 3>;
-using Vec4 = Vec<f32, 4>;
-
-using Vec2i = Vec<i32, 2>;
-using Vec3i = Vec<i32, 3>;
-using Vec4i = Vec<i32, 4>;
 
 template<class T>
 function Vec<T, 3>
@@ -359,67 +360,33 @@ vec_cross_xy(Vec<T, 2> lhs, Vec<T, 2> rhs)
     return result;
 }
 
-struct Rgb
+template<class T>
+struct Vec<T, 4>
 {
-    f32 r, g, b;
+    union
+    {
+        struct { T x, y, z, w; };
+        T elements[4];
+        Vec<T, 2> xy;
+        Vec<T, 3> xyz;
+    };
 
-    Rgb() = default;
-    explicit constexpr  Rgb(f32 r, f32 g, f32 b) :  r(r),       g(g),       b(b)        {}
-    explicit constexpr  Rgb(Vec3 rgb) :             r(rgb.x),   g(rgb.y),   b(rgb.z)    {}
+    inline T& operator[](int i) { return elements[i]; }
+    inline T const& operator[](int i) const { return elements[i]; }
 
-    explicit constexpr  Rgb(u32 hex)
-    : r(((hex & 0xFF0000) >> 16) / 255.0f)
-    , g(((hex & 0x00FF00) >>  8) / 255.0f)
-    , b(((hex & 0x0000FF) >>  0) / 255.0f)
-        {}
+    Vec() = default;
+    explicit constexpr  Vec(T xyzw) :                   x(xyzw),    y(xyzw),    z(xyzw),    w(xyzw)     {}
+    explicit constexpr  Vec(Vec<T, 2> xy, T z, T w) :   x(xy.x),    y(xy.y),    z(z),       w(w)        {}
+    explicit constexpr  Vec(Vec<T, 3> xyz, T w)     :   x(xyz.x),   y(xyz.y),   z(xyz.z),   w(w)        {}
+    explicit constexpr  Vec(T x, T y, T z, T w)     :   x(x),       y(y),       z(z),       w(w)        {}
 };
 
-namespace RGB
-{
-    static Rgb constexpr RED        (1, 0, 0);
-    static Rgb constexpr GREEN      (0, 1, 0);
-    static Rgb constexpr BLUE       (0, 0, 1);
-    static Rgb constexpr YELLOW     (1, 1, 0);
-    static Rgb constexpr CYAN       (0, 1, 1);
-    static Rgb constexpr MAGENTA    (1, 0, 1);
+// --- Convenience aliases
 
-    static Rgb constexpr WHITE      (1, 1, 1);
-    static Rgb constexpr BLACK      (0, 0, 0);
-}
+using Vec2 = Vec<f32, 2>;
+using Vec3 = Vec<f32, 3>;
+using Vec4 = Vec<f32, 4>;
 
-struct Rgba
-{
-    f32 r, g, b, a;
-    Rgba() = default;
-    explicit constexpr  Rgba(f32 r, f32 g, f32 b, f32 a) :  r(r),       g(g),       b(b),       a(a)        {}
-    explicit constexpr  Rgba(Rgb rgb) :                     r(rgb.r),   g(rgb.g),   b(rgb.b),   a(1.0f)     {}
-    explicit constexpr  Rgba(Rgb rgb, f32 a) :              r(rgb.r),   g(rgb.g),   b(rgb.b),   a(a)        {}
-    explicit constexpr  Rgba(Vec3 rgb) :                    r(rgb.x),   g(rgb.y),   b(rgb.z),   a(1.0f)     {}
-    explicit constexpr  Rgba(Vec3 rgb, f32 a) :             r(rgb.x),   g(rgb.y),   b(rgb.z),   a(a)        {}
-    explicit constexpr  Rgba(Vec4 rgba) :                   r(rgba.x),  g(rgba.y),  b(rgba.z),  a(rgba.w)   {}
-
-    explicit constexpr  Rgba(u32 hex)
-    : r(((hex & 0xFF000000) >> 24) / 255.0f)
-    , g(((hex & 0x00FF0000) >> 16) / 255.0f)
-    , b(((hex & 0x0000FF00) >>  8) / 255.0f)
-    , a(((hex & 0x000000FF) >>  0) / 255.0f)
-        {}
-};
-
-namespace RGBA
-{
-    static Rgba constexpr RED       (1, 0, 0, 1);
-    static Rgba constexpr GREEN     (0, 1, 0, 1);
-    static Rgba constexpr BLUE      (0, 0, 1, 1);
-    static Rgba constexpr YELLOW    (1, 1, 0, 1);
-    static Rgba constexpr CYAN      (0, 1, 1, 1);
-    static Rgba constexpr MAGENTA   (1, 0, 1, 1);
-
-    static Rgba constexpr WHITE         (1, 1, 1, 1);
-    static Rgba constexpr BLACK         (0, 0, 0, 1);
-
-    // TODO - replace this with TRANSPARENT, but apparently it
-    //  collides with a windows symbol.
-    // TODO - don't include windows.h
-    static Rgba constexpr TRANSPARENT2   (0, 0, 0, 0);
-}
+using Vec2i = Vec<i32, 2>;
+using Vec3i = Vec<i32, 3>;
+using Vec4i = Vec<i32, 4>;

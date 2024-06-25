@@ -198,6 +198,8 @@ static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
     constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \
     constexpr ENUM operator&(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs & (INT_TYPE)rhs); } \
     constexpr ENUM & operator&=(ENUM & lhs, ENUM rhs) { lhs = lhs & rhs; return lhs; } \
+    constexpr ENUM operator^(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs ^ (INT_TYPE)rhs); } \
+    constexpr ENUM & operator^=(ENUM & lhs, ENUM rhs) { lhs = lhs ^ rhs; return lhs; } \
     bool constexpr IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
     bool constexpr IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
     constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \

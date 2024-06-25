@@ -7,6 +7,7 @@ DEBUG_OPTIMIZE_ON
 
 #include "intrinsics.h"
 #include "vector.h"
+#include "rgba.h"
 #include "rect.h"
 #include "math_1.h"
 #include "math_2.h"

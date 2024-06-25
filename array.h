@@ -278,6 +278,16 @@ RemoveUnorderedAt(DynArray<T>* array, int iItem)
 }
 
 template <typename T>
+function void
+RemoveLast(DynArray<T>* array)
+{
+    if (array->count > 0)
+    {
+        array->count--;
+    }
+}
+
+template <typename T>
 function bool
 Remove(DynArray<T>* array, T item)
 {
