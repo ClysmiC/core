@@ -84,7 +84,7 @@ function String
 MakeString(Slice<char> slice)
 {
     String result;
-    result.data = slice.items;
+    result.data = (u8*)slice.items;
     result.length = slice.count;
     return result;
 }
@@ -93,7 +93,7 @@ function String
 MakeString(Slice<u8> slice)
 {
     String result;
-    result.data = (char*)slice.items;
+    result.data = slice.items;
     result.length = slice.count;
     return result;
 }
@@ -423,7 +423,7 @@ AppendStringCopy(BufferBuilder* builder, String string)
     if (IsEmpty(string))
         return;
 
-    char* ptr = (char*)AppendNewBytes(builder, string.length);
+    u8* ptr = (u8*)AppendNewBytes(builder, string.length);
     CopyString(string, ptr, string.length, Null_Terminate::NO);
 }
 
@@ -592,7 +592,7 @@ ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
 
     String result;
     result.length = length;
-    result.data = (char*)allocate(memory, length);
+    result.data = (u8*)allocate(memory, length);
     mem_copy(result.data, reader->page + reader->iByteInPage, length);
     AdvanceByteCursor(reader, length);
 

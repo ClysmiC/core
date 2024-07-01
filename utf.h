@@ -256,7 +256,7 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
         }
     }
 
-    result.data = (char*)allocate(memory, cBytesRequired);
+    result.data = (u8*)allocate(memory, cBytesRequired);
     result.length = cBytesRequired;
 
     int iByteWrite = 0;

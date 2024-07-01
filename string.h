@@ -22,16 +22,16 @@ zstr_length(char* zstr)
 
 struct String
 {
-    char* data;
+    u8* data;
     int length;     // count of bytes
 
     // TODO - Capacity? String "building" capabilities?
     String() = default;
 
-    explicit String(char* zstr) { this->data = zstr; this->length = zstr_length(zstr); }
-    String(char* zString, uint byte_count) { this->data = zString; this->length = byte_count; }
+    explicit String(char* zstr) { this->data = (u8*)zstr; this->length = zstr_length(zstr); }
+    String(char* zString, uint byte_count) { this->data = (u8*)zString; this->length = byte_count; }
 
-    char & operator[](int i) const { return data[i]; }
+    u8 & operator[](int i) const { return data[i]; }
 };
 
 // NOTE - ArrayLen runs at compile time for string literals, which is why this
@@ -70,11 +70,11 @@ CopyZString(char* src, char* dst, int lengthDst, Null_Terminate nullTerminateDst
 //  Or maybe look into using printf("%.*s", length, string); ???
 
 function void
-CopyString(String src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+CopyString(String src, u8* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
 {
     if (lengthDst == 0) return;
 
-    char* srcCursor = src.data;
+    u8* srcCursor = src.data;
     int lengthDstCopy = ((bool)nullTerminateDst) ? lengthDst - 1 : lengthDst;
 
     int iByteDst = 0;
@@ -89,6 +89,8 @@ CopyString(String src, char* dst, int lengthDst, Null_Terminate nullTerminateDst
 
     if ((bool)nullTerminateDst) *dst = '\0';
 }
+
+// TODO - rename these
 
 function void
 CopyString(String src, String dst)
@@ -113,8 +115,8 @@ DuplicateZStringToString(char* src, Memory_Region memory)
 {
     String dst;
     dst.length = zstr_length(src);
-    dst.data = (char*)allocate(memory, dst.length);
-    CopyZString(src, dst.data, dst.length, Null_Terminate::NO);
+    dst.data = (u8*)allocate(memory, dst.length);
+    CopyZString(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     return dst;
 }
 
@@ -123,7 +125,7 @@ DuplicateString(String src, Memory_Region memory)
 {
     String dst;
     dst.length = src.length;
-    dst.data = (char*)allocate(memory, dst.length);
+    dst.data = (u8*)allocate(memory, dst.length);
     CopyString(src, dst);
     return dst;
 }
@@ -133,7 +135,7 @@ DuplicateStringToZString(String src, Memory_Region memory)
 {
     uint lengthDst = src.length + 1;
     char* dst = (char*)allocate(memory, lengthDst);
-    CopyString(src, dst, lengthDst, Null_Terminate::YES);
+    CopyString(src, (u8*)dst, lengthDst, Null_Terminate::YES);
     return dst;
 }
 
@@ -149,12 +151,12 @@ StringFromZString(
 
     if (!memory) // @Gross - This API is weird. Most of these functions don't allow null memory regions. Should probably split this into a "Duplicate" which takes a region, and this which doesn't
     {
-        dst.data = src;
+        dst.data = (u8*)src;
     }
     else if (dst.length > 0)
     {
-        dst.data = (char*)allocate(memory, dst.length);
-        CopyZString(src, dst.data, dst.length, Null_Terminate::NO);
+        dst.data = (u8*)allocate(memory, dst.length);
+        CopyZString(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     }
 
     return dst;
@@ -165,7 +167,7 @@ ZStringFromString(String src, Memory_Region memory)
 {
     int lengthDst = src.length + 1;
     char* dst = (char*)allocate(memory, lengthDst);
-    CopyString(src, dst, lengthDst, Null_Terminate::YES);
+    CopyString(src, (u8*)dst, lengthDst, Null_Terminate::YES);
     return dst;
 }
 
@@ -262,7 +264,7 @@ StringInsert(
 
     String result;
     result.length = srcA.length + srcB.length;
-    result.data = (char*)allocate(memory, result.length);
+    result.data = (u8*)allocate(memory, result.length);
     mem_copy(result.data, srcA.data, iInsert);
     mem_copy(result.data + iInsert, srcB.data, srcB.length);
     mem_copy(result.data + iInsert + srcB.length, srcA.data + iInsert, srcA.length - iInsert);
@@ -274,7 +276,7 @@ StringConcat(String srcA, String srcB, Memory_Region memory)
 {
     String result;
     result.length = srcA.length + srcB.length;
-    result.data = (char*)allocate(memory, result.length);
+    result.data = (u8*)allocate(memory, result.length);
     mem_copy(result.data, srcA.data, srcA.length);
     mem_copy(result.data + srcA.length, srcB.data, srcB.length);
     return result;
@@ -304,10 +306,10 @@ AreStringsEqual(char* str0, char* str1)
 function bool
 AreStringsEqual(String str0, char* str1)
 {
-    char* cursor0 = str0.data;
-    char* endCursor0 = str0.data + str0.length;
+    u8* cursor0 = str0.data;
+    u8* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1;
+    u8* cursor1 = (u8*)str1;
 
     while ((cursor0 < endCursor0) && *cursor1)
     {
@@ -334,11 +336,11 @@ string_eq(String const& str0, String const& str1)
     if (str0.length != str1.length) return false;
     if (str0.data == str1.data)   return true;
 
-    char* cursor0 = str0.data;
-    char* endCursor0 = str0.data + str0.length;
+    u8* cursor0 = str0.data;
+    u8* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1.data;
-    char* endCursor1 = str1.data + str1.length;
+    u8* cursor1 = str1.data;
+    u8* endCursor1 = str1.data + str1.length;
 
     while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
     {
@@ -401,10 +403,10 @@ AreStringsEqualIgnoreCase(char* str0, char* str1)
 function bool
 AreStringsEqualIgnoreCase(String str0, char* str1)
 {
-    char* cursor0 = str0.data;
-    char* endCursor0 = str0.data + str0.length;
+    u8* cursor0 = str0.data;
+    u8* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1;
+    u8* cursor1 = (u8*)str1;
 
     while ((cursor0 < endCursor0) && *cursor1)
     {
@@ -432,11 +434,11 @@ AreStringsEqualIgnoreCase(String str0, String str1)
     if (str0.length != str1.length) return false;
     if (str0.data == str1.data)   return true;
 
-    char* cursor0 = str0.data;
-    char* endCursor0 = str0.data + str0.length;
+    u8* cursor0 = str0.data;
+    u8* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1.data;
-    char* endCursor1 = str1.data + str1.length;
+    u8* cursor1 = str1.data;
+    u8* endCursor1 = str1.data + str1.length;
 
     while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
     {
@@ -554,8 +556,8 @@ StringFromPrintf_v(Memory_Region memory, int lengthBuffer, char const* fmt, va_l
     //  to work on arbitrarily sized strings...
 
     String result;
-    result.data = (char*)allocate(memory, sizeof(char) * lengthBuffer);
-    result.length = stbsp_vsnprintf(result.data, lengthBuffer, fmt, varargs);
+    result.data = (u8*)allocate(memory, lengthBuffer);
+    result.length = stbsp_vsnprintf((char*)result.data, lengthBuffer, fmt, varargs);
     return result;
 }
 
