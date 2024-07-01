@@ -84,8 +84,8 @@ function String
 MakeString(Slice<char> slice)
 {
     String result;
-    result.bytes = slice.items;
-    result.cBytes = slice.count;
+    result.data = slice.items;
+    result.length = slice.count;
     return result;
 }
 
@@ -93,8 +93,8 @@ function String
 MakeString(Slice<u8> slice)
 {
     String result;
-    result.bytes = (char*)slice.items;
-    result.cBytes = slice.count;
+    result.data = (char*)slice.items;
+    result.length = slice.count;
     return result;
 }
 
@@ -385,15 +385,15 @@ IsEmpty(BufferBuilder* builder)
 }
 
 function u8*
-AppendNewBytes(BufferBuilder* builder, int cBytes)
+AppendNewBytes(BufferBuilder* builder, int length)
 {
-    int cBytesOld = builder->bytes.count;
-    int cBytesNew = cBytesOld + cBytes;
+    int lengthOld = builder->bytes.count;
+    int lengthNew = lengthOld + length;
     
-    EnsureCapacity(&builder->bytes, cBytesNew);
-    builder->bytes.count = cBytesNew;
+    EnsureCapacity(&builder->bytes, lengthNew);
+    builder->bytes.count = lengthNew;
 
-    return builder->bytes + cBytesOld;
+    return builder->bytes + lengthOld;
 }
 
 function void
@@ -423,8 +423,8 @@ AppendStringCopy(BufferBuilder* builder, String string)
     if (IsEmpty(string))
         return;
 
-    char* ptr = (char*)AppendNewBytes(builder, string.cBytes);
-    CopyString(string, ptr, string.cBytes, Null_Terminate::NO);
+    char* ptr = (char*)AppendNewBytes(builder, string.length);
+    CopyString(string, ptr, string.length, Null_Terminate::NO);
 }
 
 function u8 *
@@ -443,27 +443,27 @@ struct PushBuffer
 {
     struct PageHeader
     {
-        uintptr cBytesallocated; // Includes header
-        uintptr cBytesCapacity;  // ...
+        uintptr allocated_b; // Includes header
+        uintptr capacity_b;  // ...
         PageHeader* pNext;
     };
     
     Memory_Region memory;
     PageHeader* pages;
     PageHeader* pageTail;
-    uintptr cBytesPushed;
+    uintptr lengthPushed;
 
     PushBuffer() = default;
-    PushBuffer(Memory_Region memory, int cBytesPerPage)
+    PushBuffer(Memory_Region memory, int lengthPerPage)
     {
         *this = {};
         this->memory = memory;
 
-        cBytesPerPage += sizeof(PageHeader);
+        lengthPerPage += sizeof(PageHeader);
         
-        PageHeader* page = (PageHeader *)allocate(this->memory, cBytesPerPage);
-        page->cBytesallocated = sizeof(PageHeader);
-        page->cBytesCapacity = cBytesPerPage;
+        PageHeader* page = (PageHeader *)allocate(this->memory, lengthPerPage);
+        page->allocated_b = sizeof(PageHeader);
+        page->capacity_b = lengthPerPage;
         page->pNext = nullptr;
 
         this->pages = page;
@@ -472,29 +472,29 @@ struct PushBuffer
 };
 
 function void*
-AppendNewBytes(PushBuffer* buffer, uintptr cBytes)
+AppendNewBytes(PushBuffer* buffer, uintptr length)
 {
     auto* page = buffer->pageTail;
 
-    uintptr cBytesFree = page->cBytesCapacity - page->cBytesallocated;
-    if (cBytesFree < cBytes)
+    uintptr lengthFree = page->capacity_b - page->allocated_b;
+    if (lengthFree < length)
     {
-        uintptr cBytesNewPage = max(page->cBytesCapacity, cBytes + sizeof(PushBuffer::PageHeader));
+        uintptr lengthNewPage = max(page->capacity_b, length + sizeof(PushBuffer::PageHeader));
 
-        page = (PushBuffer::PageHeader*)allocate(buffer->memory, cBytesNewPage);
-        page->cBytesallocated = sizeof(PushBuffer::PageHeader);
-        page->cBytesCapacity = cBytesNewPage;
+        page = (PushBuffer::PageHeader*)allocate(buffer->memory, lengthNewPage);
+        page->allocated_b = sizeof(PushBuffer::PageHeader);
+        page->capacity_b = lengthNewPage;
         page->pNext = nullptr;
 
         buffer->pageTail->pNext = page;
         buffer->pageTail = page;
     }
 
-    void* result = (u8*)page + page->cBytesallocated;
+    void* result = (u8*)page + page->allocated_b;
 
-    page->cBytesallocated += cBytes;
-    buffer->cBytesPushed += cBytes;
-    Assert(page->cBytesallocated <= page->cBytesCapacity);
+    page->allocated_b += length;
+    buffer->lengthPushed += length;
+    Assert(page->allocated_b <= page->capacity_b);
 
     return result;
 }
@@ -526,14 +526,14 @@ Append(PushBuffer* buffer, T const& t)
 function void
 AppendStringCopy(PushBuffer* buffer, String string)
 {
-    int cBytesNeeded = sizeof(i32) + string.cBytes;
-    u8* bytes = (u8 *)AppendNewBytes(buffer, cBytesNeeded);
+    int lengthNeeded = sizeof(i32) + string.length;
+    u8* bytes = (u8 *)AppendNewBytes(buffer, lengthNeeded);
 
     // Write the string length
-    *((i32 *)bytes) = string.cBytes;
+    *((i32 *)bytes) = string.length;
 
     // Then, write the payload
-    mem_copy(bytes + sizeof(i32), string.bytes, string.cBytes);
+    mem_copy(bytes + sizeof(i32), string.data, string.length);
 }
 
 function void AdvanceByteCursor(struct PushBufferReader* reader, int advance); // @Hgen - Need to support core module...
@@ -569,7 +569,7 @@ Read(PushBufferReader* reader)
     //  can usually detect if that assumption breaks.
     
     Assert(!IsFinishedReading(reader));
-    Assert(reader->page->cBytesallocated - reader->iByteInPage >= sizeof(T));
+    Assert(reader->page->allocated_b - reader->iByteInPage >= sizeof(T));
     
     // TODO - endianness?
     T* result = (T*)((u8*)reader->page + reader->iByteInPage);
@@ -585,16 +585,16 @@ ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
 
     Assert(!IsFinishedReading(reader));
 
-    i32 cBytes = *Read<i32>(reader);
+    i32 length = *Read<i32>(reader);
 
     Assert(!IsFinishedReading(reader));
-    Assert(reader->page->cBytesallocated - reader->iByteInPage >= cBytes);
+    Assert(reader->page->allocated_b - reader->iByteInPage >= length);
 
     String result;
-    result.cBytes = cBytes;
-    result.bytes = (char*)allocate(memory, cBytes);
-    mem_copy(result.bytes, reader->page + reader->iByteInPage, cBytes);
-    AdvanceByteCursor(reader, cBytes);
+    result.length = length;
+    result.data = (char*)allocate(memory, length);
+    mem_copy(result.data, reader->page + reader->iByteInPage, length);
+    AdvanceByteCursor(reader, length);
 
     return result;
 }
@@ -604,9 +604,9 @@ AdvanceByteCursor(PushBufferReader* reader, int advance)
 {
     reader->iByteInPage += advance;
 
-    if (reader->iByteInPage >= reader->page->cBytesallocated)
+    if (reader->iByteInPage >= reader->page->allocated_b)
     {
-        Assert(reader->iByteInPage == reader->page->cBytesallocated); // Should end exactly on the boundary, not past it...
+        Assert(reader->iByteInPage == reader->page->allocated_b); // Should end exactly on the boundary, not past it...
         reader->page = reader->page->pNext;
         reader->iByteInPage = sizeof(PushBuffer::PageHeader);
     }

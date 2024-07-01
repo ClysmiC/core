@@ -38,6 +38,7 @@ BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
 
     for (int i = 0; i < cBytes; i++)
     {
+        // @Slow - do this loop with uint64 to go faster?
         result ^= static_cast<const char*>(pBytes)[i];
         result *= s_fnvPrime;
     }

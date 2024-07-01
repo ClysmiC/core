@@ -45,6 +45,13 @@ struct Rgba
         {}
 };
 
+inline bool
+rgba_is_zero(Rgba const& rgba)
+{
+    bool result = (rgba.r == 0 && rgba.g == 0 && rgba.b == 0 && rgba.a == 0);
+    return result;
+}
+
 namespace RGBA
 {
     static Rgba constexpr RED       (1, 0, 0, 1);
@@ -58,8 +65,5 @@ namespace RGBA
     static Rgba constexpr BLACK         (0, 0, 0, 1);
     static Rgba constexpr GRAY          (0.5f, 0.5f, 0.5f, 1.0f);
 
-    // TODO - replace this with TRANSPARENT, but apparently it
-    //  collides with a windows symbol.
-    // TODO - don't include windows.h
-    static Rgba constexpr TRANSPARENT2   (0, 0, 0, 0);
+    static Rgba constexpr ZERO   (0, 0, 0, 0);
 }

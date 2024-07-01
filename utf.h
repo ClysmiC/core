@@ -256,8 +256,8 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
         }
     }
 
-    result.bytes = (char*)allocate(memory, cBytesRequired);
-    result.cBytes = cBytesRequired;
+    result.data = (char*)allocate(memory, cBytesRequired);
+    result.length = cBytesRequired;
 
     int iByteWrite = 0;
     {
@@ -271,25 +271,25 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
 
             if (codePoint <= 0x7F)
             {
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen1, 0);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen1, 0);
             }
             else if (codePoint <= 0x7FF)
             {
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen2, 1);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen2, 1);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
             }
             else if (codePoint <= 0xFFFF)
             {
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen3, 2);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen3, 2);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
             }
             else
             {
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen4, 3);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 2);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
-                result.bytes[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::LeadLen4, 3);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 2);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 1);
+                result.data[iByteWrite++] = MakeUtf8CodeUnit_Fast(codePoint, CodeUnitType::Continuation, 0);
             }
         }
     }

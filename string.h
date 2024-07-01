@@ -1,17 +1,16 @@
 // TODO
 // - Do I want a way to differentiate between empty string and null string? (I.e., empty string bytes
-//   points somewhere, but cBytes is still 0? That'd be kinda weird, but I do see value in a distinction)
+//   points somewhere, but length is still 0? That'd be kinda weird, but I do see value in a distinction)
 // - Do I want to make this a typedef for Slice<char> ?
 // - Implement StringBuilder... should it be a typedef for a DynArray<char> ?
 
-// NOTE - ZString is a zero terminated string, a.k.a. "c-string". You won't (well, shouldn't!) find "c-string"
-//  in the code-base though, since that is too similar to cStrings which would mean "count of strings"
+// NOTE - zstr is a zero terminated string, a.k.a. "c-string"
 
 function int
-ZStringLength(char* string)
+zstr_length(char* zstr)
 {
     int result = 0;
-    char* cursor = string;
+    char* cursor = zstr;
     while (*cursor)
     {
         result++;
@@ -23,23 +22,21 @@ ZStringLength(char* string)
 
 struct String
 {
-    // NOTE - Unicode compatible via UTF-8
-
-    char* bytes;    // TODO - rename to data
-    int cBytes;     // TODO - rename to length
+    char* data;
+    int length;     // count of bytes
 
     // TODO - Capacity? String "building" capabilities?
-
     String() = default;
 
-    // HMM - Should this allow implicit from zString? Or write conversion function? Or is that redundant with StringFromLit?
-    explicit String(char* zString) { this->bytes = zString; this->cBytes = ZStringLength(bytes); }
-    String(char* zString, uint cBytes) { this->bytes = zString; this->cBytes = cBytes; }
+    explicit String(char* zstr) { this->data = zstr; this->length = zstr_length(zstr); }
+    String(char* zString, uint byte_count) { this->data = zString; this->length = byte_count; }
 
-    char & operator[](int iByte) { return bytes[iByte]; }
+    char & operator[](int i) const { return data[i]; }
 };
 
-#define StringFromLit(stringLit) String(stringLit, ArrayLen(stringLit) - 1) // NOTE - ArrayLen runs at compile time for string literals, which is why this macro is better than the ctor if you know the string at comp-time
+// NOTE - ArrayLen runs at compile time for string literals, which is why this
+//  macro is better than the ctor if you know the string at comp-time
+#define String_Literal(zstr_literal) String(zstr_literal, ArrayLen(zstr_literal) - 1)
 
 enum class Null_Terminate : u8
 {
@@ -50,14 +47,14 @@ enum class Null_Terminate : u8
 };
 
 function void
-CopyZString(char* src, char* dst, int cBytesDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+CopyZString(char* src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
 {
-    if (cBytesDst == 0) return;
+    if (lengthDst == 0) return;
 
-    int cBytesDstCopy = ((bool)nullTerminateDst) ? cBytesDst - 1 : cBytesDst;
+    int lengthDstCopy = ((bool)nullTerminateDst) ? lengthDst - 1 : lengthDst;
 
     int iByteDst = 0;
-    while (*src && iByteDst < cBytesDstCopy)
+    while (*src && iByteDst < lengthDstCopy)
     {
         *dst = *src;
 
@@ -73,15 +70,15 @@ CopyZString(char* src, char* dst, int cBytesDst, Null_Terminate nullTerminateDst
 //  Or maybe look into using printf("%.*s", length, string); ???
 
 function void
-CopyString(String src, char* dst, int cBytesDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+CopyString(String src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
 {
-    if (cBytesDst == 0) return;
+    if (lengthDst == 0) return;
 
-    char* srcCursor = src.bytes;
-    int cBytesDstCopy = ((bool)nullTerminateDst) ? cBytesDst - 1 : cBytesDst;
+    char* srcCursor = src.data;
+    int lengthDstCopy = ((bool)nullTerminateDst) ? lengthDst - 1 : lengthDst;
 
     int iByteDst = 0;
-    while (iByteDst < src.cBytes && iByteDst < cBytesDstCopy)
+    while (iByteDst < src.length && iByteDst < lengthDstCopy)
     {
         *dst = *srcCursor;
 
@@ -96,18 +93,18 @@ CopyString(String src, char* dst, int cBytesDst, Null_Terminate nullTerminateDst
 function void
 CopyString(String src, String dst)
 {
-    CopyString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
-    dst.cBytes = min(dst.cBytes, src.cBytes);
+    CopyString(src, dst.data, dst.length, Null_Terminate::NO);
+    dst.length = min(dst.length, src.length);
 }
 
 function char*
 DuplicateZString(char* src, Memory_Region memory)
 {
-    int cBytesSrc = ZStringLength(src);
-    int cBytesDst = cBytesSrc + 1;
+    int lengthSrc = zstr_length(src);
+    int lengthDst = lengthSrc + 1;
 
-    char* dst = (char*)allocate(memory, cBytesDst);
-    CopyZString(src, dst, cBytesDst);
+    char* dst = (char*)allocate(memory, lengthDst);
+    CopyZString(src, dst, lengthDst);
     return dst;
 }
 
@@ -115,9 +112,9 @@ function String
 DuplicateZStringToString(char* src, Memory_Region memory)
 {
     String dst;
-    dst.cBytes = ZStringLength(src);
-    dst.bytes = (char*)allocate(memory, dst.cBytes);
-    CopyZString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
+    dst.length = zstr_length(src);
+    dst.data = (char*)allocate(memory, dst.length);
+    CopyZString(src, dst.data, dst.length, Null_Terminate::NO);
     return dst;
 }
 
@@ -125,8 +122,8 @@ function String
 DuplicateString(String src, Memory_Region memory)
 {
     String dst;
-    dst.cBytes = src.cBytes;
-    dst.bytes = (char*)allocate(memory, dst.cBytes);
+    dst.length = src.length;
+    dst.data = (char*)allocate(memory, dst.length);
     CopyString(src, dst);
     return dst;
 }
@@ -134,9 +131,9 @@ DuplicateString(String src, Memory_Region memory)
 function char*
 DuplicateStringToZString(String src, Memory_Region memory)
 {
-    uint cBytesDst = src.cBytes + 1;
-    char* dst = (char*)allocate(memory, cBytesDst);
-    CopyString(src, dst, cBytesDst, Null_Terminate::YES);
+    uint lengthDst = src.length + 1;
+    char* dst = (char*)allocate(memory, lengthDst);
+    CopyString(src, dst, lengthDst, Null_Terminate::YES);
     return dst;
 }
 
@@ -145,19 +142,19 @@ StringFromZString(
     char* src,
     Memory_Region memory=nullptr)
 {
-    int cBytesSrc = ZStringLength(src);
+    int lengthSrc = zstr_length(src);
 
     String dst;
-    dst.cBytes = cBytesSrc;
+    dst.length = lengthSrc;
 
     if (!memory) // @Gross - This API is weird. Most of these functions don't allow null memory regions. Should probably split this into a "Duplicate" which takes a region, and this which doesn't
     {
-        dst.bytes = src;
+        dst.data = src;
     }
-    else if (dst.cBytes > 0)
+    else if (dst.length > 0)
     {
-        dst.bytes = (char*)allocate(memory, dst.cBytes);
-        CopyZString(src, dst.bytes, dst.cBytes, Null_Terminate::NO);
+        dst.data = (char*)allocate(memory, dst.length);
+        CopyZString(src, dst.data, dst.length, Null_Terminate::NO);
     }
 
     return dst;
@@ -166,9 +163,9 @@ StringFromZString(
 function char*
 ZStringFromString(String src, Memory_Region memory)
 {
-    int cBytesDst = src.cBytes + 1;
-    char* dst = (char*)allocate(memory, cBytesDst);
-    CopyString(src, dst, cBytesDst, Null_Terminate::YES);
+    int lengthDst = src.length + 1;
+    char* dst = (char*)allocate(memory, lengthDst);
+    CopyString(src, dst, lengthDst, Null_Terminate::YES);
     return dst;
 }
 
@@ -183,12 +180,12 @@ CopySubstring(
     int iSrcStart,
     int cntCharSrcToCopy, // NOTE - This is a count, not an end index!
     char* dst,
-    int cBytesDst)
+    int lengthDst)
 {
-    if (cBytesDst <= 0)
+    if (lengthDst <= 0)
         return;
 
-    int cntCharDst = cBytesDst - 1; // Leave 1 byte for null terminator
+    int cntCharDst = lengthDst - 1; // Leave 1 byte for null terminator
     int iCharDst = 0;
 
     int cntCharToCopy = min(cntCharDst, cntCharSrcToCopy);
@@ -203,7 +200,7 @@ CopySubstring(
         dst++;
     }
 
-    Assert(iCharDst < cBytesDst);
+    Assert(iCharDst < lengthDst);
     *dst = '\0';
 }
 
@@ -212,12 +209,12 @@ StringConcat(
     const char* srcA,
     const char* srcB,
     char* dst,
-    int cBytesDst)
+    int lengthDst)
 {
-    if (cBytesDst <= 0)
+    if (lengthDst <= 0)
         return;
 
-    int cntCharDst = cBytesDst - 1; // Leave 1 byte for null terminator
+    int cntCharDst = lengthDst - 1; // Leave 1 byte for null terminator
     int iCharDst = 0;
 
     while (*srcA && iCharDst < cntCharDst)
@@ -238,7 +235,7 @@ StringConcat(
         dst++;
     }
 
-    Assert(iCharDst < cBytesDst);
+    Assert(iCharDst < lengthDst);
     AssertWarn(*srcA == '\0');
     AssertWarn(*srcB == '\0');
 
@@ -257,18 +254,18 @@ StringInsert(
         AssertFalseWarn;
         iInsert = 0;
     }
-    else if (iInsert > srcA.cBytes)
+    else if (iInsert > srcA.length)
     {
         AssertFalseWarn;
-        iInsert = srcA.cBytes;
+        iInsert = srcA.length;
     }
 
     String result;
-    result.cBytes = srcA.cBytes + srcB.cBytes;
-    result.bytes = (char*)allocate(memory, result.cBytes);
-    mem_copy(result.bytes, srcA.bytes, iInsert);
-    mem_copy(result.bytes + iInsert, srcB.bytes, srcB.cBytes);
-    mem_copy(result.bytes + iInsert + srcB.cBytes, srcA.bytes + iInsert, srcA.cBytes - iInsert);
+    result.length = srcA.length + srcB.length;
+    result.data = (char*)allocate(memory, result.length);
+    mem_copy(result.data, srcA.data, iInsert);
+    mem_copy(result.data + iInsert, srcB.data, srcB.length);
+    mem_copy(result.data + iInsert + srcB.length, srcA.data + iInsert, srcA.length - iInsert);
     return result;
 }
 
@@ -276,10 +273,10 @@ function String
 StringConcat(String srcA, String srcB, Memory_Region memory)
 {
     String result;
-    result.cBytes = srcA.cBytes + srcB.cBytes;
-    result.bytes = (char*)allocate(memory, result.cBytes);
-    mem_copy(result.bytes, srcA.bytes, srcA.cBytes);
-    mem_copy(result.bytes + srcA.cBytes, srcB.bytes, srcB.cBytes);
+    result.length = srcA.length + srcB.length;
+    result.data = (char*)allocate(memory, result.length);
+    mem_copy(result.data, srcA.data, srcA.length);
+    mem_copy(result.data + srcA.length, srcB.data, srcB.length);
     return result;
 }
 
@@ -307,8 +304,8 @@ AreStringsEqual(char* str0, char* str1)
 function bool
 AreStringsEqual(String str0, char* str1)
 {
-    char* cursor0 = str0.bytes;
-    char* endCursor0 = str0.bytes + str0.cBytes;
+    char* cursor0 = str0.data;
+    char* endCursor0 = str0.data + str0.length;
 
     char* cursor1 = str1;
 
@@ -332,16 +329,16 @@ AreStringsEqual(char* str0, String str1)
 }
 
 function bool
-AreStringsEqual(String str0, String str1)
+string_eq(String const& str0, String const& str1)
 {
-    if (str0.cBytes != str1.cBytes) return false;
-    if (str0.bytes == str1.bytes)   return true;
+    if (str0.length != str1.length) return false;
+    if (str0.data == str1.data)   return true;
 
-    char* cursor0 = str0.bytes;
-    char* endCursor0 = str0.bytes + str0.cBytes;
+    char* cursor0 = str0.data;
+    char* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1.bytes;
-    char* endCursor1 = str1.bytes + str1.cBytes;
+    char* cursor1 = str1.data;
+    char* endCursor1 = str1.data + str1.length;
 
     while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
     {
@@ -404,8 +401,8 @@ AreStringsEqualIgnoreCase(char* str0, char* str1)
 function bool
 AreStringsEqualIgnoreCase(String str0, char* str1)
 {
-    char* cursor0 = str0.bytes;
-    char* endCursor0 = str0.bytes + str0.cBytes;
+    char* cursor0 = str0.data;
+    char* endCursor0 = str0.data + str0.length;
 
     char* cursor1 = str1;
 
@@ -432,14 +429,14 @@ AreStringsEqualIgnoreCase(char* str0, String str1)
 function bool
 AreStringsEqualIgnoreCase(String str0, String str1)
 {
-    if (str0.cBytes != str1.cBytes) return false;
-    if (str0.bytes == str1.bytes)   return true;
+    if (str0.length != str1.length) return false;
+    if (str0.data == str1.data)   return true;
 
-    char* cursor0 = str0.bytes;
-    char* endCursor0 = str0.bytes + str0.cBytes;
+    char* cursor0 = str0.data;
+    char* endCursor0 = str0.data + str0.length;
 
-    char* cursor1 = str1.bytes;
-    char* endCursor1 = str1.bytes + str1.cBytes;
+    char* cursor1 = str1.data;
+    char* endCursor1 = str1.data + str1.length;
 
     while ((cursor0 < endCursor0) && (cursor1 < endCursor1))
     {
@@ -475,9 +472,9 @@ StringHasPrefix(char* str, char* prefix)
 function bool
 StringHasPrefix(String str, String prefix)
 {
-    if (prefix.cBytes > str.cBytes) return false;
+    if (prefix.length > str.length) return false;
 
-    for (int iChar = 0; iChar < prefix.cBytes; iChar++)
+    for (int iChar = 0; iChar < prefix.length; iChar++)
     {
         char s = str[iChar];
         char x = prefix[iChar];
@@ -491,8 +488,8 @@ StringHasPrefix(String str, String prefix)
 function bool
 StringHasSuffix(char* str, char* suffix)
 {
-    int strLength = ZStringLength(str);
-    int suffixLength = ZStringLength(suffix);
+    int strLength = zstr_length(str);
+    int suffixLength = zstr_length(suffix);
 
     if (suffixLength > strLength) return false;
 
@@ -513,10 +510,10 @@ StringHasSuffix(char* str, char* suffix)
 function bool
 StringHasSuffix(String str, String suffix)
 {
-    if (suffix.cBytes > str.cBytes) return false;
+    if (suffix.length > str.length) return false;
 
     int iCharSuffix = 0;
-    for (int iCharStr = str.cBytes - suffix.cBytes; iCharStr < str.cBytes; iCharStr++)
+    for (int iCharStr = str.length - suffix.length; iCharStr < str.length; iCharStr++)
     {
         char s = str[iCharStr];
         char x = suffix[iCharSuffix];
@@ -533,45 +530,45 @@ StringHasSuffix(String str, String suffix)
 #include "lib/stb/stb_sprintf.h"
 
 function int
-ZStringFromPrintf_v(char* buffer, int cBytesBuffer, char const* fmt, va_list varargs)
+ZStringFromPrintf_v(char* buffer, int lengthBuffer, char const* fmt, va_list varargs)
 {
-    int result = stbsp_vsnprintf(buffer, cBytesBuffer, fmt, varargs);
+    int result = stbsp_vsnprintf(buffer, lengthBuffer, fmt, varargs);
     return result;
 }
 
 function int
-ZStringFromPrintf(char* buffer, int cBytesBuffer, char const* fmt, ...)
+ZStringFromPrintf(char* buffer, int lengthBuffer, char const* fmt, ...)
 {
     va_list varargs;
     va_start(varargs, fmt);
-    int result = ZStringFromPrintf_v(buffer, cBytesBuffer, fmt, varargs);
+    int result = ZStringFromPrintf_v(buffer, lengthBuffer, fmt, varargs);
     va_end(varargs);
     return result;
 }
 
 function String
-StringFromPrintf_v(Memory_Region memory, int cBytesBuffer, char const* fmt, va_list varargs)
+StringFromPrintf_v(Memory_Region memory, int lengthBuffer, char const* fmt, va_list varargs)
 {
-    // TODO - I don't like having a cBytesBuffer param...
+    // TODO - I don't like having a lengthBuffer param...
     //  but this requires some sort of re-allocing string builder (which we don't yet have)
     //  to work on arbitrarily sized strings...
 
     String result;
-    result.bytes = (char*)allocate(memory, sizeof(char) * cBytesBuffer);
-    result.cBytes = stbsp_vsnprintf(result.bytes, cBytesBuffer, fmt, varargs);
+    result.data = (char*)allocate(memory, sizeof(char) * lengthBuffer);
+    result.length = stbsp_vsnprintf(result.data, lengthBuffer, fmt, varargs);
     return result;
 }
 
 function String
-StringFromPrintf(Memory_Region memory, int cBytesBuffer, char const* fmt, ...)
+StringFromPrintf(Memory_Region memory, int lengthBuffer, char const* fmt, ...)
 {
-    // TODO - I don't like having a cBytesBuffer param...
+    // TODO - I don't like having a lengthBuffer param...
     //  but this requires some sort of re-allocing string builder (which we don't yet have)
     //  to work on arbitrarily sized strings...
 
     va_list varargs;
     va_start(varargs, fmt);
-    String result = StringFromPrintf_v(memory, cBytesBuffer, fmt, varargs);
+    String result = StringFromPrintf_v(memory, lengthBuffer, fmt, varargs);
     va_end(varargs);
     return result;
 }
@@ -579,7 +576,7 @@ StringFromPrintf(Memory_Region memory, int cBytesBuffer, char const* fmt, ...)
 function int
 IndexOfFirst(String string, char c)
 {
-    for (int iByte = 0; iByte < string.cBytes; iByte++)
+    for (int iByte = 0; iByte < string.length; iByte++)
     {
         if (string[iByte] == c) return iByte;
     }
@@ -590,7 +587,7 @@ IndexOfFirst(String string, char c)
 function int
 IndexOfLast(String string, char c)
 {
-    for (int iByte = string.cBytes - 1; iByte >= 0; iByte--)
+    for (int iByte = string.length - 1; iByte >= 0; iByte--)
     {
         if (string[iByte] == c) return iByte;
     }
@@ -601,7 +598,7 @@ IndexOfLast(String string, char c)
 function bool
 IsEmpty(String string)
 {
-    return (string.cBytes == 0);
+    return (string.length == 0);
 }
 
 // @Cleanup - move to platform ?
@@ -614,8 +611,8 @@ GetDirectoryFromFullFilename(String fullFilename)
 
     if (iLastSlash < 0) return result;
 
-    result.bytes = fullFilename.bytes;
-    result.cBytes = iLastSlash + 1;
+    result.data = fullFilename.data;
+    result.length = iLastSlash + 1;
     return result;
 }
 
@@ -639,12 +636,12 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
     // Parse + or -
 
     f64 resultMultiply = 1.0;
-    if (string.cBytes > 0 && string[0] == '-')
+    if (string.length > 0 && string[0] == '-')
     {
         resultMultiply = -1;
         iCursor++;
     }
-    else if (string.cBytes > 0 && string[0] == '+')
+    else if (string.length > 0 && string[0] == '+')
     {
         iCursor++;
     }
@@ -652,7 +649,7 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
     // Parse whole part
 
     f64 resultWhole = 0;
-    while (iCursor < string.cBytes)
+    while (iCursor < string.length)
     {
         char c = string[iCursor];
         if (separator && c == separator)
@@ -670,12 +667,12 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
     // Parse frac part
 
     f64 resultFrac = 0;
-    if (iCursor < string.cBytes && string[iCursor] == '.')
+    if (iCursor < string.length && string[iCursor] == '.')
     {
         iCursor++;
 
         f64 fracDigitMultiplier = 0.1;
-        while (iCursor < string.cBytes)
+        while (iCursor < string.length)
         {
             char c = string[iCursor];
             if (separator && (c == separator))
@@ -695,7 +692,7 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
 
     // Parse exponent
 
-    if (iCursor < string.cBytes &&
+    if (iCursor < string.length &&
         (string[iCursor] == 'e' || string[iCursor] == 'E'))
     {
         iCursor++;
@@ -712,7 +709,7 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
         }
 
         i32 expUnsigned = 0;
-        while (iCursor < string.cBytes)
+        while (iCursor < string.length)
         {
             // NOTE - Scanner should ensure well-formed DecimalFloatLiteral has at least 1 decimal digit here.
             //  Parser doesn't check.
@@ -748,7 +745,7 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
 
     *poResult = (resultWhole + resultFrac) * resultMultiply;
 
-    bool result = (iCursor == string.cBytes);
+    bool result = (iCursor == string.length);
     return result;
 }
 
@@ -770,7 +767,7 @@ TryParseU64FromEntireString(String string, u64 * poResult, char separator=0)
     bool hasSignificantDigit = false;
 
     int iCursor = 0;
-    for ( ; iCursor < string.cBytes; iCursor++)
+    for ( ; iCursor < string.length; iCursor++)
     {
         char c = string[iCursor];
         if (!IsDecimalDigit(c))
@@ -792,6 +789,6 @@ TryParseU64FromEntireString(String string, u64 * poResult, char separator=0)
             return false;
     }
 
-    bool result = (iCursor == string.cBytes);
+    bool result = (iCursor == string.length);
     return result;
 }
