@@ -630,6 +630,15 @@ struct EnumTable
         return items[offset_index];
     }
 
+    T_VALUE const& operator[](ENUM_KEY index) const
+    {
+#if ENUM_TABLE_BOUNDS_CHECK
+        Assert(index >= START && index < ENUM_KEY::ENUM_COUNT);
+#endif
+        u64 offset_index = u64(index - START);
+        return items[offset_index];
+    }
+
     // HMM - This isn't an obvious overload, but it makes it work the same way as a raw ptr, which I like
     T_VALUE* operator+(ENUM_KEY index)
     {
