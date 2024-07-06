@@ -65,5 +65,6 @@ namespace RGBA
     static Rgba constexpr BLACK         (0, 0, 0, 1);
     static Rgba constexpr GRAY          (0.5f, 0.5f, 0.5f, 1.0f);
 
+    static Rgba constexpr TRANSPARENT2  (1, 1, 1, 0);   // TODO - rename to TRANSPARENT... but conflicts with windows define...
     static Rgba constexpr ZERO   (0, 0, 0, 0);
 }
