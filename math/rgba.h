@@ -21,7 +21,6 @@ namespace RGB
     static Rgb constexpr YELLOW     (1, 1, 0);
     static Rgb constexpr CYAN       (0, 1, 1);
     static Rgb constexpr MAGENTA    (1, 0, 1);
-
     static Rgb constexpr WHITE      (1, 1, 1);
     static Rgb constexpr BLACK      (0, 0, 0);
 }
@@ -43,6 +42,8 @@ struct Rgba
     , b(((hex & 0x0000FF00) >>  8) / 255.0f)
     , a(((hex & 0x000000FF) >>  0) / 255.0f)
         {}
+
+    explicit constexpr  Rgba(f32 rgb) :                     r(rgb),     g(rgb),     b(rgb),     a(1.0f)     {}
 };
 
 inline bool
