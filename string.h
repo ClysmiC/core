@@ -47,38 +47,39 @@ enum class Null_Terminate : u8
 };
 
 function void
-Copyzstr(char* src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+zstr_copy(char* src, char* dst, int dst_length, Null_Terminate null_terminate=Null_Terminate::YES)
 {
-    if (lengthDst == 0) return;
+    if (dst_length == 0) return;
 
-    int lengthDstCopy = ((bool)nullTerminateDst) ? lengthDst - 1 : lengthDst;
+    int dst_length_to_copy = ((bool)null_terminate) ? dst_length - 1 : dst_length;
 
-    int iByteDst = 0;
-    while (*src && iByteDst < lengthDstCopy)
+    int i = 0;
+    while (*src && i < dst_length_to_copy)
     {
         *dst = *src;
 
-        iByteDst++;
+        // @Slow
+        i++;
         src++;
         dst++;
     }
 
-    if ((bool)nullTerminateDst) *dst = '\0';
+    if ((bool)null_terminate) *dst = '\0';
 }
 
 // HMM - Should a String carry around if it is null-terminated or not? Need a convenient way to print strings...
 //  Or maybe look into using printf("%.*s", length, string); ???
 
 function void
-CopyString(String src, u8* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+string_copy(String src, u8* dst, int dst_length, Null_Terminate null_terminate=Null_Terminate::YES)
 {
-    if (lengthDst == 0) return;
+    if (dst_length == 0) return;
 
     u8* srcCursor = src.data;
-    int lengthDstCopy = ((bool)nullTerminateDst) ? lengthDst - 1 : lengthDst;
+    int dst_length_to_copy = ((bool)null_terminate) ? dst_length - 1 : dst_length;
 
     int iByteDst = 0;
-    while (iByteDst < src.length && iByteDst < lengthDstCopy)
+    while (iByteDst < src.length && iByteDst < dst_length_to_copy)
     {
         *dst = *srcCursor;
 
@@ -87,40 +88,39 @@ CopyString(String src, u8* dst, int lengthDst, Null_Terminate nullTerminateDst=N
         dst++;
     }
 
-    if ((bool)nullTerminateDst) *dst = '\0';
+    if ((bool)null_terminate) *dst = '\0';
 }
 
-// TODO - rename these
 function char*
-Duplicatezstr(char* src, Memory_Region memory)
+zstr_create(char* src, Memory_Region memory)
 {
     int lengthSrc = zstr_length(src);
-    int lengthDst = lengthSrc + 1;
+    int dst_length = lengthSrc + 1;
 
-    char* dst = (char*)allocate(memory, lengthDst);
-    Copyzstr(src, dst, lengthDst);
+    char* dst = (char*)allocate(memory, dst_length);
+    zstr_copy(src, dst, dst_length);
     return dst;
 }
 
 function String
-DuplicatezstrToString(char* src, Memory_Region memory)
+string_create(char* src, Memory_Region memory)
 {
     String dst;
     dst.length = zstr_length(src);
     dst.data = (u8*)allocate(memory, dst.length);
-    Copyzstr(src, (char*)dst.data, dst.length, Null_Terminate::NO);
+    zstr_copy(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     return dst;
 }
 
 function String
-DuplicateString(String src, Memory_Region memory)
+string_create(String src, Memory_Region memory)
 {
     String result;
     result.length = src.length;
     if (result.length > 0)
     {
         result.data = (u8*)allocate(memory, result.length + 1);
-        CopyString(src, result.data, result.length + 1);
+        string_copy(src, result.data, result.length + 1);
     }
     else
     {
@@ -130,16 +130,17 @@ DuplicateString(String src, Memory_Region memory)
 }
 
 function char*
-DuplicateStringTozstr(String src, Memory_Region memory)
+zstr_create(String src, Memory_Region memory)
 {
-    uint lengthDst = src.length + 1;
-    char* dst = (char*)allocate(memory, lengthDst);
-    CopyString(src, (u8*)dst, lengthDst, Null_Terminate::YES);
+    uint dst_length = src.length + 1;
+    char* dst = (char*)allocate(memory, dst_length);
+    string_copy(src, (u8*)dst, dst_length, Null_Terminate::YES);
     return dst;
 }
 
+#if 0   // disabled 2024-07-13
 function String
-StringFromzstr(
+string_create(
     char* src,
     Memory_Region memory=nullptr)
 {
@@ -155,21 +156,12 @@ StringFromzstr(
     else if (dst.length > 0)
     {
         dst.data = (u8*)allocate(memory, dst.length);
-        Copyzstr(src, (char*)dst.data, dst.length, Null_Terminate::NO);
+        zstr_copy(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     }
 
     return dst;
 }
-
-function char*
-zstrFromString(String src, Memory_Region memory)
-{
-    int lengthDst = src.length + 1;
-    char* dst = (char*)allocate(memory, lengthDst);
-    CopyString(src, (u8*)dst, lengthDst, Null_Terminate::YES);
-    return dst;
-}
-
+#endif
 
 // @Cleanup - Passing the dest buffers deep in the parameter list make it kinda hard to grep for places where
 //  I am initializing string buffers. Any string/stringview abstraction I may write in the future
@@ -181,12 +173,12 @@ CopySubstring(
     int iSrcStart,
     int cntCharSrcToCopy, // NOTE - This is a count, not an end index!
     char* dst,
-    int lengthDst)
+    int dst_length)
 {
-    if (lengthDst <= 0)
+    if (dst_length <= 0)
         return;
 
-    int cntCharDst = lengthDst - 1; // Leave 1 byte for null terminator
+    int cntCharDst = dst_length - 1; // Leave 1 byte for null terminator
     int iCharDst = 0;
 
     int cntCharToCopy = min(cntCharDst, cntCharSrcToCopy);
@@ -201,7 +193,7 @@ CopySubstring(
         dst++;
     }
 
-    Assert(iCharDst < lengthDst);
+    Assert(iCharDst < dst_length);
     *dst = '\0';
 }
 
@@ -210,12 +202,12 @@ StringConcat(
     const char* srcA,
     const char* srcB,
     char* dst,
-    int lengthDst)
+    int dst_length)
 {
-    if (lengthDst <= 0)
+    if (dst_length <= 0)
         return;
 
-    int cntCharDst = lengthDst - 1; // Leave 1 byte for null terminator
+    int cntCharDst = dst_length - 1; // Leave 1 byte for null terminator
     int iCharDst = 0;
 
     while (*srcA && iCharDst < cntCharDst)
@@ -236,7 +228,7 @@ StringConcat(
         dst++;
     }
 
-    Assert(iCharDst < lengthDst);
+    Assert(iCharDst < dst_length);
     AssertWarn(*srcA == '\0');
     AssertWarn(*srcB == '\0');
 
@@ -282,7 +274,7 @@ StringConcat(String srcA, String srcB, Memory_Region memory)
 }
 
 function bool
-AreStringsEqual(char* str0, char* str1)
+zstr_eq(char* str0, char* str1)
 {
     Assert(str0);
     Assert(str1);
@@ -303,7 +295,7 @@ AreStringsEqual(char* str0, char* str1)
 }
 
 function bool
-AreStringsEqual(String str0, char* str1)
+string_eq(String str0, char* str1)
 {
     u8* cursor0 = str0.data;
     u8* endCursor0 = str0.data + str0.length;
@@ -323,9 +315,9 @@ AreStringsEqual(String str0, char* str1)
 }
 
 function bool
-AreStringsEqual(char* str0, String str1)
+string_eq(char* str0, String str1)
 {
-    bool result = AreStringsEqual(str1, str0);
+    bool result = string_eq(str1, str0);
     return result;
 }
 
@@ -378,7 +370,7 @@ AsciiUpperCase(char ascii)
 }
 
 function bool
-AreStringsEqualIgnoreCase(char* str0, char* str1)
+zstr_eq_ignore_case(char* str0, char* str1)
 {
     Assert(str0);
     Assert(str1);
@@ -400,7 +392,7 @@ AreStringsEqualIgnoreCase(char* str0, char* str1)
 }
 
 function bool
-AreStringsEqualIgnoreCase(String str0, char* str1)
+string_eq_ignore_case(String str0, char* str1)
 {
     u8* cursor0 = str0.data;
     u8* endCursor0 = str0.data + str0.length;
@@ -421,14 +413,14 @@ AreStringsEqualIgnoreCase(String str0, char* str1)
 }
 
 function bool
-AreStringsEqualIgnoreCase(char* str0, String str1)
+string_eq_ignore_case(char* str0, String str1)
 {
-    bool result = AreStringsEqual(str1, str0);
+    bool result = string_eq_ignore_case(str1, str0);
     return result;
 }
 
 function bool
-AreStringsEqualIgnoreCase(String str0, String str1)
+string_eq_ignore_case(String str0, String str1)
 {
     if (str0.length != str1.length) return false;
     if (str0.data == str1.data)   return true;

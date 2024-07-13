@@ -424,7 +424,7 @@ AppendStringCopy(BufferBuilder* builder, String string)
         return;
 
     u8* ptr = (u8*)AppendNewBytes(builder, string.length);
-    CopyString(string, ptr, string.length, Null_Terminate::NO);
+    string_copy(string, ptr, string.length, Null_Terminate::NO);
 }
 
 function u8 *
