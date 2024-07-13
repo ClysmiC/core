@@ -47,16 +47,16 @@ BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
 }
 
 function unsigned int
-BuildHashZString(const char* zString, unsigned int runningHash)
+BuildHashzstr(const char* zstr, unsigned int runningHash)
 {
     unsigned int result = runningHash;
     static const unsigned int s_fnvPrime = 16777619;
 
-    while (*zString)
+    while (*zstr)
     {
-        result ^= *zString;
+        result ^= *zstr;
         result *= s_fnvPrime;
-        zString++;
+        zstr++;
     }
 
     return result;
@@ -70,10 +70,10 @@ StartHash(const void* pBytes=nullptr, int cBytes=0)
 }
 
 function unsigned int
-StartHashZString(const char* zString)
+StartHashzstr(const char* zstr)
 {
     static const unsigned int s_fnvOffsetBasis = 2166136261;
-    return BuildHashZString(zString, s_fnvOffsetBasis);
+    return BuildHashzstr(zstr, s_fnvOffsetBasis);
 }
 
 function unsigned int

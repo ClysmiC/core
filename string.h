@@ -29,7 +29,7 @@ struct String
     String() = default;
 
     explicit String(char* zstr) { this->data = (u8*)zstr; this->length = zstr_length(zstr); }
-    String(char* zString, uint byte_count) { this->data = (u8*)zString; this->length = byte_count; }
+    String(char* zstr, uint byte_count) { this->data = (u8*)zstr; this->length = byte_count; }
 
     u8 & operator[](int i) const { return data[i]; }
 };
@@ -47,7 +47,7 @@ enum class Null_Terminate : u8
 };
 
 function void
-CopyZString(char* src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
+Copyzstr(char* src, char* dst, int lengthDst, Null_Terminate nullTerminateDst=Null_Terminate::YES)
 {
     if (lengthDst == 0) return;
 
@@ -91,47 +91,46 @@ CopyString(String src, u8* dst, int lengthDst, Null_Terminate nullTerminateDst=N
 }
 
 // TODO - rename these
-
-function void
-CopyString(String src, String dst)
-{
-    CopyString(src, dst.data, dst.length, Null_Terminate::NO);
-    dst.length = min(dst.length, src.length);
-}
-
 function char*
-DuplicateZString(char* src, Memory_Region memory)
+Duplicatezstr(char* src, Memory_Region memory)
 {
     int lengthSrc = zstr_length(src);
     int lengthDst = lengthSrc + 1;
 
     char* dst = (char*)allocate(memory, lengthDst);
-    CopyZString(src, dst, lengthDst);
+    Copyzstr(src, dst, lengthDst);
     return dst;
 }
 
 function String
-DuplicateZStringToString(char* src, Memory_Region memory)
+DuplicatezstrToString(char* src, Memory_Region memory)
 {
     String dst;
     dst.length = zstr_length(src);
     dst.data = (u8*)allocate(memory, dst.length);
-    CopyZString(src, (char*)dst.data, dst.length, Null_Terminate::NO);
+    Copyzstr(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     return dst;
 }
 
 function String
 DuplicateString(String src, Memory_Region memory)
 {
-    String dst;
-    dst.length = src.length;
-    dst.data = (u8*)allocate(memory, dst.length);
-    CopyString(src, dst);
-    return dst;
+    String result;
+    result.length = src.length;
+    if (result.length > 0)
+    {
+        result.data = (u8*)allocate(memory, result.length + 1);
+        CopyString(src, result.data, result.length + 1);
+    }
+    else
+    {
+        result.data = nullptr;
+    }
+    return result;
 }
 
 function char*
-DuplicateStringToZString(String src, Memory_Region memory)
+DuplicateStringTozstr(String src, Memory_Region memory)
 {
     uint lengthDst = src.length + 1;
     char* dst = (char*)allocate(memory, lengthDst);
@@ -140,7 +139,7 @@ DuplicateStringToZString(String src, Memory_Region memory)
 }
 
 function String
-StringFromZString(
+StringFromzstr(
     char* src,
     Memory_Region memory=nullptr)
 {
@@ -156,14 +155,14 @@ StringFromZString(
     else if (dst.length > 0)
     {
         dst.data = (u8*)allocate(memory, dst.length);
-        CopyZString(src, (char*)dst.data, dst.length, Null_Terminate::NO);
+        Copyzstr(src, (char*)dst.data, dst.length, Null_Terminate::NO);
     }
 
     return dst;
 }
 
 function char*
-ZStringFromString(String src, Memory_Region memory)
+zstrFromString(String src, Memory_Region memory)
 {
     int lengthDst = src.length + 1;
     char* dst = (char*)allocate(memory, lengthDst);
@@ -532,18 +531,18 @@ StringHasSuffix(String str, String suffix)
 #include "lib/stb/stb_sprintf.h"
 
 function int
-ZStringFromPrintf_v(char* buffer, int lengthBuffer, char const* fmt, va_list varargs)
+zstrFromPrintf_v(char* buffer, int lengthBuffer, char const* fmt, va_list varargs)
 {
     int result = stbsp_vsnprintf(buffer, lengthBuffer, fmt, varargs);
     return result;
 }
 
 function int
-ZStringFromPrintf(char* buffer, int lengthBuffer, char const* fmt, ...)
+zstrFromPrintf(char* buffer, int lengthBuffer, char const* fmt, ...)
 {
     va_list varargs;
     va_start(varargs, fmt);
-    int result = ZStringFromPrintf_v(buffer, lengthBuffer, fmt, varargs);
+    int result = zstrFromPrintf_v(buffer, lengthBuffer, fmt, varargs);
     va_end(varargs);
     return result;
 }
