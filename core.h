@@ -262,9 +262,10 @@ defer_<F> defer_func_(F f) {
 #include "math/math.h"
 #include "mem_util.h"
 #include "mem_alloc.h"
-#include "string.h"
+#include "string/string.h"
 #include "array.h"
 #include "dict.h"
 #include "tree.h"
-#include "utf.h"
+#include "string/utf.h"
+#include "string/gap_buffer.h"
 #include "util/util.h"  // HMM - should util be moved out of core?
