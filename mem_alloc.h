@@ -176,8 +176,8 @@ enum AllocType : u8
 };
 
 // @Cleanup - forward declarations because core module doesn't run hgen
-function void* allocate(MEM::Region_Header* region, uintptr byte_count, CTZ clearToZero=CTZ::NIL);
-function void* allocate_tracked(MEM::Region_Header* region, uintptr byte_count, CTZ clearToZero=CTZ::NIL);
+function void* allocate(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NIL);
+function void* allocate_tracked(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NIL);
 function void free_tracked_allocation(MEM::Region_Header* region, void* allocation);
 function bool mem_region_end(MEM::Region_Header* region);
 function bool mem_region_reset(MEM::Region_Header* region);
@@ -186,11 +186,11 @@ namespace MEM
 {
 
 function void
-resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
+resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_count_new)
 {
     Free_Block_Header* pHeadOrig = *ppHead;
 
-    if (byte_countNew == 0)
+    if (byte_count_new == 0)
     {
         // NOTE - 0 has special meaning. It means to remove the head node entirely.
         //  We don't bother updating the size
@@ -205,9 +205,9 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
     }
     else
     {
-        Assert(byte_countNew > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
+        Assert(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
 
-        pHeadOrig->byte_count = byte_countNew;
+        pHeadOrig->byte_count = byte_count_new;
         bool isHeadTooSmall = pHeadOrig->next && pHeadOrig->next->byte_count > pHeadOrig->byte_count;
 
         if (isHeadTooSmall)
@@ -216,9 +216,9 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_countNew)
             *ppHead = pHeadOrig->next;
             (*ppHead)->prev = nullptr;
 
-            if (byte_countNew > 0)
+            if (byte_count_new > 0)
             {
-                Assert(byte_countNew > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
+                Assert(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
 
                 // Find the node that should point to the old head
                 Free_Block_Header* biggerThanOrig = *ppHead;
@@ -589,7 +589,7 @@ mem_region_end(Region_Header* region, bool unlink)
 using Memory_Region = MEM::Region_Header*;
 
 function void*
-allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
+allocate(Memory_Region region, uintptr byte_count, CTZ ctz)
 {
     using namespace MEM;
 
@@ -633,7 +633,7 @@ allocate(Memory_Region region, uintptr byte_count, CTZ clearToZero)
         debug_validate_prev_and_next(region_header->shared_list);
     }
 
-    if ((bool)clearToZero)
+    if ((bool)ctz)
     {
         mem_zero(result, byte_count);
     }
@@ -645,9 +645,9 @@ template <typename T>
 T*
 allocate(
     Memory_Region region,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
-    T* result = (T*)allocate(region, sizeof(T), clearToZero);
+    T* result = (T*)allocate(region, sizeof(T), ctz);
     return result;
 }
 
@@ -656,14 +656,14 @@ T*
 allocate_array(
     Memory_Region region,
     uintptr count,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
-    T* result = (T*)allocate(region, sizeof(T) * count, clearToZero);
+    T* result = (T*)allocate(region, sizeof(T) * count, ctz);
     return result;
 }
 
 function void*
-allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
+allocate_tracked(Memory_Region region, uintptr byte_count, CTZ ctz)
 {
     void* result;
     if (region)
@@ -675,7 +675,7 @@ allocate_tracked(Memory_Region region, uintptr byte_count, CTZ clearToZero)
         result = MEM::system_allocate(byte_count);
     }
 
-    if ((bool)clearToZero)
+    if ((bool)ctz)
     {
         mem_zero(result, byte_count);
     }
@@ -687,9 +687,9 @@ template <typename T>
 T*
 allocate_tracked(
     Memory_Region region,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
-    T* result = (T*)allocate_tracked(region, sizeof(T), clearToZero);
+    T* result = (T*)allocate_tracked(region, sizeof(T), ctz);
     return result;
 }
 
@@ -698,9 +698,9 @@ T*
 allocate_array_tracked(
     Memory_Region region,
     uintptr count,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
-    T* result = (T*)allocate_tracked(region, sizeof(T) * count, clearToZero);
+    T* result = (T*)allocate_tracked(region, sizeof(T) * count, ctz);
     return result;
 }
 
@@ -718,14 +718,14 @@ free_tracked_allocation(Memory_Region region, void* allocation)
 }
 
 function void*
-reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew)
+reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_count_new)
 {
     using namespace MEM;
 
     void* result;
     if (!allocation)
     {
-        result = allocate_tracked(region, byte_countNew);
+        result = allocate_tracked(region, byte_count_new);
     }
     else
     {
@@ -734,7 +734,7 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
         debug_validate_left_and_right(tracked_header);
 
         uintptr byte_countOld = tracked_header->byte_count - sizeof(Tracked_Block_Header);
-        if (byte_countOld >= byte_countNew)
+        if (byte_countOld >= byte_count_new)
         {
             result = allocation;
         }
@@ -743,13 +743,24 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_countNew
 
             // TODO - Grow in place if possible
 
-            result = allocate_tracked(region, byte_countNew);
+            result = allocate_tracked(region, byte_count_new);
             mem_copy(result, allocation, byte_countOld);
 
             free_tracked_allocation(region, allocation);
         }
     }
 
+    return result;
+}
+
+template <typename T>
+T*
+reallocate_array_tracked(
+    Memory_Region region,
+    T* allocation,
+    uintptr count_new)
+{
+    T* result = (T*)reallocate_tracked(region, allocation, sizeof(T) * count_new);
     return result;
 }
 
@@ -893,7 +904,7 @@ template <typename T>
 function T*
 allocate(
     Recycle_Allocator<T> * alloc,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
     T* result;
 
@@ -904,7 +915,7 @@ allocate(
         result = &alloc->recycleList->item;
         alloc->recycleList = alloc->recycleList->pNextRecycled;
 
-        if ((bool)clearToZero)
+        if ((bool)ctz)
         {
             mem_zero(result, sizeof(Recycle_Allocator<T>::Slot));
         }
@@ -917,7 +928,7 @@ allocate(
     }
     else
     {
-        result = (T*)allocate(alloc->memory, sizeof(Recycle_Allocator<T>::Slot), clearToZero);
+        result = (T*)allocate(alloc->memory, sizeof(Recycle_Allocator<T>::Slot), ctz);
     }
 
 #if BUILD_DEBUG
@@ -933,11 +944,11 @@ function void
 PreallocateRecycleListContiguous(
     Recycle_Allocator<T> * alloc,
     int cntItemPreallocate,
-    CTZ clearToZero=CTZ::NIL)
+    CTZ ctz=CTZ::NIL)
 {
     auto * slots = (Recycle_Allocator<T>::Slot*)allocate(alloc->memory,
                                                          cntItemPreallocate * sizeof(Recycle_Allocator<T>::Slot),
-                                                         clearToZero);
+                                                         ctz);
 
     for (int iSlot = 0; iSlot < cntItemPreallocate; iSlot++)
     {
