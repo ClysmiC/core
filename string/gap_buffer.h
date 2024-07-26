@@ -3,7 +3,7 @@ struct Gap_Buffer
     u8* buffer;
     i32 capacity;
 
-    i32 gap_start;      // aka, "cursor"
+    i32 gap_start;      // aka, "cursor", "caret"
     i32 gap_size;
 
     Memory_Region memory;
@@ -90,7 +90,7 @@ function void
 gap_buffer_set_cursor(Gap_Buffer* gb, i32 index)
 {
     i32 data_length = gb->capacity - gb->gap_size;
-    Assert(data_length > 0);
+    Assert(data_length >= 0);
 
     index = clamp(index, 0, data_length);
 
@@ -126,18 +126,57 @@ gap_buffer_move_cursor_right(Gap_Buffer* gb, i32 count=1)
     return gb->gap_start;
 }
 
-// function void
-// gap_buffer_remove(Gap_Buffer* gb, i32 start, i32 count)
-// {
-//     AssertTodo;
-// }
+function i32
+gap_buffer_set_cursor_to_start(Gap_Buffer* gb)
+{
+    gap_buffer_set_cursor(gb, 0);
+    return gb->gap_start;
+}
+
+function i32
+gap_buffer_set_cursor_to_end(Gap_Buffer* gb)
+{
+    gap_buffer_set_cursor(gb, gb->capacity - gb->gap_size);
+    return gb->gap_start;
+}
 
 function void
-gap_buffer_backspace(Gap_Buffer* gb)
+gap_buffer_remove_selection(Gap_Buffer* gb, i32 selection_mark)
+{
+    i32 selection_start = min(gb->gap_start, selection_mark);
+    i32 selection_end = max(gb->gap_start, selection_mark);
+
+    i32 data_length = gb->capacity - gb->gap_size;
+    selection_start = clamp(selection_start, 0, data_length);
+    selection_end = clamp(selection_end, selection_start, data_length);
+
+    if (selection_start == selection_end)
+        return;
+
+    Assert(selection_end > selection_start);
+
+    gb->gap_start = selection_start;
+    gb->gap_size += (selection_end - selection_start);
+
+    Assert(gb->gap_start + gb->gap_size <= gb->capacity);
+}
+
+function void
+gap_buffer_delete_left(Gap_Buffer* gb)
 {
     if (gb->gap_start > 0)
     {
         gb->gap_start--;
+        gb->gap_size++;
+    }
+}
+
+function void
+gap_buffer_delete_right(Gap_Buffer* gb)
+{
+    i32 right_size = gb->capacity - (gb->gap_start + gb->gap_size);
+    if (right_size > 0)
+    {
         gb->gap_size++;
     }
 }
