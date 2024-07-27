@@ -785,3 +785,20 @@ TryParseU64FromEntireString(String string, u64 * poResult, char separator=0)
     bool result = (iCursor == string.length);
     return result;
 }
+
+function bool
+char_is_whitespace(char c)
+{
+    // TODO - support unicode
+    // https://learn.microsoft.com/en-us/dotnet/api/system.char.iswhitespace?view=net-8.0
+
+    bool result =
+        (c == ' ') ||
+        (c == '\n') ||
+        (c == '\r') ||
+        (c == '\t') ||
+        (c == '\v') ||
+        (c == '\f');
+
+    return result;
+}
