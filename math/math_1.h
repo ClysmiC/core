@@ -5,8 +5,15 @@
 // - cephes
 // - sollya
 
+// @Cleanup
 #define IncrementIfZero(value) DoWhile0((value) = (decltype(value))((value) + !bool(value));)
 #define DecrementIfNonZero(value) DoWhile0((value) = (decltype(value))((value) - bool(value));)
+
+struct Range
+{
+    int start;
+    int length;
+};
 
 function bool
 f32_approx_eq(

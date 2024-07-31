@@ -31,7 +31,7 @@ gap_buffer_create(Memory_Region memory, int capacity=128)
 }
 
 function void
-gap_buffer_ensure_gap_size(Gap_Buffer* gb, int minimum_gap_size)
+gap_size_ensure(Gap_Buffer* gb, int minimum_gap_size)
 {
     minimum_gap_size = max(minimum_gap_size, 0);
     if (gb->gap_size < minimum_gap_size)
@@ -63,7 +63,7 @@ gap_buffer_ensure_gap_size(Gap_Buffer* gb, int minimum_gap_size)
 function void
 gap_buffer_insert(Gap_Buffer* gb, char c)
 {
-    gap_buffer_ensure_gap_size(gb, 1);
+    gap_size_ensure(gb, 1);
 
     gb->buffer[gb->gap_start] = c;
     gb->gap_start++;
@@ -76,7 +76,7 @@ gap_buffer_insert(Gap_Buffer* gb, char c)
 function void
 gap_buffer_insert(Gap_Buffer* gb, String string)
 {
-    gap_buffer_ensure_gap_size(gb, string.length);
+    gap_size_ensure(gb, string.length);
 
     mem_copy(gb->buffer + gb->gap_start, string.data, string.length);
     gb->gap_start += string.length;
@@ -87,7 +87,7 @@ gap_buffer_insert(Gap_Buffer* gb, String string)
 }
 
 function void
-gap_buffer_set_cursor(Gap_Buffer* gb, int index)
+gap_buffer_cursor_set(Gap_Buffer* gb, int index)
 {
     int data_length = gb->capacity - gb->gap_size;
     Assert(data_length >= 0);
@@ -113,51 +113,61 @@ gap_buffer_set_cursor(Gap_Buffer* gb, int index)
 }
 
 function int
-gap_buffer_set_cursor_to_start(Gap_Buffer* gb)
+gap_buffer_cursor_to_start(Gap_Buffer* gb)
 {
-    gap_buffer_set_cursor(gb, 0);
+    gap_buffer_cursor_set(gb, 0);
     return gb->gap_start;
 }
 
 function int
-gap_buffer_set_cursor_to_end(Gap_Buffer* gb)
+gap_buffer_cursor_to_end(Gap_Buffer* gb)
 {
-    gap_buffer_set_cursor(gb, gb->capacity - gb->gap_size);
+    gap_buffer_cursor_set(gb, gb->capacity - gb->gap_size);
     return gb->gap_start;
 }
 
 function int
-gap_buffer_move_cursor_left(Gap_Buffer* gb, int count=1)
+gap_buffer_cursor_move_left(Gap_Buffer* gb, int count=1)
 {
-    gap_buffer_set_cursor(gb, gb->gap_start - count);
+    gap_buffer_cursor_set(gb, gb->gap_start - count);
     return gb->gap_start;
 }
 
 function int
 gap_buffer_move_cursor_right(Gap_Buffer* gb, int count=1)
 {
-    gap_buffer_set_cursor(gb, gb->gap_start + count);
+    gap_buffer_cursor_set(gb, gb->gap_start + count);
     return gb->gap_start;
+}
+
+function Range
+selection_compute(Gap_Buffer const& gb, int selection_mark)
+{
+    Range result;
+
+    result.start = min(gb.gap_start, selection_mark);
+    int end = max(gb.gap_start, selection_mark);
+
+    int data_length = gb.capacity - gb.gap_size;
+    result.start = clamp(result.start, 0, data_length);
+    end = clamp(end, result.start, data_length);
+
+    result.length = end - result.start;
+    Assert(result.length >= 0);
+
+    return result;
 }
 
 // Remove all characters between gap_start and selection_mark
 function void
-gap_buffer_remove_selection(Gap_Buffer* gb, int selection_mark)
+gap_buffer_selection_remove(Gap_Buffer* gb, int selection_mark)
 {
-    int selection_start = min(gb->gap_start, selection_mark);
-    int selection_end = max(gb->gap_start, selection_mark);
-
-    int data_length = gb->capacity - gb->gap_size;
-    selection_start = clamp(selection_start, 0, data_length);
-    selection_end = clamp(selection_end, selection_start, data_length);
-
-    if (selection_start == selection_end)
+    Range selection = selection_compute(*gb, selection_mark);
+    if (selection.length <= 0)
         return;
 
-    Assert(selection_end > selection_start);
-
-    gb->gap_start = selection_start;
-    gb->gap_size += (selection_end - selection_start);
+    gb->gap_start = selection.start;
+    gb->gap_size += selection.length;;
 
     Assert(gb->gap_start + gb->gap_size <= gb->capacity);
 }
@@ -193,7 +203,7 @@ gap_buffer_delete_right_all(Gap_Buffer* gb)
 }
 
 function int
-gap_buffer_locate_word_boundary_left(Gap_Buffer const& gb)
+word_boundary_locate_left(Gap_Buffer const& gb)
 {
     int result = 0;
     int cursor = gb.gap_start;
@@ -222,7 +232,7 @@ gap_buffer_locate_word_boundary_left(Gap_Buffer const& gb)
 }
 
 function int
-gap_buffer_locate_word_boundary_right(Gap_Buffer const& gb)
+word_boundary_locate_right(Gap_Buffer const& gb)
 {
     int result = 0;
     int cursor = gb.gap_start + gb.gap_size;
@@ -251,15 +261,49 @@ gap_buffer_locate_word_boundary_right(Gap_Buffer const& gb)
 function String
 string_create(Gap_Buffer const& gb, Memory_Region memory)
 {
-    String result;
+    String result = {};
     result.length = gb.capacity - gb.gap_size;
-    result.data = (u8*)allocate(memory, result.length + 1);
+    if (result.length > 0)
+    {
+        result.data = (u8*)allocate(memory, result.length + 1);
 
-    int gap_end = gb.gap_start + gb.gap_size;
+        int gap_end = gb.gap_start + gb.gap_size;
 
-    mem_copy(result.data, gb.buffer, gb.gap_start);
-    mem_copy(result.data + gb.gap_start, gb.buffer + gap_end, gb.capacity - gap_end);
-    result.data[result.length] = '\0';
+        mem_copy(result.data, gb.buffer, gb.gap_start);
+        mem_copy(result.data + gb.gap_start, gb.buffer + gap_end, gb.capacity - gap_end);
+        result.data[result.length] = '\0';
+    }
+
     return result;
 }
 
+function String
+string_create_from_selection(Gap_Buffer const& gb, int selection_mark, Memory_Region memory)
+{
+    String result = {};
+    Range selection = selection_compute(gb, selection_mark);
+    if (selection.length <= 0)
+        return result;
+
+    result.length = selection.length;
+    result.data = (u8*)allocate(memory, result.length + 1);
+
+    if (selection.start < gb.gap_start)
+    {
+        // Due to the nature of a gap_buffer, it shouldn't be possible for
+        //  the selection to straddle the gap... since the gap inherently
+        //  represents one side of the selection
+        Assert(gb.gap_start - selection.start == selection.length);
+        mem_copy(result.data, gb.buffer + selection.start, selection.length);
+        result.data[result.length] = '\0';
+    }
+    else
+    {
+        Assert(selection.start == gb.gap_start);
+        Assert(selection.start + gb.gap_size + selection.length <= gb.capacity);
+        mem_copy(result.data, gb.buffer + selection.start + gb.gap_size, selection.length);
+        result.data[result.length] = '\0';
+    }
+
+    return result;
+}
