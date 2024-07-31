@@ -115,18 +115,18 @@ buffer_reader_create(Slice<u8> const& buffer)
 }
 
 function bool
-IsFinishedReading(Buffer_Reader* reader)
+buffer_reader_is_finished(Buffer_Reader const& reader)
 {
-    bool result = (reader->bytes_read >= reader->buffer.count);
+    bool result = (reader.bytes_read >= reader.buffer.count);
     return result;
 }
 
 function void*
-Read(Buffer_Reader* reader, uintptr byte_count)
+buffer_read_bytes(Buffer_Reader* reader, uintptr byte_count)
 {
     // TODO - return null here?
     //  As long as I'm not hitting these asserts, just leave these as asserts.... for speed reading :)
-    Assert(!IsFinishedReading(reader));
+    Assert(!buffer_reader_is_finished(*reader));
     Assert(reader->buffer.count - reader->bytes_read >= byte_count);
 
     void* result = (void*)((u8*)reader->buffer + reader->bytes_read);
@@ -136,17 +136,17 @@ Read(Buffer_Reader* reader, uintptr byte_count)
 
 template <typename T>
 function T*
-Read(Buffer_Reader* reader)
+buffer_read(Buffer_Reader* reader)
 {
-    T* result = (T*)Read(reader, sizeof(T));
+    T* result = (T*)buffer_read_bytes(reader, sizeof(T));
     return result;
 }
 
 template <typename T>
 function T*
-ReadArray(Buffer_Reader* reader, uintptr count)
+buffer_read_array(Buffer_Reader* reader, uintptr count)
 {
-    T* result = (T*)Read(reader, sizeof(T) * count);
+    T* result = (T*)buffer_read_bytes(reader, sizeof(T) * count);
     return result;
 }
 
@@ -434,35 +434,35 @@ RawPtr(BufferBuilder* builder)
     return result;
 }
 
-// --- PushBuffer
+// --- Push_Buffer
 //  Simple paged linear allocator.
 //  Can push heterogeneous (mixed-size) items indefinitely, then read them back in sequence.
 //  Doesn't remember types. User is responsible for reading the same types out in the order they were pushed in.
 
-struct PushBuffer
+struct Push_Buffer
 {
-    struct PageHeader
+    struct Page_Header
     {
         uintptr allocated_b; // Includes header
         uintptr capacity_b;  // ...
-        PageHeader* pNext;
+        Page_Header* pNext;
     };
     
     Memory_Region memory;
-    PageHeader* pages;
-    PageHeader* pageTail;
+    Page_Header* pages;
+    Page_Header* pageTail;
     uintptr lengthPushed;
 
-    PushBuffer() = default;
-    PushBuffer(Memory_Region memory, int lengthPerPage)
+    Push_Buffer() = default;
+    Push_Buffer(Memory_Region memory, int lengthPerPage)
     {
         *this = {};
         this->memory = memory;
 
-        lengthPerPage += sizeof(PageHeader);
+        lengthPerPage += sizeof(Page_Header);
         
-        PageHeader* page = (PageHeader *)allocate(this->memory, lengthPerPage);
-        page->allocated_b = sizeof(PageHeader);
+        Page_Header* page = (Page_Header *)allocate(this->memory, lengthPerPage);
+        page->allocated_b = sizeof(Page_Header);
         page->capacity_b = lengthPerPage;
         page->pNext = nullptr;
 
@@ -472,17 +472,17 @@ struct PushBuffer
 };
 
 function void*
-AppendNewBytes(PushBuffer* buffer, uintptr length)
+push_buffer_append_new_bytes(Push_Buffer* buffer, uintptr length)
 {
     auto* page = buffer->pageTail;
 
     uintptr lengthFree = page->capacity_b - page->allocated_b;
     if (lengthFree < length)
     {
-        uintptr lengthNewPage = max(page->capacity_b, length + sizeof(PushBuffer::PageHeader));
+        uintptr lengthNewPage = max(page->capacity_b, length + sizeof(Push_Buffer::Page_Header));
 
-        page = (PushBuffer::PageHeader*)allocate(buffer->memory, lengthNewPage);
-        page->allocated_b = sizeof(PushBuffer::PageHeader);
+        page = (Push_Buffer::Page_Header*)allocate(buffer->memory, lengthNewPage);
+        page->allocated_b = sizeof(Push_Buffer::Page_Header);
         page->capacity_b = lengthNewPage;
         page->pNext = nullptr;
 
@@ -501,33 +501,34 @@ AppendNewBytes(PushBuffer* buffer, uintptr length)
 
 template <typename T>
 function T*
-AppendNew(PushBuffer* buffer)
+push_buffer_append_new(Push_Buffer* buffer)
 {
-    T* result = (T*)AppendNewBytes(buffer, sizeof(T));
+    T* result = (T*)push_buffer_append_new_bytes(buffer, sizeof(T));
     return result;
 }
 
 template <typename T>
 function T*
-AppendNewArray(PushBuffer* buffer, uintptr count)
+push_buffer_append_new_array(Push_Buffer* buffer, uintptr count)
 {
-    T* result = (T*)AppendNewBytes(buffer, sizeof(T) * count);
+    T* result = (T*)push_buffer_append_new_bytes(buffer, sizeof(T) * count);
     return result;
 }
 
 template <typename T>
 function void
-Append(PushBuffer* buffer, T const& t)
+push_buffer_append(Push_Buffer* buffer, T const& t)
 {
-    T* newT = AppendNew<T>(buffer);
-    *newT = t;
+    T* new_t = push_buffer_append_new<T>(buffer);
+    *new_t = t;
 }
 
-function void
-AppendStringCopy(PushBuffer* buffer, String string)
+template <>
+inline void
+push_buffer_append(Push_Buffer* buffer, String const& string)
 {
     int lengthNeeded = sizeof(i32) + string.length;
-    u8* bytes = (u8 *)AppendNewBytes(buffer, lengthNeeded);
+    u8* bytes = (u8 *)push_buffer_append_new_bytes(buffer, lengthNeeded);
 
     // Write the string length
     *((i32 *)bytes) = string.length;
@@ -536,71 +537,71 @@ AppendStringCopy(PushBuffer* buffer, String string)
     mem_copy(bytes + sizeof(i32), string.data, string.length);
 }
 
-function void AdvanceByteCursor(struct PushBufferReader* reader, int advance); // @Hgen - Need to support core module...
+function void push_buffer_reader_advance(struct Push_Buffer_Reader* reader, int advance); // @Hgen - Need to support core module...
 
-struct PushBufferReader
+struct Push_Buffer_Reader
 {
-    PushBuffer::PageHeader* page;
+    Push_Buffer::Page_Header* page;
     int iByteInPage;
 
-    PushBufferReader() = default;
-    PushBufferReader(PushBuffer* push_buffer)
+    Push_Buffer_Reader() = default;
+    Push_Buffer_Reader(Push_Buffer* push_buffer)
     {
         this->page = push_buffer->pages;
         this->iByteInPage = 0;
-        AdvanceByteCursor(this, sizeof(PushBuffer::PageHeader));
+        push_buffer_reader_advance(this, sizeof(Push_Buffer::Page_Header));
     }
 };
 
 function bool
-IsFinishedReading(PushBufferReader* reader)
+push_buffer_reader_is_finished(Push_Buffer_Reader const& reader)
 {
-    bool result = (reader->page == nullptr);
+    bool result = (reader.page == nullptr);
     return result;
 }
 
 template <typename T>
 function T*
-Read(PushBufferReader* reader)
+push_buffer_read(Push_Buffer_Reader* reader)
 {
     // NOTE - Reads by pointer... consider if I want to expose separate by-ptr and by-value versions
 
     // NOTE - We rely on the user reading the exact same stream of values that they wrote. Asserts below
     //  can usually detect if that assumption breaks.
     
-    Assert(!IsFinishedReading(reader));
+    Assert(!push_buffer_reader_is_finished(*reader));
     Assert(reader->page->allocated_b - reader->iByteInPage >= sizeof(T));
     
     // TODO - endianness?
     T* result = (T*)((u8*)reader->page + reader->iByteInPage);
-    AdvanceByteCursor(reader, sizeof(T));
+    push_buffer_reader_advance(reader, sizeof(T));
 
     return result;
 }
 
 function String
-ReadStringCopy(PushBufferReader* reader, Memory_Region memory)
+push_buffer_read_string_and_create(Push_Buffer_Reader* reader, Memory_Region memory)
 {
     // NOTE - This reads by "copy", which is different than reading by pointer above...
 
-    Assert(!IsFinishedReading(reader));
+    Assert(!push_buffer_reader_is_finished(*reader));
 
-    i32 length = *Read<i32>(reader);
+    i32 length = *push_buffer_read<i32>(reader);
 
-    Assert(!IsFinishedReading(reader));
+    Assert(!push_buffer_reader_is_finished(*reader));
     Assert(reader->page->allocated_b - reader->iByteInPage >= length);
 
     String result;
     result.length = length;
     result.data = (u8*)allocate(memory, length);
     mem_copy(result.data, reader->page + reader->iByteInPage, length);
-    AdvanceByteCursor(reader, length);
+    push_buffer_reader_advance(reader, length);
 
     return result;
 }
 
 function void
-AdvanceByteCursor(PushBufferReader* reader, int advance)
+push_buffer_reader_advance(Push_Buffer_Reader* reader, int advance)
 {
     reader->iByteInPage += advance;
 
@@ -608,16 +609,16 @@ AdvanceByteCursor(PushBufferReader* reader, int advance)
     {
         Assert(reader->iByteInPage == reader->page->allocated_b); // Should end exactly on the boundary, not past it...
         reader->page = reader->page->pNext;
-        reader->iByteInPage = sizeof(PushBuffer::PageHeader);
+        reader->iByteInPage = sizeof(Push_Buffer::Page_Header);
     }
 }
 
-// --- EnumTable
+// --- Enum_Table
 //  Array indexed by an enum. By default, Nil is an invalid index.
-//  You need to use the DefineEnumOps macro to use an EnumTable!
+//  You need to use the DefineEnumOps macro to use an Enum_Table!
 
 template <typename ENUM_KEY, typename T_VALUE, ENUM_KEY START=ENUM_KEY::NIL + 1>
-struct EnumTable
+struct Enum_Table
 {
     T_VALUE items[ENUM_KEY::ENUM_COUNT - START];
     
@@ -651,6 +652,6 @@ struct EnumTable
 };
 
 template <typename ENUM_KEY, typename T_VALUE>
-using EnumTableAllowNil = EnumTable<ENUM_KEY, T_VALUE, ENUM_KEY::NIL>;
+using Enum_Table_Allow_Nil = Enum_Table<ENUM_KEY, T_VALUE, ENUM_KEY::NIL>;
 
-// TODO - DynEnumTable -- growable enum table for indexing with unbounded ID enums
+// TODO - DynEnum_Table -- growable enum table for indexing with unbounded ID enums
