@@ -1,5 +1,29 @@
 #pragma once
 
+// --- Defer macro
+// Courtesy of https://www.gingerbill.org/article/2015/08/19/defer-in-cpp/
+
+template <typename F>
+struct defer_
+{
+    F f;
+    defer_(F f) : f(f) {}
+    ~defer_() { f(); }
+};
+
+template <typename F>
+defer_<F> defer_func_(F f) {
+    return defer_<F>(f);
+}
+#define Defer__1(x, y) x##y
+#define Defer__2(x, y) Defer__1(x, y)
+#define Defer__3(x) Defer__2(x, __COUNTER__)
+#define Defer(code) auto Defer__3(_defer_) = defer_func_([&](){code;})
+
+
+
+// --- Ranked score
+
 struct RankedScore
 {
     void* scoree;

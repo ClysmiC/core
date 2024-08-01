@@ -437,6 +437,7 @@ RawPtr(BufferBuilder* builder)
 // --- Push_Buffer
 //  Simple paged linear allocator.
 //  Can push heterogeneous (mixed-size) items indefinitely, then read them back in sequence.
+//  Memory address of pushed items is stable, since the buffer grows via a linked-list of chunks ("pages")
 //  Doesn't remember types. User is responsible for reading the same types out in the order they were pushed in.
 
 struct Push_Buffer

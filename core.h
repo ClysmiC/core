@@ -4,6 +4,8 @@
 
 #include "detect_compiler.h"
 
+
+
 #if BUILD_DEBUG
  #if COMPILER_MSVC
   #define DEBUG_OPTIMIZE_OFF __pragma(optimize("", off))
@@ -180,85 +182,8 @@ static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
 
 
 
-// --- Enum stuff
-
-#define DefaultInvalid default: { AssertFalse; } break
-#define DefaultNilInvalid case 0: default: { AssertFalse; } break
-#define DefaultInvalidEnum(ENUM) case ENUM::ENUM_COUNT: default: { AssertFalse; } break
-#define DefaultNilInvalidEnum(ENUM) case ENUM::NIL: case ENUM::ENUM_COUNT: default: { AssertFalse; } break
-
-#define DefaultInvalidFallthrough default: { AssertFalse; }
-#define DefaultInvalidEnumFallthrough(ENUM) case ENUM::ENUM_COUNT: default: { AssertFalse; }
-#define DefaultNilInvalidEnumFallthrough(ENUM) case ENUM::NIL: case ENUM::ENUM_COUNT: default: { AssertFalse; }
-
-//          Really, the solution to this one is at the type level there should be a distinction between a flag and a flag set. | operator could always produce flag set... other operators might get fuzzy
-// HMM - do I want shift operators?
-#define DefineFlagOps(ENUM, INT_TYPE) \
-    constexpr ENUM operator|(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs | (INT_TYPE)rhs); } \
-    constexpr ENUM & operator|=(ENUM & lhs, ENUM rhs) { lhs = lhs | rhs; return lhs; } \
-    constexpr ENUM operator&(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs & (INT_TYPE)rhs); } \
-    constexpr ENUM & operator&=(ENUM & lhs, ENUM rhs) { lhs = lhs & rhs; return lhs; } \
-    constexpr ENUM operator^(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs ^ (INT_TYPE)rhs); } \
-    constexpr ENUM & operator^=(ENUM & lhs, ENUM rhs) { lhs = lhs ^ rhs; return lhs; } \
-    bool constexpr IsFlagSet(ENUM flags, ENUM query) { return (flags & query) == query; } \
-    bool constexpr IsAnyFlagSet(ENUM flags, ENUM query) { return (INT_TYPE)(flags & query) != 0; } \
-    constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \
-    StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
-
-    // ID's often increment/decrement by an integer
-#define DefineIdOps(ENUM, INT_TYPE) \
-    bool constexpr operator==(ENUM lhs, INT_TYPE rhs) { return (INT_TYPE)lhs == rhs; } \
-    bool constexpr operator==(INT_TYPE lhs, ENUM rhs) { return rhs == lhs; } \
-    constexpr ENUM& operator++(ENUM & value) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
-    constexpr ENUM& operator++(ENUM & value, int) { value = (ENUM)((INT_TYPE)value + 1); return value; } \
-    constexpr ENUM& operator--(ENUM & value) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
-    constexpr ENUM& operator--(ENUM & value, int) { value = (ENUM)((INT_TYPE)value - 1); return value; } \
-    constexpr ENUM operator+(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs + (INT_TYPE)rhs); } \
-    constexpr ENUM operator+(ENUM lhs, INT_TYPE rhs) { return (ENUM)((INT_TYPE)lhs + rhs); } \
-    constexpr ENUM operator+(INT_TYPE lhs, ENUM rhs) { return (ENUM)(lhs + (INT_TYPE)rhs); } \
-    constexpr ENUM& operator+=(ENUM & lhs, ENUM rhs) { lhs = lhs + rhs; return lhs; } \
-    constexpr ENUM& operator+=(ENUM & lhs, INT_TYPE rhs) { lhs = lhs + rhs; return lhs; } \
-    constexpr ENUM operator-(ENUM lhs, ENUM rhs) { return (ENUM)((INT_TYPE)lhs - (INT_TYPE)rhs); } \
-    constexpr ENUM operator-(ENUM lhs, INT_TYPE rhs) { return (ENUM)((INT_TYPE)lhs - rhs); } \
-    constexpr ENUM& operator-=(ENUM & lhs, ENUM rhs) { lhs = lhs - rhs; return lhs; } \
-    constexpr ENUM& operator-=(ENUM & lhs, INT_TYPE rhs) { lhs = lhs - rhs; return lhs; } \
-    StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
-
-#define DefineEnumOps(ENUM, INT_TYPE) \
-    DefineIdOps(ENUM, INT_TYPE); \
-    bool constexpr IsEnumValid(ENUM value) { return value > ENUM::NIL && value < ENUM::ENUM_COUNT; } \
-    StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
-
-#define DefineEnumOpsAllowNil(ENUM, INT_TYPE) \
-    DefineIdOps(ENUM, INT_TYPE); \
-    bool constexpr IsEnumValid(ENUM value) { return value >= ENUM::NIL && value < ENUM::ENUM_COUNT; } \
-    StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
-
-#define ForEnum(ENUM, it) for (ENUM it = (ENUM)1; it < ENUM::ENUM_COUNT; it++)
-#define ForEnumAllowNil(ENUM, it) for (ENUM it = ENUM::NIL; it < ENUM::ENUM_COUNT; it++)
-
-
-
-// --- Defer macro
-// Courtesy of https://www.gingerbill.org/article/2015/08/19/defer-in-cpp/
-
-template <typename F>
-    struct defer_ {
-        F f;
-    defer_(F f) : f(f) {}
-        ~defer_() { f(); }
-    };
-
-template <typename F>
-defer_<F> defer_func_(F f) {
-    return defer_<F>(f);
-}
-#define Defer__1(x, y) x##y
-#define Defer__2(x, y) Defer__1(x, y)
-#define Defer__3(x)      Defer__2(x, __COUNTER__)
-#define Defer(code)      auto Defer__3(_defer_) = defer_func_([&](){code;})
-
-
+#include "io_visit.h"
+#include "enum.h"
 #include "math/math.h"
 #include "mem_util.h"
 #include "mem_alloc.h"
