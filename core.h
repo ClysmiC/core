@@ -182,13 +182,13 @@ static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
 
 
 
-#include "io_visit.h"
 #include "enum.h"
 #include "math/math.h"
 #include "mem_util.h"
 #include "mem_alloc.h"
 #include "string/string.h"
-#include "array.h"
+#include "array/array.h"
+#include "io_visit.h"
 #include "dict.h"
 #include "tree.h"
 #include "string/utf.h"

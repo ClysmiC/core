@@ -1,10 +1,4 @@
-// TODO
-// - Do I want a way to differentiate between empty string and null string? (I.e., empty string bytes
-//   points somewhere, but length is still 0? That'd be kinda weird, but I do see value in a distinction)
-// - Do I want to make this a typedef for Slice<char> ?
-// - Implement StringBuilder... should it be a typedef for a DynArray<char> ?
-
-// NOTE - zstr is a zero terminated string, a.k.a. "c-string"
+// --- zstr (Zero terminated STRing, a.k.a. "c-string")
 
 function int
 zstr_length(char* zstr)

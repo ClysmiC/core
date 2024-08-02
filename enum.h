@@ -19,10 +19,11 @@
     constexpr ENUM operator~(ENUM e) { return (ENUM)~(INT_TYPE)e; } \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
+
 #define DefineFlagOps(ENUM, INT_TYPE) \
     DefineFlagOpsSkipIoTemplate(ENUM, INT_TYPE); \
-    template<> struct io_is_atom<ENUM> { static bool constexpr value = true; }; \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
+// template<> struct io_is_atom<ENUM> { static bool constexpr value = true; };
 
     // ID's often increment/decrement by an integer
 #define DefineIdOps(ENUM, INT_TYPE) \
@@ -41,7 +42,6 @@
     constexpr ENUM operator-(ENUM lhs, INT_TYPE rhs) { return (ENUM)((INT_TYPE)lhs - rhs); } \
     constexpr ENUM& operator-=(ENUM & lhs, ENUM rhs) { lhs = lhs - rhs; return lhs; } \
     constexpr ENUM& operator-=(ENUM & lhs, INT_TYPE rhs) { lhs = lhs - rhs; return lhs; } \
-    template<> struct io_is_atom<ENUM> { static bool constexpr value = true; }; \
     StaticAssert(sizeof(ENUM) == sizeof(INT_TYPE))
 
 #define DefineEnumOps(ENUM, INT_TYPE) \

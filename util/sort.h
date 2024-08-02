@@ -44,7 +44,7 @@ int BinarySearch(Slice<T> sorted, T const& item, FN_COMPARATOR compare)
 template <class T, class FN_COMPARATOR>
 void InsertSorted(DynArray<T> * array, T const& item, FN_COMPARATOR compare)
 {
-    int index = BinarySearch(MakeSlice(*array), item, compare);
+    int index = BinarySearch(slice_create(*array), item, compare);
     if (index < 0)
     {
         index = ~index;
@@ -112,14 +112,14 @@ BubbleSort(DynArray<T>* array, FN_COMPARATOR compare)
     // NOTE - The array param technically doesn't need to be a pointer, but since
     //  we are potentially modifying the items array, a pointer communicates the intent better.
 
-    BubbleSort(MakeSlice(*array), compare);
+    BubbleSort(slice_create(*array), compare);
 }
 
 template <class T, class FN_COMPARATOR>
 function void
 BubbleSort(T* items, int count, FN_COMPARATOR compare)
 {
-    BubbleSort(MakeSlice(items, count), compare);
+    BubbleSort(slice_create(items, count), compare);
 }
 
 template <class T, class FN_COMPARATOR>
@@ -155,12 +155,12 @@ BubbleSortByPtr(DynArray<T>* array, FN_COMPARATOR compare)
     // NOTE - The array param technically doesn't need to be a pointer, but since
     //  we are potentially modifying the items array, a pointer communicates the intent better.
 
-    BubbleSortByPtr(MakeSlice(*array), compare);
+    BubbleSortByPtr(slice_create(*array), compare);
 }
 
 template <class T, class FN_COMPARATOR>
 function void
 BubbleSortByPtr(T* items, int count, FN_COMPARATOR compare)
 {
-    BubbleSortByPtr(MakeSlice(items, count), compare);
+    BubbleSortByPtr(slice_create(items, count), compare);
 }
