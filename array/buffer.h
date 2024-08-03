@@ -296,15 +296,15 @@ struct Push_Buffer
 {
     struct Page_Header
     {
-        uintptr allocated_b; // Includes header
-        uintptr capacity_b;  // ...
+        int allocated_b; // Includes header
+        int capacity_b;  // ...
         Page_Header* pNext;
     };
 
     Memory_Region memory;
     Page_Header* pages;
     Page_Header* pageTail;
-    uintptr lengthPushed;
+    int lengthPushed;
 
     Push_Buffer() = default;
     Push_Buffer(Memory_Region memory, int lengthPerPage)
@@ -325,14 +325,16 @@ struct Push_Buffer
 };
 
 function void*
-push_buffer_append_new_bytes(Push_Buffer* buffer, uintptr length)
+push_buffer_append_new_bytes(Push_Buffer* buffer, int length)
 {
+    length = max(0, length);
+
     auto* page = buffer->pageTail;
 
-    uintptr lengthFree = page->capacity_b - page->allocated_b;
+    int lengthFree = page->capacity_b - page->allocated_b;
     if (lengthFree < length)
     {
-        uintptr lengthNewPage = max(page->capacity_b, length + sizeof(Push_Buffer::Page_Header));
+        int lengthNewPage = max(page->capacity_b, length + (int)sizeof(Push_Buffer::Page_Header));
 
         page = (Push_Buffer::Page_Header*)allocate(buffer->memory, lengthNewPage);
         page->allocated_b = sizeof(Push_Buffer::Page_Header);
@@ -362,7 +364,7 @@ push_buffer_append_new(Push_Buffer* buffer)
 
 template <typename T>
 function T*
-push_buffer_append_new_array(Push_Buffer* buffer, uintptr count)
+push_buffer_append_new_array(Push_Buffer* buffer, int count)
 {
     T* result = (T*)push_buffer_append_new_bytes(buffer, sizeof(T) * count);
     return result;
