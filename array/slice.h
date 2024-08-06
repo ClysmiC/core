@@ -102,7 +102,7 @@ slice_read_bytes(Slice_Reader* reader, int byte_count)
     byte_count = max(0, byte_count);
 
     // TODO - bounds check...
-    Assert(!slice_reader_is_finished(*reader));
+    Assert(Implies(byte_count != 0, !slice_reader_is_finished(*reader)));
     Assert(reader->buffer.count - reader->bytes_read >= byte_count);
 
     void* result = (void*)((u8*)reader->buffer + reader->bytes_read);

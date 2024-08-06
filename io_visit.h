@@ -275,6 +275,13 @@ io_slice_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String
     io_slice_atom_blob(io_, value_bytes, {});
 }
 
+inline void
+io_slice_end(Io_Vtable* io_)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    Assert(slice_reader_is_finished(io->reader));
+}
+
 function Io_Slice_Reader
 io_slice_reader_create(Slice<u8> const& slice)
 {
@@ -284,6 +291,7 @@ io_slice_reader_create(Slice<u8> const& slice)
 
     Io_Slice_Reader result;
     result.vtable = IO_VTABLE_NOP;
+    result.vtable.end = io_slice_end;
     result.vtable.array_begin = io_slice_array_begin;
     result.vtable.atom_u8 = io_slice_atom_u8;
     result.vtable.atom_u16 = io_slice_atom_u16;
