@@ -97,10 +97,11 @@ slice_reader_is_finished(Slice_Reader const& reader)
 }
 
 function void*
-slice_read_bytes(Slice_Reader* reader, uintptr byte_count)
+slice_read_bytes(Slice_Reader* reader, int byte_count)
 {
-    // TODO - return null here?
-    //  As long as I'm not hitting these asserts, just leave these as asserts.... for speed reading :)
+    byte_count = max(0, byte_count);
+
+    // TODO - bounds check...
     Assert(!slice_reader_is_finished(*reader));
     Assert(reader->buffer.count - reader->bytes_read >= byte_count);
 
@@ -119,7 +120,7 @@ slice_read(Slice_Reader* reader)
 
 template <typename T>
 function T*
-slice_read_array(Slice_Reader* reader, uintptr count)
+slice_read_array(Slice_Reader* reader, int count)
 {
     T* result = (T*)slice_read_bytes(reader, sizeof(T) * count);
     return result;

@@ -182,3 +182,119 @@ io_pb_create(Memory_Region memory, int bytes_per_page)
     result.pb = Push_Buffer(memory, bytes_per_page);
     return result;
 }
+
+
+
+// --- I/O visitor that reads from a slice
+
+struct Io_Slice_Reader
+{
+    Io_Vtable vtable;
+    Slice_Reader reader;
+};
+
+inline void
+io_slice_array_begin(Io_Vtable* io_, i32* length, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *length = *slice_read<i32>(&io->reader);
+}
+
+inline void
+io_slice_atom_u8(Io_Vtable* io_, u8* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<u8>(&io->reader);
+}
+
+inline void
+io_slice_atom_u16(Io_Vtable* io_, u16* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<u16>(&io->reader);
+}
+
+inline void
+io_slice_atom_u32(Io_Vtable* io_, u32* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<u32>(&io->reader);
+}
+
+inline void
+io_slice_atom_u64(Io_Vtable* io_, u64* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<u64>(&io->reader);
+}
+
+inline void
+io_slice_atom_i8(Io_Vtable* io_, i8* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<i8>(&io->reader);
+}
+
+inline void
+io_slice_atom_i16(Io_Vtable* io_, i16* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<i16>(&io->reader);
+}
+inline void
+io_slice_atom_i32(Io_Vtable* io_, i32* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<i32>(&io->reader);
+}
+
+inline void
+io_slice_atom_i64(Io_Vtable* io_, i64* value, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *value = *slice_read<i64>(&io->reader);
+}
+
+inline void
+io_slice_atom_blob(Io_Vtable* io_, Slice<u8> io_bytes, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+
+    // TODO - bounds check
+    u8* src = (u8*)slice_read_bytes(&io->reader, io_bytes.count);
+    mem_copy(io_bytes.items, src, io_bytes.count);
+}
+
+inline void
+io_slice_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    Slice<u8> value_bytes = slice_create(*value);
+
+    io_slice_atom_i32(io_, (i32*)&value->length, {});
+    io_slice_atom_blob(io_, value_bytes, {});
+}
+
+function Io_Slice_Reader
+io_slice_reader_create(Slice<u8> const& slice)
+{
+    // HMM
+    //  - return a pointer? the vtable is kinda large...
+    //  - could also let the caller supply the push-buffer instead of creating one...
+
+    Io_Slice_Reader result;
+    result.vtable = IO_VTABLE_NOP;
+    result.vtable.array_begin = io_slice_array_begin;
+    result.vtable.atom_u8 = io_slice_atom_u8;
+    result.vtable.atom_u16 = io_slice_atom_u16;
+    result.vtable.atom_u32 = io_slice_atom_u32;
+    result.vtable.atom_u64 = io_slice_atom_u64;
+    result.vtable.atom_i8 = io_slice_atom_i8;
+    result.vtable.atom_i16 = io_slice_atom_i16;
+    result.vtable.atom_i32 = io_slice_atom_i32;
+    result.vtable.atom_i64 = io_slice_atom_i64;
+    result.vtable.atom_string = io_slice_atom_string;
+    result.vtable.atom_blob = io_slice_atom_blob;
+    result.reader = slice_reader_create(slice);
+    return result;
+}
