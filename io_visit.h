@@ -1,26 +1,3 @@
-// template<typename T>
-// struct io_is_atom
-// {
-//     static bool constexpr value = false;
-// };
-
-// template<> struct io_is_atom<u8> { static bool constexpr value = true; };
-// template<> struct io_is_atom<u16> { static bool constexpr value = true; };
-// template<> struct io_is_atom<u32> { static bool constexpr value = true; };
-// template<> struct io_is_atom<u64> { static bool constexpr value = true; };
-// template<> struct io_is_atom<i8> { static bool constexpr value = true; };
-// template<> struct io_is_atom<i16> { static bool constexpr value = true; };
-// template<> struct io_is_atom<i32> { static bool constexpr value = true; };
-// template<> struct io_is_atom<i64> { static bool constexpr value = true; };
-
-// template<typename Io, typename T>
-// function void
-// io_visit(Io* io, T* t)
-// {
-//     // If you are visiting a non-atom, you need to define a template specialization of io_visit
-//     StaticAssert(io_is_atom<T>::value);
-// }
-
 struct Io_Vtable
 {
     void (*begin)(Io_Vtable* io, String name);
@@ -28,18 +5,18 @@ struct Io_Vtable
 
     void (*object_begin)(Io_Vtable* io, String name);
     void (*object_end)(Io_Vtable* io);
-    void (*array_begin)(Io_Vtable* io, int length, String name);
+    void (*array_begin)(Io_Vtable* io, i32* length, String name);
     void (*array_end)(Io_Vtable* io);
 
-    void (*atom_u8)(Io_Vtable* io, u8 value, String name);
-    void (*atom_u16)(Io_Vtable* io, u16 value, String name);
-    void (*atom_u32)(Io_Vtable* io, u32 value, String name);
-    void (*atom_u64)(Io_Vtable* io, u64 value, String name);
-    void (*atom_i8)(Io_Vtable* io, i8 value, String name);
-    void (*atom_i16)(Io_Vtable* io, i16 value, String name);
-    void (*atom_i32)(Io_Vtable* io, i32 value, String name);
-    void (*atom_i64)(Io_Vtable* io, i64 value, String name);
-    void (*atom_string)(Io_Vtable* io, String value, String name);
+    void (*atom_u8)(Io_Vtable* io, u8* value, String name);
+    void (*atom_u16)(Io_Vtable* io, u16* value, String name);
+    void (*atom_u32)(Io_Vtable* io, u32* value, String name);
+    void (*atom_u64)(Io_Vtable* io, u64* value, String name);
+    void (*atom_i8)(Io_Vtable* io, i8* value, String name);
+    void (*atom_i16)(Io_Vtable* io, i16* value, String name);
+    void (*atom_i32)(Io_Vtable* io, i32* value, String name);
+    void (*atom_i64)(Io_Vtable* io, i64* value, String name);
+    void (*atom_string)(Io_Vtable* io, String* value, Memory_Region memory, String name);
     void (*atom_blob)(Io_Vtable* io, Slice<u8> bytes, String name);
 };
 
@@ -47,17 +24,17 @@ inline void io_begin(Io_Vtable* io, String name) { return; }
 inline void io_end(Io_Vtable* io) { return; }
 inline void io_object_begin_nop(Io_Vtable* io, String name) { return; }
 inline void io_object_end_nop(Io_Vtable* io) { return; }
-inline void io_array_begin_nop(Io_Vtable* io, int length, String name) { return; }
+inline void io_array_begin_nop(Io_Vtable* io, i32* length, String name) { return; }
 inline void io_array_end_nop(Io_Vtable* io) { return; }
-inline void io_atom_u8_nop(Io_Vtable* io, u8 value, String name) { return; }
-inline void io_atom_u16_nop(Io_Vtable* io, u16 value, String name) { return; }
-inline void io_atom_u32_nop(Io_Vtable* io, u32 value, String name) { return; }
-inline void io_atom_u64_nop(Io_Vtable* io, u64 value, String name) { return; }
-inline void io_atom_i8_nop(Io_Vtable* io, i8 value, String name) { return; }
-inline void io_atom_i16_nop(Io_Vtable* io, i16 value, String name) { return; }
-inline void io_atom_i32_nop(Io_Vtable* io, i32 value, String name) { return; }
-inline void io_atom_i64_nop(Io_Vtable* io, i64 value, String name) { return; }
-inline void io_atom_string_nop(Io_Vtable* io, String value, String name) { return;}
+inline void io_atom_u8_nop(Io_Vtable* io, u8* value, String name) { return; }
+inline void io_atom_u16_nop(Io_Vtable* io, u16* value, String name) { return; }
+inline void io_atom_u32_nop(Io_Vtable* io, u32* value, String name) { return; }
+inline void io_atom_u64_nop(Io_Vtable* io, u64* value, String name) { return; }
+inline void io_atom_i8_nop(Io_Vtable* io, i8* value, String name) { return; }
+inline void io_atom_i16_nop(Io_Vtable* io, i16* value, String name) { return; }
+inline void io_atom_i32_nop(Io_Vtable* io, i32* value, String name) { return; }
+inline void io_atom_i64_nop(Io_Vtable* io, i64* value, String name) { return; }
+inline void io_atom_string_nop(Io_Vtable* io, String* value, Memory_Region memory, String name) { return;}
 inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { return ; }
 
 
@@ -103,84 +80,82 @@ struct Io_Push_Buffer
 };
 
 inline void
-io_pb_array_begin(Io_Vtable* io_, int length, String name)
+io_pb_array_begin(Io_Vtable* io_, i32* length, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, length);
+    push_buffer_append(&io->pb, *length);
 }
 
 inline void
-io_pb_atom_u8(Io_Vtable* io_, u8 value, String name)
+io_pb_atom_u8(Io_Vtable* io_, u8* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_u16(Io_Vtable* io_, u16 value, String name)
+io_pb_atom_u16(Io_Vtable* io_, u16* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_u32(Io_Vtable* io_, u32 value, String name)
+io_pb_atom_u32(Io_Vtable* io_, u32* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_u64(Io_Vtable* io_, u64 value, String name)
+io_pb_atom_u64(Io_Vtable* io_, u64* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_i8(Io_Vtable* io_, i8 value, String name)
+io_pb_atom_i8(Io_Vtable* io_, i8* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_i16(Io_Vtable* io_, i16 value, String name)
+io_pb_atom_i16(Io_Vtable* io_, i16* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 inline void
-io_pb_atom_i32(Io_Vtable* io_, i32 value, String name)
+io_pb_atom_i32(Io_Vtable* io_, i32* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
-io_pb_atom_i64(Io_Vtable* io_, i64 value, String name)
+io_pb_atom_i64(Io_Vtable* io_, i64* value, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, value);
+    push_buffer_append(&io->pb, *value);
 }
 
 inline void
 io_pb_atom_blob(Io_Vtable* io_, Slice<u8> bytes, String name)
 {
-    // NOTE - doesn't write the number of bytes... it's assumed the reader knows.
-    //  See usage in io_pb_atom_string(..)
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
     u8* dst = (u8*)push_buffer_append_new_bytes(&io->pb, bytes.count);
     mem_copy(dst, bytes.items, bytes.count);
 }
 
 inline void
-io_pb_atom_string(Io_Vtable* io_, String value, String name)
+io_pb_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    Slice<u8> value_bytes = slice_create(value);
+    Slice<u8> value_bytes = slice_create(*value);
 
-    io_pb_atom_i32(io_, value.length, {});
+    io_pb_atom_i32(io_, (i32*)&value->length, {});
     io_pb_atom_blob(io_, value_bytes, {});
 }
 
