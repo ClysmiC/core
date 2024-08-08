@@ -18,6 +18,10 @@ struct Io_Vtable
     void (*atom_i64)(Io_Vtable* io, i64* value, String name);
     void (*atom_string)(Io_Vtable* io, String* value, Memory_Region memory, String name);
     void (*atom_blob)(Io_Vtable* io, Slice<u8> bytes, String name);
+
+    // TODO
+    // void error(u32 error_code);
+    // u32 get_error_code();
 };
 
 inline void io_begin(Io_Vtable* io, String name) { return; }

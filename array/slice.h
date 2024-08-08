@@ -28,15 +28,15 @@ slice_create(T* ptr, int count)
     return result;
 }
 
-template <typename T>
-function Slice<T>
-slice_create(T* ptr, uintptr count)
-{
-    Slice<T> result;
-    result.items = ptr;
-    result.count = (int)count;
-    return result;
-}
+// template <typename T>
+// function Slice<T>
+// slice_create(T* ptr, uintptr count)
+// {
+//     Slice<T> result;
+//     result.items = ptr;
+//     result.count = (int)count;
+//     return result;
+// }
 
 function Slice<u8>
 slice_create(String string)
