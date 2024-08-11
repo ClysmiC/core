@@ -134,7 +134,7 @@ gap_buffer_cursor_move_left(Gap_Buffer* gb, int count=1)
 }
 
 function int
-gap_buffer_move_cursor_right(Gap_Buffer* gb, int count=1)
+gap_buffer_cursor_move_right(Gap_Buffer* gb, int count=1)
 {
     gap_buffer_cursor_set(gb, gb->gap_start + count);
     return gb->gap_start;
@@ -160,7 +160,7 @@ selection_compute(Gap_Buffer const& gb, int selection_mark)
 
 // Remove all characters between gap_start and selection_mark
 function void
-gap_buffer_selection_remove(Gap_Buffer* gb, int selection_mark)
+gap_buffer_clear_selection(Gap_Buffer* gb, int selection_mark)
 {
     Range selection = selection_compute(*gb, selection_mark);
     if (selection.length <= 0)
@@ -173,7 +173,7 @@ gap_buffer_selection_remove(Gap_Buffer* gb, int selection_mark)
 }
 
 function void
-gap_buffer_delete_left(Gap_Buffer* gb, int count=1)
+gap_buffer_clear_left(Gap_Buffer* gb, int count=1)
 {
     count = clamp(count, 0, gb->gap_start);
     gb->gap_start -= count;
@@ -181,14 +181,14 @@ gap_buffer_delete_left(Gap_Buffer* gb, int count=1)
 }
 
 function void
-gap_buffer_delete_left_all(Gap_Buffer* gb)
+gap_buffer_clear_left_all(Gap_Buffer* gb)
 {
     gb->gap_size += gb->gap_start;
     gb->gap_start = 0;
 }
 
 function void
-gap_buffer_delete_right(Gap_Buffer* gb, int count=1)
+gap_buffer_clear_right(Gap_Buffer* gb, int count=1)
 {
     int right_size = gb->capacity - (gb->gap_start + gb->gap_size);
     count = clamp(count, 0, right_size);
@@ -196,10 +196,17 @@ gap_buffer_delete_right(Gap_Buffer* gb, int count=1)
 }
 
 function void
-gap_buffer_delete_right_all(Gap_Buffer* gb)
+gap_buffer_clear_right_all(Gap_Buffer* gb)
 {
     int right_size = gb->capacity - (gb->gap_start + gb->gap_size);
     gb->gap_size += right_size;
+}
+
+function void
+gap_buffer_clear(Gap_Buffer* gb)
+{
+    gb->gap_start = 0;
+    gb->gap_size = gb->capacity;
 }
 
 function int
