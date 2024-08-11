@@ -30,10 +30,11 @@ gap_buffer_create(Memory_Region memory, int capacity=128)
     return result;
 }
 
+
 function void
 gap_size_ensure(Gap_Buffer* gb, int minimum_gap_size)
 {
-    minimum_gap_size = max(minimum_gap_size, 0);
+    minimum_gap_size = max(0, minimum_gap_size);
     if (gb->gap_size < minimum_gap_size)
     {
         int capacity_old = gb->capacity;
@@ -58,6 +59,37 @@ gap_size_ensure(Gap_Buffer* gb, int minimum_gap_size)
                  gb->buffer + gb->gap_start + gb->gap_size,
                  right_of_gap_size);
     }
+}
+
+function void
+gap_buffer_capacity_ensure(Gap_Buffer* gb, int minimum_capacity)
+{
+    minimum_capacity = max(0, minimum_capacity);
+    if (gb->capacity < minimum_capacity)
+    {
+        int minimum_gap_size = gb->gap_size + (minimum_capacity - gb->capacity);
+        gap_size_ensure(gb, minimum_gap_size);
+
+        Assert(gb->capacity >= minimum_capacity);
+    }
+}
+
+function void
+gap_buffer_copy_contents(Gap_Buffer* dst, Gap_Buffer const& src)
+{
+    gap_buffer_capacity_ensure(dst, src.capacity);
+    dst->gap_start = src.gap_start;
+
+    // dst may have greater capacity than src
+    dst->gap_size = src.gap_size + (dst->capacity - src.capacity);
+    Assert(dst->gap_size >= src.gap_size);
+    Assert(dst->capacity >= src.capacity);
+
+    int src_gap_end = src.gap_start + src.gap_size;
+    int dst_gap_end = dst->gap_start + dst->gap_size;
+
+    mem_copy(dst->buffer, src.buffer, src.gap_start);
+    mem_copy(dst->buffer + dst_gap_end, src.buffer + src_gap_end, src.capacity - src_gap_end);
 }
 
 function void
