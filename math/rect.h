@@ -129,9 +129,23 @@ template<class T, uint N>
 function bool
 rect_contains_point(Rect<T, N> const& rect, Vec<T, N> point)
 {
-    bool result =      point.x >= rect.min.x
-                    && point.y >= rect.min.y
-                    && point.x < rect.max.x
-                    && point.y < rect.max.y;
+    bool result = true;
+    for (int i = 0; i < N; i++)
+    {
+        result &= (point.elements[i] >= rect.min.elements[i] && point.elements[i] < rect.max.elements[i]);
+    }
+
+    return result;
+}
+
+template<class T, uint N>
+function bool
+rect_is_zero(Rect<T, N> const& rect)
+{
+    bool result = true;
+    for (int i = 0; i < N; i++)
+    {
+        result &= (rect.min.elements[i] == T{} && rect.max.elements[i] == T{});
+    }
     return result;
 }
