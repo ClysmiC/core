@@ -19,8 +19,8 @@ using denom_t = i64;            // Compile-time calculations with denominators a
 template<class T, denom_t D>
 struct Value
 {
-    StaticAssert(D >= 1);
-    StaticAssert(integer_type<T>::is_supported);
+    STATIC_ASSERT(D >= 1);
+    STATIC_ASSERT(integer_type<T>::is_supported);
 
     static denom_t constexpr d = D;
     T n;
@@ -300,7 +300,7 @@ struct Quantity
     template<Si_Unit_Type OTHER_UNIT_TYPE>
     constexpr Quantity(Quantity<OTHER_UNIT_TYPE> const& v) : value(v.value)
     {
-        StaticAssert(UNIT_TYPE == OTHER_UNIT_TYPE ||
+        STATIC_ASSERT(UNIT_TYPE == OTHER_UNIT_TYPE ||
                      UNIT_TYPE == Si_Unit_Type::SCALAR ||
                      OTHER_UNIT_TYPE == Si_Unit_Type::SCALAR);
     }
@@ -492,7 +492,7 @@ operator*(Quantity<UNIT0> lhs, Quantity<UNIT1> rhs)
 {
     static Si_Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
     static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
-    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
+    STATIC_ASSERT(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
 
     // TODO - This should widen out to a 64-bit intermediate quantity like Value does...
     //  narrowing to 32 bits in this operator defeats the purpose of the 64 bit intermediates.
@@ -507,8 +507,8 @@ operator*=(Quantity<UNIT0>& lhs, Quantity<UNIT1> rhs)
 {
     static Si_Unit_Type constexpr RESULT_TYPE = Product<UNIT0, UNIT1>::RESULT;
     static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Product<UNIT1, UNIT0>::RESULT;
-    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
-    StaticAssert(RESULT_TYPE == UNIT0);
+    STATIC_ASSERT(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
+    STATIC_ASSERT(RESULT_TYPE == UNIT0);
 
     // TODO - This should widen out to a 64-bit intermediate quantity like Value does...
     //  narrowing to 32 bits in this operator defeats the purpose of the 64 bit intermediates.
@@ -532,8 +532,8 @@ operator/=(Quantity<UNIT0>& lhs, Quantity<UNIT1> rhs)
 {
     static Si_Unit_Type constexpr RESULT_TYPE = Quotient<UNIT0, UNIT1>::RESULT;
     static Si_Unit_Type constexpr RESULT_TYPE_OPPOSITE = Quotient<UNIT1, UNIT0>::RESULT;
-    StaticAssert(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
-    StaticAssert(RESULT_TYPE == UNIT0);
+    STATIC_ASSERT(RESULT_TYPE == RESULT_TYPE_OPPOSITE);      // User should define both A*B and B*A to produce the same result unit
+    STATIC_ASSERT(RESULT_TYPE == UNIT0);
 
     lhs = lhs / rhs;
     return lhs;

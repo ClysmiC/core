@@ -39,13 +39,13 @@ gap_size_ensure(Gap_Buffer* gb, int minimum_gap_size)
     {
         int capacity_old = gb->capacity;
         int right_of_gap_size = gb->capacity - gb->gap_start - gb->gap_size;
-        Assert(right_of_gap_size >= 0);
+        ASSERT(right_of_gap_size >= 0);
 
         int gap_size_delta = minimum_gap_size - gb->gap_size;
         int minimum_capacity_new = gb->capacity + gap_size_delta;
 
         int capacity_new = gb->capacity;
-        Assert(capacity_new < minimum_capacity_new);
+        ASSERT(capacity_new < minimum_capacity_new);
         while (capacity_new < minimum_capacity_new)
         {
             capacity_new *= 2;
@@ -70,7 +70,7 @@ gap_buffer_capacity_ensure(Gap_Buffer* gb, int minimum_capacity)
         int minimum_gap_size = gb->gap_size + (minimum_capacity - gb->capacity);
         gap_size_ensure(gb, minimum_gap_size);
 
-        Assert(gb->capacity >= minimum_capacity);
+        ASSERT(gb->capacity >= minimum_capacity);
     }
 }
 
@@ -82,8 +82,8 @@ gap_buffer_copy_contents(Gap_Buffer* dst, Gap_Buffer const& src)
 
     // dst may have greater capacity than src
     dst->gap_size = src.gap_size + (dst->capacity - src.capacity);
-    Assert(dst->gap_size >= src.gap_size);
-    Assert(dst->capacity >= src.capacity);
+    ASSERT(dst->gap_size >= src.gap_size);
+    ASSERT(dst->capacity >= src.capacity);
 
     int src_gap_end = src.gap_start + src.gap_size;
     int dst_gap_end = dst->gap_start + dst->gap_size;
@@ -101,8 +101,8 @@ gap_buffer_insert(Gap_Buffer* gb, char c)
     gb->gap_start++;
     gb->gap_size--;
 
-    Assert(gb->gap_start + gb->gap_size <= gb->capacity);
-    Assert(gb->gap_size >= 0);
+    ASSERT(gb->gap_start + gb->gap_size <= gb->capacity);
+    ASSERT(gb->gap_size >= 0);
 }
 
 function void
@@ -114,15 +114,15 @@ gap_buffer_insert(Gap_Buffer* gb, String string)
     gb->gap_start += string.length;
     gb->gap_size -= string.length;
 
-    Assert(gb->gap_start + gb->gap_size <= gb->capacity);
-    Assert(gb->gap_size >= 0);
+    ASSERT(gb->gap_start + gb->gap_size <= gb->capacity);
+    ASSERT(gb->gap_size >= 0);
 }
 
 function void
 gap_buffer_cursor_set(Gap_Buffer* gb, int index)
 {
     int data_length = gb->capacity - gb->gap_size;
-    Assert(data_length >= 0);
+    ASSERT(data_length >= 0);
 
     index = clamp(index, 0, data_length);
 
@@ -185,7 +185,7 @@ selection_compute(Gap_Buffer const& gb, int selection_mark)
     end = clamp(end, result.start, data_length);
 
     result.length = end - result.start;
-    Assert(result.length >= 0);
+    ASSERT(result.length >= 0);
 
     return result;
 }
@@ -201,7 +201,7 @@ gap_buffer_clear_selection(Gap_Buffer* gb, int selection_mark)
     gb->gap_start = selection.start;
     gb->gap_size += selection.length;;
 
-    Assert(gb->gap_start + gb->gap_size <= gb->capacity);
+    ASSERT(gb->gap_start + gb->gap_size <= gb->capacity);
 }
 
 function void
@@ -332,14 +332,14 @@ string_create_from_selection(Gap_Buffer const& gb, int selection_mark, Memory_Re
         // Due to the nature of a gap_buffer, it shouldn't be possible for
         //  the selection to straddle the gap... since the gap inherently
         //  represents one side of the selection
-        Assert(gb.gap_start - selection.start == selection.length);
+        ASSERT(gb.gap_start - selection.start == selection.length);
         mem_copy(result.data, gb.buffer + selection.start, selection.length);
         result.data[result.length] = '\0';
     }
     else
     {
-        Assert(selection.start == gb.gap_start);
-        Assert(selection.start + gb.gap_size + selection.length <= gb.capacity);
+        ASSERT(selection.start == gb.gap_start);
+        ASSERT(selection.start + gb.gap_size + selection.length <= gb.capacity);
         mem_copy(result.data, gb.buffer + selection.start + gb.gap_size, selection.length);
         result.data[result.length] = '\0';
     }

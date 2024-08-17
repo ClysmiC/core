@@ -34,7 +34,7 @@ struct RankedScore
 function RankedScore
 GetBestScore(RankedScore incumbent, RankedScore challenger)
 {
-    Assert(challenger.scoree);
+    ASSERT(challenger.scoree);
 
     RankedScore result;
     if (!incumbent.scoree)
@@ -43,12 +43,12 @@ GetBestScore(RankedScore incumbent, RankedScore challenger)
     }
     else
     {
-        Assert(incumbent.scoreCount == challenger.scoreCount);
-        Assert(challenger.scoreCount < ArrayLen(challenger.score));
+        ASSERT(incumbent.scoreCount == challenger.scoreCount);
+        ASSERT(challenger.scoreCount < ARRAY_LEN(challenger.score));
 
         result = incumbent;
 
-        for (int iScore = 0; iScore < ArrayLen(challenger.score); iScore++)
+        for (int iScore = 0; iScore < ARRAY_LEN(challenger.score); iScore++)
         {
             // TODO - Option to prefer high scores or low scores. Expose this option per score?
 

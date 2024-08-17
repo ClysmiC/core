@@ -4,8 +4,6 @@
 
 #include "detect_compiler.h"
 
-
-
 #if BUILD_DEBUG
  #if COMPILER_MSVC
   #define DEBUG_OPTIMIZE_OFF __pragma(optimize("", off))
@@ -26,40 +24,39 @@
 
 // TODO - Better way to force breakpoint
 #if COMPILER_MSVC
- #define ForceBreakpoint() __debugbreak()
+ #define FORCE_BREAKPOINT() __debugbreak()
 #else
- #define ForceBreakpoint() (*(int*)0 = 0)
+ #define FORCE_BREAKPOINT() (*(int*)0 = 0)
 #endif
 
-#define DoWhile0(STATEMENT) do { STATEMENT } while(0)
+#define DO_WHILE0(STATEMENT) do { STATEMENT } while(0)
 
 #if BUILD_DEBUG && ENABLE_ASSERT
- #define Assert(EXPRESSION) DoWhile0(if (!(EXPRESSION)) { ForceBreakpoint(); })
+ #define ASSERT(EXPRESSION) DO_WHILE0(if (!(EXPRESSION)) { FORCE_BREAKPOINT(); })
 #else
- #define Assert(EXPRESSION)
+ #define ASSERT(EXPRESSION)
 #endif
 
-#define AssertFalseWarn Assert(false)
-#define AssertFalse Assert(false)
-#define AssertTodo Assert(false)
-#define AssertWarn(EXPRESSION) Assert(EXPRESSION)
-#define AssertElseTodo(EXPRESSION) Assert(EXPRESSION)
+#define ASSERT_FALSE_WARN ASSERT(false)
+#define ASSERT_FALSE ASSERT(false)
+#define ASSERT_TODO ASSERT(false)
+#define ASSERT_WARN(EXPRESSION) ASSERT(EXPRESSION)
 
 
 #if BUILD_DEBUG
- #define Verify(expression) Assert(expression)
- #define VerifyWarn(expression) Assert(expression)
+ #define VERIFY(expression) ASSERT(expression)
+ #define VERIFY_WARN(expression) ASSERT(expression)
 #else
- #define Verify(expression) expression
- #define VerifyWarn(expression) expression
+ #define VERIFY(expression) expression
+ #define VERIFY_WARN(expression) expression
 #endif
 
-#define StaticAssert(expr) static_assert(expr, "Static assert failed!")
-#define StaticAssertTodo StaticAssert(false)
+// TODO - more informative error...
+#define STATIC_ASSERT(expr) static_assert(expr, "Static assert failed!")
 
 // Expressive macros inside asserts
-#define Implies(p, q) (!(p) || (q))
-#define Iff(p, q) ((bool)(p) == (bool)(q))
+#define IMPLIES(p, q) (!(p) || (q))
+#define IFF(p, q) ((bool)(p) == (bool)(q))
 
 
 // TODO - get DEBUG_OPTIMIZE working.
@@ -177,6 +174,8 @@ static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
 #endif
 
 // Tells hgen to emit a default argument value in the generated forward declaration
+// TODO - rename these to OPTIONAL_ARG and OPTIONAL_ARG0
+//      - need to update hgen keywords too...
 #define OptionalArg(name, defaultValue) name
 #define OptionalArg0(name) name
 

@@ -99,15 +99,15 @@ debug_validate_left_and_right(Tracked_Block_Header* tracked)
     Tracked_Block_Header* left = tracked ? tracked->left : nullptr;
     if (left)
     {
-        Assert(left->right == tracked);
-        Assert((u8*)left + left->byte_count == (u8*)tracked);
+        ASSERT(left->right == tracked);
+        ASSERT((u8*)left + left->byte_count == (u8*)tracked);
 
     }
     Tracked_Block_Header* right = tracked ? tracked->right : nullptr;
     if (right)
     {
-        Assert(right->left == tracked);
-        Assert((u8*)tracked + tracked->byte_count == (u8*)right);
+        ASSERT(right->left == tracked);
+        ASSERT((u8*)tracked + tracked->byte_count == (u8*)right);
     }
 #endif
 }
@@ -119,15 +119,15 @@ debug_validate_prev_and_next(Free_Block_Header* free, bool allow_size_mismatch =
     Free_Block_Header* prev = free ? free->prev : nullptr;
     if (prev)
     {
-        Assert(prev->next == free);
-        Assert(Implies(!allow_size_mismatch, prev->byte_count >= free->byte_count));
+        ASSERT(prev->next == free);
+        ASSERT(IMPLIES(!allow_size_mismatch, prev->byte_count >= free->byte_count));
 
     }
     Free_Block_Header* next = free ? free->next : nullptr;
     if (next)
     {
-        Assert(next->prev == free);
-        Assert(Implies(!allow_size_mismatch, next->byte_count <= free->byte_count));
+        ASSERT(next->prev == free);
+        ASSERT(IMPLIES(!allow_size_mismatch, next->byte_count <= free->byte_count));
     }
 #endif
 }
@@ -140,13 +140,13 @@ debug_region_name_set(MEM::Region_Header * region, char const * name)
     {
         char const * c = name;
         int i = 0;
-        while (*c && i < ArrayLen(region->name))
+        while (*c && i < ARRAY_LEN(region->name))
         {
             region->name[i] = *c;
             c++;
             i++;
         }
-        region->name[ArrayLen(region->name) - 1] = '\0';
+        region->name[ARRAY_LEN(region->name) - 1] = '\0';
         region->id = debug_id_from_name(name);
     }
     else
@@ -205,7 +205,7 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_count_new)
     }
     else
     {
-        Assert(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
+        ASSERT(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
 
         pHeadOrig->byte_count = byte_count_new;
         bool isHeadTooSmall = pHeadOrig->next && pHeadOrig->next->byte_count > pHeadOrig->byte_count;
@@ -218,7 +218,7 @@ resize_free_list_head(Free_Block_Header** ppHead, uintptr byte_count_new)
 
             if (byte_count_new > 0)
             {
-                Assert(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
+                ASSERT(byte_count_new > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
 
                 // Find the node that should point to the old head
                 Free_Block_Header* biggerThanOrig = *ppHead;
@@ -381,7 +381,7 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
     Free_Block_Header* free = ensure_block_with_size(region, byte_count, AllocType::Tracked);
 
     bool is_free_block_from_tracked_list = (free == region->tracked_list);
-    Assert(Implies(!is_free_block_from_tracked_list, free == region->shared_list));
+    ASSERT(IMPLIES(!is_free_block_from_tracked_list, free == region->shared_list));
 
     // Split free block into the tracked allocation (left) and ...
 
@@ -400,7 +400,7 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
     if (split_byte_count > 0)
     {
         // ... a smaller shared block (right)
-        Assert(split_byte_count > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
+        ASSERT(split_byte_count > BYTE_COUNT::TOO_SMALL_TO_BOTHER_TRACKING);
 
         Free_Block_Header* split = (Free_Block_Header*)((u8*)free + byte_count);
         split->byte_count = split_byte_count;
@@ -414,7 +414,7 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
         {
             split->next->prev = split;
         }
-        split->prev = nullptr; Assert(!free->prev);
+        split->prev = nullptr; ASSERT(!free->prev);
 
         result_header->right = split;
         if (split->right)
@@ -463,7 +463,7 @@ function void
 free_tracked_allocation_from_region(Region_Header* region, void* allocation)
 {
     Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
-    Assert(tracked_header->state == Tracked_State::ALLOCATED);
+    ASSERT(tracked_header->state == Tracked_State::ALLOCATED);
     debug_validate_left_and_right(tracked_header);
 
     Tracked_Block_Header* left = tracked_header->left;
@@ -473,7 +473,7 @@ free_tracked_allocation_from_region(Region_Header* region, void* allocation)
 
     if (left && left->state == Tracked_State::FREE_UNSHARED)
     {
-        Assert(left->right == tracked_header);
+        ASSERT(left->right == tracked_header);
 
         // --- Merge w/ free left (unshared)
 
@@ -518,7 +518,7 @@ free_tracked_allocation_from_region(Region_Header* region, void* allocation)
 
             tracked_header->byte_count += right->byte_count;
 
-            Assert(right->right == nullptr);     // right of shared is never tracked, by definition
+            ASSERT(right->right == nullptr);     // right of shared is never tracked, by definition
             tracked_header->right = nullptr;
 
             // Remove for now. We'll add the merged result back in.
@@ -593,15 +593,15 @@ allocate(Memory_Region region, uintptr byte_count, CTZ ctz)
 {
     using namespace MEM;
 
-    Assert(region);
+    ASSERT(region);
 
     Region_Header* region_header = region;
 
     // --- Make sure our shared block is big enough!
 
     Free_Block_Header* shared = ensure_block_with_size(region_header, byte_count, AllocType::Untracked);
-    Assert(shared == region_header->shared_list);
-    Assert(shared->byte_count >= byte_count);
+    ASSERT(shared == region_header->shared_list);
+    ASSERT(shared->byte_count >= byte_count);
 
     // --- Split shared block into the untracked allocation (right) and ...
 
@@ -730,7 +730,7 @@ reallocate_tracked(Memory_Region region, void* allocation, uintptr byte_count_ne
     else
     {
         Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
-        Assert(tracked_header->state == Tracked_State::ALLOCATED);
+        ASSERT(tracked_header->state == Tracked_State::ALLOCATED);
         debug_validate_left_and_right(tracked_header);
 
         uintptr byte_countOld = tracked_header->byte_count - sizeof(Tracked_Block_Header);
@@ -923,7 +923,7 @@ allocate(
 #if BUILD_DEBUG
         alloc->countAvailableToRecycle--;
         alloc->countRecycledTotal++;
-        Assert(alloc->countAvailableToRecycle >= 0);
+        ASSERT(alloc->countAvailableToRecycle >= 0);
 #endif
     }
     else
@@ -980,7 +980,7 @@ recycle(Recycle_Allocator<T>* alloc, T* item)
 #if BUILD_DEBUG
     alloc->countAvailableToRecycle++;
     alloc->countLive--;
-    Assert(alloc->countLive >= 0);
+    ASSERT(alloc->countLive >= 0);
 #endif
 }
 

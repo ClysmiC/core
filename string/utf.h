@@ -267,7 +267,7 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
             using namespace UTF8;
 
             u32 codePoint = NextCodePointUtf16_(bytesUtf16, cBytesUtf16, &iByteScan, endianness);
-            Assert(codePoint != UTF::invalidCodePoint);    // Was already validated when we were counting bytes
+            ASSERT(codePoint != UTF::invalidCodePoint);    // Was already validated when we were counting bytes
 
             if (codePoint <= 0x7F)
             {
@@ -294,7 +294,7 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
         }
     }
 
-    Assert(iByteWrite == cBytesRequired);
+    ASSERT(iByteWrite == cBytesRequired);
     return result;
 
 LError:    // @goto

@@ -8,7 +8,7 @@
 // Using _ for now as a hack workaround
 #define offsetof_(type, member) ((uintptr)&(((type*)0)->member))
 
-#define ArrayLen(array) (sizeof(array) / sizeof((array)[0]))
+#define ARRAY_LEN(array) (sizeof(array) / sizeof((array)[0]))
 
 #define Kilobytes(value) ((value) * 1024LL)
 #define Megabytes(value) (Kilobytes(value) * 1024LL)
@@ -65,8 +65,8 @@ mem_zero(void* memory, uintptr cBytes)
     }
 }
 
-#define ZeroArray(array) do { mem_zero((array), ArrayLen(array) * sizeof((array)[0])); } while (0)
-#define FillArray(array, value) for (int i = 0; i < ArrayLen(array); i++) { (array)[i] = value; }
+#define ZeroArray(array) do { mem_zero((array), ARRAY_LEN(array) * sizeof((array)[0])); } while (0)
+#define FillArray(array, value) for (int i = 0; i < ARRAY_LEN(array); i++) { (array)[i] = value; }
 
 function void
 mem_copy(void* dst, void const* src, uintptr bytes)

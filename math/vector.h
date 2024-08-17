@@ -1,7 +1,7 @@
 template<class T, uint N>
 struct Vec
 {
-    StaticAssert(N > 0);
+    STATIC_ASSERT(N > 0);
     static uint constexpr COUNT = N;
 
     T elements[N];

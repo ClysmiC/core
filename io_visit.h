@@ -283,7 +283,7 @@ inline void
 io_slice_end(Io_Vtable* io_)
 {
     Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    Assert(slice_reader_is_finished(io->reader));
+    ASSERT(slice_reader_is_finished(io->reader));
 }
 
 function Io_Slice_Reader

@@ -69,6 +69,16 @@ StartHash(const void* pBytes=nullptr, int cBytes=0)
     return BuildHash(pBytes, cBytes, s_fnvOffsetBasis);
 }
 
+function u32
+u32_id_hash(u32 const& id)
+{
+    // Use this hash for things like counters, ids, enums.
+    //  This is a bad hash function if used for many integers that have a common divisor.
+    return id;
+}
+
+function bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
+
 function unsigned int
 StartHashzstr(const char* zstr)
 {
@@ -168,7 +178,7 @@ V * InsertNew(
 {
     typedef HashMap<K, V> hm;
 
-    Assert(pHashmap->pBuffer);
+    ASSERT(pHashmap->pBuffer);
 
     // H is the neighborhood size
 
@@ -179,7 +189,7 @@ V * InsertNew(
 
     // i is the ideal index for the key
 
-    Assert(
+    ASSERT(
         pHashmap->cCapacity != 0 &&
         (pHashmap->cCapacity & (pHashmap->cCapacity - 1)) == 0);  // Test that it is a power of 2
 
@@ -271,7 +281,7 @@ V * InsertNew(
         *pBucketEmpty = *pBucketSwappable;
 
         int newOffset = (pBucketSwappable->infoBits & AlsHash::s_infoOffsetMask )+ dOffset;
-        Assert(newOffset < H);
+        ASSERT(newOffset < H);
 
         pBucketEmpty->infoBits &= ~AlsHash::s_infoOffsetMask;
         pBucketEmpty->infoBits |= newOffset;
@@ -334,7 +344,7 @@ function bool AlsHashHelper_(
 {
     typedef HashMap<K, V> hm;
 
-    Assert(pHashmap->pBuffer);
+    ASSERT(pHashmap->pBuffer);
 
     // H is the neighborhood size
 
@@ -415,7 +425,7 @@ function bool AlsHashHelper_(
 
                 default:
                 {
-                    Assert(false);
+                    ASSERT(false);
                     return false;
                 }
             }
@@ -487,7 +497,7 @@ void GrowHashmap(
 {
     typedef HashMap<K, V> hm;
 
-    Assert(newCapacity > pHashmap->cCapacity);
+    ASSERT(newCapacity > pHashmap->cCapacity);
 
     // Store pointer to old buffer so we can copy from it
 

@@ -28,9 +28,18 @@ struct String
     u8 & operator[](int i) const { return data[i]; }
 };
 
+function String
+string_create(u8* data, int length)
+{
+    String result;
+    result.data = data;
+    result.length = length;
+    return result;
+}
+
 // NOTE - ArrayLen runs at compile time for string literals, which is why this
 //  macro is better than the ctor if you know the string at comp-time
-#define String_Literal(zstr_literal) String(zstr_literal, ArrayLen(zstr_literal) - 1)
+#define STRING(zstr_literal) String(zstr_literal, ARRAY_LEN(zstr_literal) - 1)
 
 enum class Null_Terminate : u8
 {
@@ -96,6 +105,7 @@ zstr_create(char* src, Memory_Region memory)
     return dst;
 }
 
+// HMM - rename these to string_copy?
 function String
 string_create(char* src, Memory_Region memory)
 {
@@ -187,7 +197,7 @@ CopySubstring(
         dst++;
     }
 
-    Assert(iCharDst < dst_length);
+    ASSERT(iCharDst < dst_length);
     *dst = '\0';
 }
 
@@ -222,9 +232,9 @@ StringConcat(
         dst++;
     }
 
-    Assert(iCharDst < dst_length);
-    AssertWarn(*srcA == '\0');
-    AssertWarn(*srcB == '\0');
+    ASSERT(iCharDst < dst_length);
+    ASSERT_WARN(*srcA == '\0');
+    ASSERT_WARN(*srcB == '\0');
 
     *dst = '\0';
 }
@@ -238,12 +248,12 @@ StringInsert(
 {
     if (iInsert < 0)
     {
-        AssertFalseWarn;
+        ASSERT_FALSE_WARN;
         iInsert = 0;
     }
     else if (iInsert > srcA.length)
     {
-        AssertFalseWarn;
+        ASSERT_FALSE_WARN;
         iInsert = srcA.length;
     }
 
@@ -270,8 +280,8 @@ StringConcat(String srcA, String srcB, Memory_Region memory)
 function bool
 zstr_eq(char* str0, char* str1)
 {
-    Assert(str0);
-    Assert(str1);
+    ASSERT(str0);
+    ASSERT(str1);
 
     char* cursor0 = str0;
     char* cursor1 = str1;
@@ -366,8 +376,8 @@ AsciiUpperCase(char ascii)
 function bool
 zstr_eq_ignore_case(char* str0, char* str1)
 {
-    Assert(str0);
-    Assert(str1);
+    ASSERT(str0);
+    ASSERT(str1);
 
     char* cursor0 = str0;
     char* cursor1 = str1;
@@ -386,7 +396,7 @@ zstr_eq_ignore_case(char* str0, char* str1)
 }
 
 function bool
-string_eq_ignore_case(String str0, char* str1)
+string_eq_ignore_case(String const& str0, char* str1)
 {
     u8* cursor0 = str0.data;
     u8* endCursor0 = str0.data + str0.length;
@@ -407,14 +417,14 @@ string_eq_ignore_case(String str0, char* str1)
 }
 
 function bool
-string_eq_ignore_case(char* str0, String str1)
+string_eq_ignore_case(char* str0, String const& str1)
 {
     bool result = string_eq_ignore_case(str1, str0);
     return result;
 }
 
 function bool
-string_eq_ignore_case(String str0, String str1)
+string_eq_ignore_case(String const& str0, String const& str1)
 {
     if (str0.length != str1.length) return false;
     if (str0.data == str1.data)   return true;
@@ -439,78 +449,29 @@ string_eq_ignore_case(String str0, String str1)
 }
 
 function bool
-StringHasPrefix(char* str, char* prefix)
+string_ends_with(String const& str, String const& suffix)
 {
-    char* strCursor = str;
-    char* prefixCursor = prefix;
+    if (str.length < suffix.length)
+        return false;
 
-    while (*strCursor && *prefixCursor)
-    {
-        if (*strCursor != *prefixCursor)
-            return false;
+    int prefix_length = str.length - suffix.length;
+    String end = string_create(str.data + prefix_length, suffix.length);
 
-        *strCursor++;
-        *prefixCursor++;
-    }
-
-    return (*prefixCursor == '\0');
+    bool result = string_eq(end, suffix);
+    return result;
 }
 
 function bool
-StringHasPrefix(String str, String prefix)
+string_ends_with_ignore_case(String const& str, String const& suffix)
 {
-    if (prefix.length > str.length) return false;
+    if (str.length < suffix.length)
+        return false;
 
-    for (int iChar = 0; iChar < prefix.length; iChar++)
-    {
-        char s = str[iChar];
-        char x = prefix[iChar];
+    int prefix_length = str.length - suffix.length;
+    String end = string_create(str.data + prefix_length, suffix.length);
 
-        if (s != x) return false;
-    }
-
-    return true;
-}
-
-function bool
-StringHasSuffix(char* str, char* suffix)
-{
-    int strLength = zstr_length(str);
-    int suffixLength = zstr_length(suffix);
-
-    if (suffixLength > strLength) return false;
-
-    int iCharSuffix = 0;
-    for (int iCharStr = strLength - suffixLength; iCharStr < strLength; iCharStr++)
-    {
-        char s = str[iCharStr];
-        char x = suffix[iCharSuffix];
-
-        if (s != x) return false;
-
-        iCharSuffix++;
-    }
-
-    return true;
-}
-
-function bool
-StringHasSuffix(String str, String suffix)
-{
-    if (suffix.length > str.length) return false;
-
-    int iCharSuffix = 0;
-    for (int iCharStr = str.length - suffix.length; iCharStr < str.length; iCharStr++)
-    {
-        char s = str[iCharStr];
-        char x = suffix[iCharSuffix];
-
-        if (s != x) return false;
-
-        iCharSuffix++;
-    }
-
-    return true;
+    bool result = string_eq_ignore_case(end, suffix);
+    return result;
 }
 
 // TODO - get rid of core dependency on stb_sprintf?
@@ -675,7 +636,7 @@ TryParseF64FromEntireString(String string, f64 * poResult, char separator=0)
         }
     }
 
-    Assert(resultFrac < 1.0);
+    ASSERT(resultFrac < 1.0);
 
     // Parse exponent
 

@@ -55,9 +55,9 @@ struct TreeBuilder
         MemberRef<T, T*> mPrevSibling = MemberRef_Nil<T, T*>(),
         MemberRef<T, T*> mLastChild = MemberRef_Nil<T, T*>())
     {
-        Assert(mFirstChild.isValid);
-        Assert(mNextSibling.isValid);
-        Assert(mParent.isValid);
+        ASSERT(mFirstChild.isValid);
+        ASSERT(mNextSibling.isValid);
+        ASSERT(mParent.isValid);
         
         *this = {};
         this->mFirstChild = mFirstChild;
@@ -78,9 +78,9 @@ tree_builder_init(
     MemberRef<T, T*> mPrevSibling = MemberRef_Nil<T, T*>(),
     MemberRef<T, T*> mLastChild = MemberRef_Nil<T, T*>())
 {
-    Assert(mFirstChild.isValid);
-    Assert(mNextSibling.isValid);
-    Assert(mParent.isValid);
+    ASSERT(mFirstChild.isValid);
+    ASSERT(mNextSibling.isValid);
+    ASSERT(mParent.isValid);
 
     *tree_builder = {};
     tree_builder->mFirstChild = mFirstChild;
@@ -96,10 +96,10 @@ BeginRoot(TreeBuilder<T> * builder, T* root)
 {
     // HMM - Should we just make BeginRoot/EndRoot a branch in BeginChild/EndChild to make the interface smaller?
     
-    Assert(!builder->is_finished);
-    Assert(builder->root == nullptr);
-    Assert(builder->current_parent == nullptr);
-    Assert(builder->insert_child_after == nullptr);
+    ASSERT(!builder->is_finished);
+    ASSERT(builder->root == nullptr);
+    ASSERT(builder->current_parent == nullptr);
+    ASSERT(builder->insert_child_after == nullptr);
     
     builder->root = root;
     builder->current_parent = root;
@@ -110,8 +110,8 @@ template <typename T>
 function void
 EndRoot(TreeBuilder<T> * builder, bool shouldResetBuilder=false)
 {
-    Assert(!builder->is_finished);
-    Assert(builder->current_parent == builder->root);
+    ASSERT(!builder->is_finished);
+    ASSERT(builder->current_parent == builder->root);
     
 #if BUILD_DEBUG
     builder->is_finished = true;
@@ -143,16 +143,16 @@ BeginChild(TreeBuilder<T> * builder, T* child)
     bool isRebuilding = *PMember(child, builder->mParent);
     if (isRebuilding)
     {
-        Assert(*PMember(child, builder->mParent) == builder->current_parent);
-        Assert(builder->mPrevSibling.isValid); // Rebuilding over an existing tree requires prev pointers to fix up links as needed
+        ASSERT(*PMember(child, builder->mParent) == builder->current_parent);
+        ASSERT(builder->mPrevSibling.isValid); // Rebuilding over an existing tree requires prev pointers to fix up links as needed
     }
     else
     {
-        Assert(*PMember(child, builder->mFirstChild) == nullptr);
-        Assert(nextBeforeInsert == nullptr);
-        Assert(*PMember(child, builder->mParent) == nullptr);
-        Assert(prevBeforeInsert == nullptr); // NOTE - Skips isValid because we already set this var to null if the member is invalid
-        Assert(Implies(builder->mLastChild.isValid, *PMember(child, builder->mLastChild) == nullptr));
+        ASSERT(*PMember(child, builder->mFirstChild) == nullptr);
+        ASSERT(nextBeforeInsert == nullptr);
+        ASSERT(*PMember(child, builder->mParent) == nullptr);
+        ASSERT(prevBeforeInsert == nullptr); // NOTE - Skips isValid because we already set this var to null if the member is invalid
+        ASSERT(IMPLIES(builder->mLastChild.isValid, *PMember(child, builder->mLastChild) == nullptr));
     }
 
     
@@ -207,7 +207,7 @@ BeginChild(TreeBuilder<T> * builder, T* child)
 
     if (isRebuilding)
     {
-        Assert(Iff(prevBeforeInsert == prevAfterInsert,
+        ASSERT(IFF(prevBeforeInsert == prevAfterInsert,
                    nextBeforeInsert == nextAfterInsert));
         
         if (prevBeforeInsert != prevAfterInsert)
@@ -222,7 +222,7 @@ BeginChild(TreeBuilder<T> * builder, T* child)
             {
                 // We moved to be at the head. (Only unlinking for now.)
                 
-                Assert(*PMember(parent, builder->mFirstChild) == child);
+                ASSERT(*PMember(parent, builder->mFirstChild) == child);
                 *PMember(parent, builder->mFirstChild) = nextBeforeInsert;
             }
             
@@ -234,7 +234,7 @@ BeginChild(TreeBuilder<T> * builder, T* child)
             {
                 // We moved to be at the tail. (Only unlinking for now.)
                 
-                Assert(*PMember(parent, builder->mLastChild) == child);
+                ASSERT(*PMember(parent, builder->mLastChild) == child);
                 *PMember(parent, builder->mLastChild) = prevBeforeInsert;
             }
         }
@@ -281,7 +281,7 @@ template <typename T>
 function void
 EndChild(TreeBuilder<T> * builder)
 {
-    Assert(builder->current_parent != builder->root); // Should you be calling EndRoot instead?
+    ASSERT(builder->current_parent != builder->root); // Should you be calling EndRoot instead?
 
     builder->insert_child_after = builder->current_parent;
     builder->current_parent = *PMember(builder->current_parent, builder->mParent);

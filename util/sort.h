@@ -37,7 +37,7 @@ int BinarySearch(Slice<T> sorted, T const& item, FN_COMPARATOR compare)
     }
 
     int result = ~iLow;
-    Assert(result < 0);
+    ASSERT(result < 0);
     return result;
 }
 

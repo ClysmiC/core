@@ -349,7 +349,7 @@ push_buffer_append_new_bytes(Push_Buffer* buffer, int length)
 
     page->allocated_b += length;
     buffer->lengthPushed += length;
-    Assert(page->allocated_b <= page->capacity_b);
+    ASSERT(page->allocated_b <= page->capacity_b);
 
     return result;
 }
@@ -424,8 +424,8 @@ push_buffer_read(Push_Slice_Reader* reader)
     // NOTE - We rely on the user reading the exact same stream of values that they wrote. Asserts below
     //  can usually detect if that assumption breaks.
 
-    Assert(!push_slice_reader_is_finished(*reader));
-    Assert(reader->page->allocated_b - reader->iByteInPage >= sizeof(T));
+    ASSERT(!push_slice_reader_is_finished(*reader));
+    ASSERT(reader->page->allocated_b - reader->iByteInPage >= sizeof(T));
 
     // TODO - endianness?
     T* result = (T*)((u8*)reader->page + reader->iByteInPage);
@@ -439,12 +439,12 @@ push_buffer_read_string_and_create(Push_Slice_Reader* reader, Memory_Region memo
 {
     // NOTE - This reads by "copy", which is different than reading by pointer above...
 
-    Assert(!push_slice_reader_is_finished(*reader));
+    ASSERT(!push_slice_reader_is_finished(*reader));
 
     i32 length = *push_buffer_read<i32>(reader);
 
-    Assert(!push_slice_reader_is_finished(*reader));
-    Assert(reader->page->allocated_b - reader->iByteInPage >= length);
+    ASSERT(!push_slice_reader_is_finished(*reader));
+    ASSERT(reader->page->allocated_b - reader->iByteInPage >= length);
 
     String result;
     result.length = length;
@@ -462,7 +462,7 @@ push_slice_reader_advance(Push_Slice_Reader* reader, int advance)
 
     if (reader->iByteInPage >= reader->page->allocated_b)
     {
-        Assert(reader->iByteInPage == reader->page->allocated_b); // Should end exactly on the boundary, not past it...
+        ASSERT(reader->iByteInPage == reader->page->allocated_b); // Should end exactly on the boundary, not past it...
         reader->page = reader->page->pNext;
         reader->iByteInPage = sizeof(Push_Buffer::Page_Header);
     }

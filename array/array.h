@@ -35,6 +35,7 @@ struct IterByPtr
 };
 
 
+// TODO - remove this... or improve it
 
 // --- Enum_Table
 //  Array indexed by an enum. By default, Nil is an invalid index.
@@ -48,7 +49,7 @@ struct Enum_Table
     T_VALUE& operator[](ENUM_KEY index)
     {
 #if ENUM_TABLE_BOUNDS_CHECK
-        Assert(index >= START && index < ENUM_KEY::ENUM_COUNT);
+        ASSERT(index >= START && index < ENUM_KEY::ENUM_COUNT);
 #endif
         u64 offset_index = u64(index - START);
         return items[offset_index];
@@ -57,7 +58,7 @@ struct Enum_Table
     T_VALUE const& operator[](ENUM_KEY index) const
     {
 #if ENUM_TABLE_BOUNDS_CHECK
-        Assert(index >= START && index < ENUM_KEY::ENUM_COUNT);
+        ASSERT(index >= START && index < ENUM_KEY::ENUM_COUNT);
 #endif
         u64 offset_index = u64(index - START);
         return items[offset_index];
@@ -67,7 +68,7 @@ struct Enum_Table
     T_VALUE* operator+(ENUM_KEY index)
     {
 #if ENUM_TABLE_BOUNDS_CHECK
-        Assert(index >= START && index < ENUM_KEY::ENUM_COUNT);
+        ASSERT(index >= START && index < ENUM_KEY::ENUM_COUNT);
 #endif
 
         return &items[(int)(index - START)];
