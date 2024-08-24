@@ -13,6 +13,16 @@ struct Rgb
         {}
 };
 
+function bool
+operator==(Rgb const& lhs, Rgb const& rhs)
+{
+    bool result =
+        lhs.r == rhs.r &&
+        lhs.g == rhs.g &&
+        lhs.b == rhs.b;
+    return result;
+}
+
 namespace RGB
 {
     static Rgb constexpr RED        (1, 0, 0);
@@ -27,7 +37,12 @@ namespace RGB
 
 struct Rgba
 {
-    f32 r, g, b, a;
+    union
+    {
+        struct { f32 r, g, b, a; };
+        Rgb rgb;
+    };
+
     Rgba() = default;
     explicit constexpr  Rgba(f32 r, f32 g, f32 b, f32 a) :  r(r),       g(g),       b(b),       a(a)        {}
     explicit constexpr  Rgba(Rgb rgb) :                     r(rgb.r),   g(rgb.g),   b(rgb.b),   a(1.0f)     {}
