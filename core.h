@@ -43,9 +43,10 @@
 #define ASSERT_WARN(EXPRESSION) ASSERT(EXPRESSION)
 
 
+// TODO - implement these, or remove them...
 #if BUILD_DEBUG
- #define VERIFY(expression) ASSERT(expression)
- #define VERIFY_WARN(expression) ASSERT(expression)
+ #define VERIFY(expression) (bool)(expression)
+ #define VERIFY_WARN(expression) (bool)(expression)
 #else
  #define VERIFY(expression) expression
  #define VERIFY_WARN(expression) expression
