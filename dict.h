@@ -69,14 +69,12 @@ StartHash(const void* pBytes=nullptr, int cBytes=0)
     return BuildHash(pBytes, cBytes, s_fnvOffsetBasis);
 }
 
-function u32
-u32_id_hash(u32 const& id)
-{
-    // Use this hash for things like counters, ids, enums.
-    //  This is a bad hash function if used for many integers that have a common divisor.
-    return id;
-}
-
+// Use "id" hash functions for things like counters, ids, enums.
+//  This is a bad hash function if used for generic integer data sets,
+//  since data common divisors can lead to many collisions.
+function u32 u16_id_hash(u16 const& id) { return (u32)id; }
+function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
+function u32 u32_id_hash(u32 const& id) { return id; }
 function bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
 
 function unsigned int

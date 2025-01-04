@@ -84,3 +84,4 @@ using Enum_Table_Allow_Nil = Enum_Table<ENUM_KEY, T_VALUE, ENUM_KEY::NIL>;
 
 #include "slice.h"
 #include "buffer.h"
+#include "priority_queue.h"

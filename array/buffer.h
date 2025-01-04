@@ -92,47 +92,59 @@ Insert(DynArray<T>* array, const T & item, int iItem)
     array->count++;
 }
 
+// @Slow - Prefer RemoveUnordered when possible
 template <typename T>
-function void
+function T
 RemoveAt(DynArray<T>* array, int iItem)
 {
-    // HMM - Should this return the removed item?
-
-    // @Slow - Prefer RemoveUnordered when possible
-
-    if (iItem < array->count)
+    if (iItem < 0 || iItem >= array->count)
     {
-        int cntItemShift = array->count - iItem - 1;
-
-        T* dst = array->items + iItem;
-        T* src = dst + 1;
-        mem_move(dst, src, sizeof(T) * cntItemShift);
-
-        array->count--;
+        ASSERT_FALSE;
+        return T{};
     }
+
+    T result = array->items[iItem];
+
+    int cntItemShift = array->count - iItem - 1;
+    T* dst = array->items + iItem;
+    T* src = dst + 1;
+    mem_move(dst, src, sizeof(T) * cntItemShift);
+
+    array->count--;
+
+    return result;
 }
 
 template <typename T>
-function void
+function T
 RemoveUnorderedAt(DynArray<T>* array, int iItem)
 {
-    // HMM - Should this return the removed item?
-
-    if (iItem < array->count)
+    if (iItem < 0 || iItem >= array->count)
     {
-        array->items[iItem] = array->items[array->count - 1];
-        array->count--;
+        ASSERT_FALSE;
+        return T{};
     }
+
+    T result = array->items[iItem];
+    array->items[iItem] = array->items[array->count - 1];
+    array->count--;
+    return result;
 }
 
 template <typename T>
-function void
+function T
 RemoveLast(DynArray<T>* array)
 {
-    if (array->count > 0)
+    if (array->count <= 0)
     {
-        array->count--;
+        ASSERT_FALSE;
+        return T{};
     }
+
+    T result = array->items[array->count - 1];
+    array->count--;
+
+    return result;
 }
 
 template <typename T>

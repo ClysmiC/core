@@ -19,6 +19,9 @@ struct Io_Vtable
     void (*atom_string)(Io_Vtable* io, String* value, Memory_Region memory, String name);
     void (*atom_blob)(Io_Vtable* io, Slice<u8> bytes, String name);
 
+    // HMM -- just use a shared variable for this instead of a virtual function call?
+    bool (*is_deserializing)(Io_Vtable* io);
+
     // TODO
     // void error(u32 error_code);
     // u32 get_error_code();
@@ -38,9 +41,11 @@ inline void io_atom_i8_nop(Io_Vtable* io, i8* value, String name) { return; }
 inline void io_atom_i16_nop(Io_Vtable* io, i16* value, String name) { return; }
 inline void io_atom_i32_nop(Io_Vtable* io, i32* value, String name) { return; }
 inline void io_atom_i64_nop(Io_Vtable* io, i64* value, String name) { return; }
-inline void io_atom_string_nop(Io_Vtable* io, String* value, Memory_Region memory, String name) { return;}
-inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { return ; }
+inline void io_atom_string_nop(Io_Vtable* io, String* value, Memory_Region memory, String name) { return; }
+inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { return; }
 
+inline bool io_return_false(Io_Vtable* io) { return false; }
+inline bool io_return_true(Io_Vtable* io) { return true; }
 
 inline bool io_supports_string(Io_Vtable* io)
 {
@@ -70,7 +75,8 @@ static Io_Vtable const IO_VTABLE_NOP = {
     io_atom_i32_nop,
     io_atom_i64_nop,
     io_atom_string_nop,
-    io_atom_blob_nop
+    io_atom_blob_nop,
+    io_return_false,    // is_deserializing
 };
 
 
@@ -160,7 +166,20 @@ io_pb_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String na
     Slice<u8> value_bytes = slice_create(*value);
 
     io_pb_atom_i32(io_, (i32*)&value->length, {});
-    io_pb_atom_blob(io_, value_bytes, {});
+
+    Slice<u8> blob;
+    if (io_->is_deserializing(io_))
+    {
+        blob.items = (u8*)allocate(memory, value->length);
+        blob.count = value->length;
+        value->data = blob.items;
+    }
+    else
+    {
+        blob = slice_create(*value);
+    }
+
+    io_pb_atom_blob(io_, blob, {});
 }
 
 function Io_Push_Buffer
@@ -273,10 +292,21 @@ inline void
 io_slice_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String name)
 {
     Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    Slice<u8> value_bytes = slice_create(*value);
-
     io_slice_atom_i32(io_, (i32*)&value->length, {});
-    io_slice_atom_blob(io_, value_bytes, {});
+
+    Slice<u8> blob;
+    if (io_->is_deserializing(io_))
+    {
+        blob.items = (u8*)allocate(memory, value->length);
+        blob.count = value->length;
+        value->data = blob.items;
+    }
+    else
+    {
+        blob = slice_create(*value);
+    }
+
+    io_slice_atom_blob(io_, blob, {});
 }
 
 inline void
@@ -307,6 +337,7 @@ io_slice_reader_create(Slice<u8> const& slice)
     result.vtable.atom_i64 = io_slice_atom_i64;
     result.vtable.atom_string = io_slice_atom_string;
     result.vtable.atom_blob = io_slice_atom_blob;
+    result.vtable.is_deserializing = io_return_true;
     result.reader = slice_reader_create(slice);
     return result;
 }

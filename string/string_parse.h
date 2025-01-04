@@ -13,3 +13,16 @@ int int_parse(String string)
     int result = std::atoi(zstr);
     return result;
 }
+
+f32 float_parse(String string)
+{
+    // @HACK - fixed buffer to guarantee null-termination, since atof expects it
+    char zstr[1024];
+    int length = min(1023, string.length);
+    zstr[length] = '\0';
+    mem_copy(zstr, string.data, length);
+
+    // TODO - better API that includes errors... atoi silently returns 0
+    double result = std::atof(zstr);
+    return (f32)result;
+}
