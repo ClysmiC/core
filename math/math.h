@@ -12,5 +12,6 @@ DEBUG_OPTIMIZE_ON
 #include "math_1.h"
 #include "math_2.h"
 #include "fixed_math.h"
+#include "fixed_math_cordic.h"
 
 DEBUG_OPTIMIZE_OFF
