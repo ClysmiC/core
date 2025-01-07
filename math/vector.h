@@ -249,7 +249,7 @@ function T
 vec_length(Vec<T, N> v)
 {
     T result = vec_length_sq(v);
-    result = Sqrt(result);
+    result = Sqrt((f32)result); // @HACK - casting to float to support fixed point for now... switch to CORDIC or suffer desyncs!
     return result;
 }
 
@@ -277,7 +277,7 @@ template<class T, uint N>
 function Vec<T, N>
 vec_normalize_safe_0(Vec<T, N> v)
 {
-    Vec2 result = vec_normalize_safe_or(v, {});
+    Vec<T, N> result = vec_normalize_safe_or(v, {});
     return result;
 }
 #endif
