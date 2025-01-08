@@ -5,7 +5,8 @@ struct Io_Vtable
 
     void (*object_begin)(Io_Vtable* io, String name);
     void (*object_end)(Io_Vtable* io);
-    void (*array_begin)(Io_Vtable* io, i32* length, String name);
+    void (*array_begin_i32)(Io_Vtable* io, i32* length, String name);
+    void (*array_begin_u32)(Io_Vtable* io, u32* length, String name);
     void (*array_end)(Io_Vtable* io);
 
     void (*atom_u8)(Io_Vtable* io, u8* value, String name);
@@ -31,7 +32,8 @@ inline void io_begin(Io_Vtable* io, String name) { return; }
 inline void io_end(Io_Vtable* io) { return; }
 inline void io_object_begin_nop(Io_Vtable* io, String name) { return; }
 inline void io_object_end_nop(Io_Vtable* io) { return; }
-inline void io_array_begin_nop(Io_Vtable* io, i32* length, String name) { return; }
+inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name) { return; }
+inline void io_array_begin_u32_nop(Io_Vtable* io, u32* length, String name) { return; }
 inline void io_array_end_nop(Io_Vtable* io) { return; }
 inline void io_atom_u8_nop(Io_Vtable* io, u8* value, String name) { return; }
 inline void io_atom_u16_nop(Io_Vtable* io, u16* value, String name) { return; }
@@ -64,7 +66,8 @@ static Io_Vtable const IO_VTABLE_NOP = {
     io_end,
     io_object_begin_nop,
     io_object_end_nop,
-    io_array_begin_nop,
+    io_array_begin_i32_nop,
+    io_array_begin_u32_nop,
     io_array_end_nop,
     io_atom_u8_nop,
     io_atom_u16_nop,
@@ -90,7 +93,14 @@ struct Io_Push_Buffer
 };
 
 inline void
-io_pb_array_begin(Io_Vtable* io_, i32* length, String name)
+io_pb_array_begin_i32(Io_Vtable* io_, i32* length, String name)
+{
+    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
+    push_buffer_append(&io->pb, *length);
+}
+
+inline void
+io_pb_array_begin_u32(Io_Vtable* io_, u32* length, String name)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
     push_buffer_append(&io->pb, *length);
@@ -191,7 +201,8 @@ io_pb_create(Memory_Region memory, int bytes_per_page)
 
     Io_Push_Buffer result;
     result.vtable = IO_VTABLE_NOP;
-    result.vtable.array_begin = io_pb_array_begin;
+    result.vtable.array_begin_i32 = io_pb_array_begin_i32;
+    result.vtable.array_begin_u32 = io_pb_array_begin_u32;
     result.vtable.atom_u8 = io_pb_atom_u8;
     result.vtable.atom_u16 = io_pb_atom_u16;
     result.vtable.atom_u32 = io_pb_atom_u32;
@@ -217,10 +228,17 @@ struct Io_Slice_Reader
 };
 
 inline void
-io_slice_array_begin(Io_Vtable* io_, i32* length, String name)
+io_slice_array_begin_i32(Io_Vtable* io_, i32* length, String name)
 {
     Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
     *length = *slice_read<i32>(&io->reader);
+}
+
+inline void
+io_slice_array_begin_u32(Io_Vtable* io_, u32* length, String name)
+{
+    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    *length = *slice_read<u32>(&io->reader);
 }
 
 inline void
@@ -326,7 +344,8 @@ io_slice_reader_create(Slice<u8> const& slice)
     Io_Slice_Reader result;
     result.vtable = IO_VTABLE_NOP;
     result.vtable.end = io_slice_end;
-    result.vtable.array_begin = io_slice_array_begin;
+    result.vtable.array_begin_i32 = io_slice_array_begin_i32;
+    result.vtable.array_begin_u32 = io_slice_array_begin_u32;
     result.vtable.atom_u8 = io_slice_atom_u8;
     result.vtable.atom_u16 = io_slice_atom_u16;
     result.vtable.atom_u32 = io_slice_atom_u32;

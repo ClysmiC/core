@@ -298,6 +298,15 @@ vec_reject(Vec<T, N> vec, Vec<T, N> onto)
     return result;
 }
 
+template<class T, uint N>
+function bool
+vec_is_zero(Vec<T, N> const& vec)
+{
+    Vec<T, N> constexpr ZERO = Vec<T, N>{};
+    bool result = (vec == ZERO);
+    return result;
+}
+
 // --- Specialize for 2, 3, 4, to provide aliases like x, y, xy, z, etc.
 
 template<class T>
