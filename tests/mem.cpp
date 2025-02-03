@@ -1,7 +1,7 @@
  bool
 TestMemory()
 {
-    uint cBytes = Max(Kilobytes(16), CONST::cBytesMinimumRegion);
+    uint cBytes = Max(KILOBYTES(16), CONST::cBytesMinimumRegion);
     u8 * buffer = new u8[cBytes];
     
     Memory_Region programMemory = BeginRootMemory_Region(buffer, cBytes);
@@ -19,7 +19,7 @@ TestMemory()
     
     DoTest(g_cntNew == 1);
     
-    u8 * memoryOverflow = (u8 *)allocate(programMemory, (uint)Kilobytes(32));
+    u8 * memoryOverflow = (u8 *)allocate(programMemory, (uint)KILOBYTES(32));
     DoTest(g_cntNew == 2);
     
     DoTest(mem_region_end(programMemory));

@@ -10,10 +10,10 @@
 
 #define ARRAY_LEN(array) (sizeof(array) / sizeof((array)[0]))
 
-#define Kilobytes(value) ((value) * 1024LL)
-#define Megabytes(value) (Kilobytes(value) * 1024LL)
-#define Gigabytes(value) (Megabytes(value) * 1024LL)
-#define Terabytes(value) (Gigabytes(value) * 1024LL)
+#define KILOBYTES(value) ((value) * 1024LL)
+#define MEGABYTES(value) (KILOBYTES(value) * 1024LL)
+#define GIGABYTES(value) (MEGABYTES(value) * 1024LL)
+#define TERABYTES(value) (GIGABYTES(value) * 1024LL)
 
 enum class Endianness : u8
 {

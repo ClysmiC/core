@@ -28,8 +28,8 @@ struct Io_Vtable
     // u32 get_error_code();
 };
 
-inline void io_begin(Io_Vtable* io, String name) { return; }
-inline void io_end(Io_Vtable* io) { return; }
+inline void io_begin_nop(Io_Vtable* io, String name) { return; }
+inline void io_end_nop(Io_Vtable* io) { return; }
 inline void io_object_begin_nop(Io_Vtable* io, String name) { return; }
 inline void io_object_end_nop(Io_Vtable* io) { return; }
 inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name) { return; }
@@ -62,8 +62,8 @@ inline bool io_supports_blob(Io_Vtable* io)
 }
 
 static Io_Vtable const IO_VTABLE_NOP = {
-    io_begin,
-    io_end,
+    io_begin_nop,
+    io_end_nop,
     io_object_begin_nop,
     io_object_end_nop,
     io_array_begin_i32_nop,
@@ -360,3 +360,5 @@ io_slice_reader_create(Slice<u8> const& slice)
     result.reader = slice_reader_create(slice);
     return result;
 }
+
+bool constexpr IO_PATCH = false;

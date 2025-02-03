@@ -4,7 +4,7 @@ template <typename T>
 struct Slice
 {
     T* items;
-    int count;
+    i32 count;
 
     T* begin() { return items; }
     T* end()   { return items + count; }

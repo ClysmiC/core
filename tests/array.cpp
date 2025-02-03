@@ -3,7 +3,7 @@ bool TestDynArray()
     Memory_Region memory;
     Defer(mem_region_end(memory));
     {
-        uint cBytes = Max(Kilobytes(1), CONST::cBytesMinimumRegion);
+        uint cBytes = Max(KILOBYTES(1), CONST::cBytesMinimumRegion);
         u8 * buffer = new u8[cBytes];
         memory = BeginRootMemory_Region(buffer, cBytes);
         DoTest(memory);

@@ -523,7 +523,7 @@ StringFromPrintf_v(Memory_Region memory, int lengthBuffer, char const* fmt, va_l
     //  to work on arbitrarily sized strings...
 
     String result;
-    result.data = (u8*)allocate(memory, lengthBuffer);
+    result.data = (u8*)allocate(memory, lengthBuffer);  // @LEAK
     result.length = stbsp_vsnprintf((char*)result.data, lengthBuffer, fmt, varargs);
     return result;
 }

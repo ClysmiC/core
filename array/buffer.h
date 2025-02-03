@@ -4,8 +4,8 @@ template <typename T>
 struct DynArray
 {
     T* items;
-    int count;
-    int capacity;
+    i32 count;
+    i32 capacity;
     Memory_Region memory;
 
     DynArray<T>() = default;
@@ -65,6 +65,17 @@ Append(DynArray<T>* array, const T & item)
     EnsureCapacity(array, array->count + 1);
     array->items[array->count] = item;
     array->count++;
+}
+
+template <typename T>
+function u32
+array_append_and_id(DynArray<T>* array, const T & item)
+{
+    u32 result = array->count;
+    EnsureCapacity(array, array->count + 1);
+    array->items[array->count] = item;
+    array->count++;
+    return result;
 }
 
 template <typename T>
@@ -133,7 +144,7 @@ RemoveUnorderedAt(DynArray<T>* array, int iItem)
 
 template <typename T>
 function T
-RemoveLast(DynArray<T>* array)
+array_remove_last(DynArray<T>* array)
 {
     if (array->count <= 0)
     {
@@ -144,6 +155,20 @@ RemoveLast(DynArray<T>* array)
     T result = array->items[array->count - 1];
     array->count--;
 
+    return result;
+}
+
+template <typename T>
+function T*
+array_peek_last(DynArray<T>* array)
+{
+    if (array->count <= 0)
+    {
+        ASSERT_FALSE;
+        return nullptr;
+    }
+
+    T* result = array->items + array->count - 1;
     return result;
 }
 

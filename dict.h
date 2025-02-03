@@ -465,7 +465,7 @@ bool Remove(
         key,
         HashOp::Remove,
         static_cast<const V*>(nullptr),    // Update
-        static_cast<V*>(nullptr),        // Lookup
+        static_cast<V**>(nullptr),        // Lookup
         poValueRemoved,                    // Remove
         static_cast<K **>(nullptr)        // Address of found key
         );
@@ -482,7 +482,7 @@ bool Update(
         key,
         HashOp::Update,
         &value,                        // Update
-        static_cast<V*>(nullptr),    // Lookup
+        static_cast<V**>(nullptr),    // Lookup
         static_cast<V*>(nullptr)    // Remove
         static_cast<K **>(nullptr)    // Address of found key
         );
