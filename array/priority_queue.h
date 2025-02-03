@@ -23,7 +23,7 @@ template <typename T>
 function bool
 priority_queue_is_empty(Priority_Queue<T> const& queue)
 {
-    bool result = IsEmpty(queue.array);
+    bool result = array_is_empty(queue.array);
     return result;
 }
 

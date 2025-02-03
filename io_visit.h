@@ -1,3 +1,5 @@
+// Polymorphic "visitor" pattern for (de)serialization
+
 struct Io_Vtable
 {
     void (*begin)(Io_Vtable* io, String name);
@@ -44,7 +46,7 @@ inline void io_atom_i16_nop(Io_Vtable* io, i16* value, String name) { return; }
 inline void io_atom_i32_nop(Io_Vtable* io, i32* value, String name) { return; }
 inline void io_atom_i64_nop(Io_Vtable* io, i64* value, String name) { return; }
 inline void io_atom_string_nop(Io_Vtable* io, String* value, Memory_Region memory, String name) { return; }
-inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { return; }
+inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { ASSERT_FALSE_WARN; return; }
 
 inline bool io_return_false(Io_Vtable* io) { return false; }
 inline bool io_return_true(Io_Vtable* io) { return true; }
@@ -361,4 +363,454 @@ io_slice_reader_create(Slice<u8> const& slice)
     return result;
 }
 
-bool constexpr IO_PATCH = false;
+
+
+// -- I/O visitor that writes to a file
+
+struct Io_File_Writer
+{
+    Io_Push_Buffer io_pb;
+    String filename;
+    bool(*file_write_all_pb)(String, Push_Buffer const& pb);
+};
+
+inline void
+io_file_writer_begin(Io_Vtable* io_, String name)
+{
+    Io_File_Writer* io_file = (Io_File_Writer*)io_;
+    io_file->filename = name;
+}
+
+inline void
+io_file_writer_end(Io_Vtable* io_)
+{
+    Io_File_Writer* io_file = (Io_File_Writer*)io_;
+    if (io_file->filename.length > 0)
+    {
+        VERIFY(io_file->file_write_all_pb(io_file->filename, io_file->io_pb.pb));
+    }
+}
+
+inline Io_File_Writer
+io_file_writer_create(Memory_Region memory, int bytes_per_page, bool(*file_write_all_pb)(String, Push_Buffer const& pb))
+{
+    Io_File_Writer result = {};
+    result.io_pb = io_pb_create(memory, bytes_per_page);
+    result.io_pb.vtable.begin = io_file_writer_begin;
+    result.io_pb.vtable.end = io_file_writer_end;
+    result.file_write_all_pb = file_write_all_pb;
+    return result;
+}
+
+
+// --- I/O visitor that writes to a json file
+
+struct Io_Json_Ctx
+{
+    enum
+    {
+        OBJECT = 0,
+        NIL = 0,
+
+        ARRAY
+    } context;
+
+    int item_count;
+};
+
+struct Io_Json_Writer
+{
+    Io_File_Writer io_file;
+    DynArray<Io_Json_Ctx> ctx_stack;
+    Memory_Region memory;
+};
+
+inline void
+io_json_writer_begin(Io_Vtable* io, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (!string_ends_with_ignore_case(name, STRING(".json")))
+    {
+        name = StringConcat(name, STRING(".json"), io_json->memory);
+    }
+
+    io_file_writer_begin(io, name);
+}
+
+inline void
+io_json_writer_end(Io_Vtable* io)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    ASSERT(io_json->ctx_stack.count == 0);
+
+    io_file_writer_end((Io_Vtable*)&io_json->io_file);
+}
+
+function void
+io_json_writer_indent(Io_Json_Writer* io_json, int indent_delta=0)
+{
+    static u8 tab_buffer[] = { '\t', '\t', '\t', '\t', '\t', '\t', '\t', '\t' };
+
+    int tab_count = io_json->ctx_stack.count + indent_delta;
+    while (tab_count > 0)
+    {
+        io_pb_atom_blob((Io_Vtable*)io_json, slice_create(tab_buffer, min((int)ARRAY_LEN(tab_buffer), tab_count)), {});
+        tab_count -= ARRAY_LEN(tab_buffer);
+    }
+}
+
+function void
+io_json_writer_object_begin(Io_Vtable* io, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+
+    bool is_root_object = io_json->ctx_stack.count == 0;
+
+    // TODO - better string builder
+    u8 quote = '\"';
+    u8 colon = ':';
+    u8 space = ' ';
+    u8 comma = ',';
+    u8 open_brace = '{';
+    u8 new_line = '\n';
+
+    if (!is_root_object)
+    {
+        Io_Json_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->context != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        prev_ctx->item_count++;
+    }
+
+    io_pb_atom_u8(io, &open_brace, {});
+
+    // Push context
+    Io_Json_Ctx* ctx = AppendNew(&io_json->ctx_stack);
+    ctx->context = Io_Json_Ctx::OBJECT;
+    ctx->item_count = 0;
+}
+
+function void
+io_json_writer_object_end(Io_Vtable* io)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0 &&
+        array_peek_last(&io_json->ctx_stack)->context == Io_Json_Ctx::OBJECT)
+    {
+        u8 new_line = '\n';
+        u8 close_brace = '}';
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json, -1);
+        io_pb_atom_u8(io, &close_brace, {});
+
+        // Pop context
+        array_remove_last(&io_json->ctx_stack);
+    }
+    else
+    {
+        ASSERT_FALSE;
+    }
+}
+
+function void
+io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+
+    bool is_root_object = io_json->ctx_stack.count == 0;
+
+    // TODO - better string builder
+    u8 new_line = '\n';
+    u8 quote = '\"';
+    u8 colon = ':';
+    u8 space = ' ';
+    u8 comma = ',';
+    u8 open_bracket = '[';
+
+    if (!is_root_object)
+    {
+        Io_Json_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->context != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        prev_ctx->item_count++;
+    }
+
+    io_pb_atom_u8(io, &open_bracket, {});
+
+    // Push context
+    Io_Json_Ctx* ctx = AppendNew(&io_json->ctx_stack);
+    ctx->context = Io_Json_Ctx::ARRAY;
+    ctx->item_count = 0;
+}
+
+function void
+io_json_writer_array_begin_u32(Io_Vtable* io, u32* length, String name)
+{
+    io_json_writer_array_begin_i32(io, nullptr, name);
+}
+
+function void
+io_json_writer_array_end(Io_Vtable* io)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0 &&
+        array_peek_last(&io_json->ctx_stack)->context == Io_Json_Ctx::ARRAY)
+    {
+        u8 new_line = '\n';
+        u8 close_bracket = ']';
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json, -1);
+        io_pb_atom_u8(io, &close_bracket, {});
+
+        // Pop context
+        array_remove_last(&io_json->ctx_stack);
+    }
+    else
+    {
+        ASSERT_FALSE;
+    }
+}
+
+function void
+io_json_writer_atom_u64(Io_Vtable* io, u64* value, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0)
+    {
+        // TODO - better string builder
+        u8 new_line = '\n';
+        u8 quote = '\"';
+        u8 colon = ':';
+        u8 space = ' ';
+        u8 comma = ',';
+
+        Io_Json_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->context != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        u8 printf_buffer[32];
+        String value_str;
+        value_str.data = printf_buffer;
+        value_str.length = stbsp_snprintf((char*)printf_buffer, ARRAY_LEN(printf_buffer), "%llu", *value);
+        io_pb_atom_blob(io, slice_create(value_str), {});
+
+        prev_ctx->item_count++;
+    }
+    else
+    {
+        // Technically, json allows an atom value as a root object, but for our
+        //  purpose we only allow object and array as the root value
+        ASSERT_FALSE;
+    }
+}
+
+function void
+io_json_writer_atom_i64(Io_Vtable* io, i64* value, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0)
+    {
+        // TODO - better string builder
+        u8 new_line = '\n';
+        u8 quote = '\"';
+        u8 colon = ':';
+        u8 space = ' ';
+        u8 comma = ',';
+
+        Io_Json_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->context != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        u8 printf_buffer[32];
+        String value_str;
+        value_str.data = printf_buffer;
+        value_str.length = stbsp_snprintf((char*)printf_buffer, ARRAY_LEN(printf_buffer), "%lld", *value);
+        io_pb_atom_blob(io, slice_create(value_str), {});
+
+        prev_ctx->item_count++;
+    }
+    else
+    {
+        // Technically, json allows an atom value as a root object, but for our
+        //  purpose we only allow object and array as the root value
+        ASSERT_FALSE;
+    }
+}
+
+function void
+io_json_writer_atom_string(Io_Vtable* io, String* string, Memory_Region memory, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0)
+    {
+        // TODO - better string builder
+        u8 new_line = '\n';
+        u8 quote = '\"';
+        u8 colon = ':';
+        u8 space = ' ';
+        u8 comma = ',';
+
+        Io_Json_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->context != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        io_pb_atom_u8(io, &quote, {});
+        io_pb_atom_blob(io, slice_create(*string), {});
+        io_pb_atom_u8(io, &quote, {});
+
+        prev_ctx->item_count++;
+    }
+    else
+    {
+        // Technically, json allows an atom value as a root object, but for our
+        //  purpose we only allow object and array as the root value
+        ASSERT_FALSE;
+    }
+}
+
+inline void
+io_json_writer_atom_u8(Io_Vtable* io, u8* value, String name)
+{
+    u64 v = *value;
+    io_json_writer_atom_u64(io, &v, name);
+}
+
+inline void
+io_json_writer_atom_u16(Io_Vtable* io, u16* value, String name)
+{
+    u64 v = *value;
+    io_json_writer_atom_u64(io, &v, name);
+}
+
+inline void
+io_json_writer_atom_u32(Io_Vtable* io, u32* value, String name)
+{
+    u64 v = *value;
+    io_json_writer_atom_u64(io, &v, name);
+}
+
+inline void
+io_json_writer_atom_i8(Io_Vtable* io, i8* value, String name)
+{
+    i64 v = *value;
+    io_json_writer_atom_i64(io, &v, name);
+}
+
+inline void
+io_json_writer_atom_i16(Io_Vtable* io, i16* value, String name)
+{
+    i64 v = *value;
+    io_json_writer_atom_i64(io, &v, name);
+}
+
+inline void
+io_json_writer_atom_i32(Io_Vtable* io, i32* value, String name)
+{
+    i64 v = *value;
+    io_json_writer_atom_i64(io, &v, name);
+}
+
+function Io_Json_Writer
+io_json_writer_create(Memory_Region memory, int bytes_per_page, bool(*file_write_all_pb)(String, Push_Buffer const& pb))
+{
+    Io_Json_Writer result = {};
+    result.memory = memory;
+    result.ctx_stack = DynArray<Io_Json_Ctx>(memory);
+    EnsureCapacity(&result.ctx_stack, 16);
+
+    result.io_file = io_file_writer_create(memory, bytes_per_page, file_write_all_pb);
+    result.io_file.io_pb.vtable.begin = io_json_writer_begin;
+    result.io_file.io_pb.vtable.end = io_json_writer_end;
+    result.io_file.io_pb.vtable.object_begin = io_json_writer_object_begin;
+    result.io_file.io_pb.vtable.object_end = io_json_writer_object_end;
+    result.io_file.io_pb.vtable.array_begin_i32 = io_json_writer_array_begin_i32;
+    result.io_file.io_pb.vtable.array_begin_u32 = io_json_writer_array_begin_u32;
+    result.io_file.io_pb.vtable.array_end = io_json_writer_array_end;
+    result.io_file.io_pb.vtable.atom_u8 = io_json_writer_atom_u8;
+    result.io_file.io_pb.vtable.atom_u16 = io_json_writer_atom_u16;
+    result.io_file.io_pb.vtable.atom_u32 = io_json_writer_atom_u32;
+    result.io_file.io_pb.vtable.atom_u64 = io_json_writer_atom_u64;
+    result.io_file.io_pb.vtable.atom_i8 = io_json_writer_atom_i8;
+    result.io_file.io_pb.vtable.atom_i16 = io_json_writer_atom_i16;
+    result.io_file.io_pb.vtable.atom_i32 = io_json_writer_atom_i32;
+    result.io_file.io_pb.vtable.atom_i64 = io_json_writer_atom_i64;
+    result.io_file.io_pb.vtable.atom_string = io_json_writer_atom_string;
+    result.io_file.io_pb.vtable.atom_blob = io_atom_blob_nop;
+
+    return result;
+}
+
+
+// bool constexpr IO_PATCH = false;

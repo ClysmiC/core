@@ -565,7 +565,7 @@ IndexOfLast(String string, char c)
 }
 
 function bool
-IsEmpty(String string)
+string_is_empty(String string)
 {
     return (string.length == 0);
 }

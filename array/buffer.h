@@ -208,7 +208,7 @@ RemoveUnordered(DynArray<T>* array, T item)
 
 template <typename T>
 function bool
-IsEmpty(DynArray<T> array)
+array_is_empty(DynArray<T> array)
 {
     bool result = (array.count == 0);
     return result;
@@ -307,7 +307,7 @@ Append(BufferBuilder* builder, u32 value)
 function void
 AppendStringCopy(BufferBuilder* builder, String string)
 {
-    if (IsEmpty(string))
+    if (string_is_empty(string))
         return;
 
     u8* ptr = (u8*)AppendNewBytes(builder, string.length);
