@@ -5,10 +5,10 @@ struct Io_Vtable
     void (*begin)(Io_Vtable* io, String name);
     void (*end)(Io_Vtable* io);
 
-    void (*object_begin)(Io_Vtable* io, String name);
+    void (*object_begin)(Io_Vtable* io, String name, bool is_external);
     void (*object_end)(Io_Vtable* io);
-    void (*array_begin_i32)(Io_Vtable* io, i32* length, String name);
-    void (*array_begin_u32)(Io_Vtable* io, u32* length, String name);
+    void (*array_begin_i32)(Io_Vtable* io, i32* length, String name, bool is_external);
+    void (*array_begin_u32)(Io_Vtable* io, u32* length, String name, bool is_external);
     void (*array_end)(Io_Vtable* io);
 
     void (*atom_u8)(Io_Vtable* io, u8* value, String name);
@@ -32,10 +32,10 @@ struct Io_Vtable
 
 inline void io_begin_nop(Io_Vtable* io, String name) { return; }
 inline void io_end_nop(Io_Vtable* io) { return; }
-inline void io_object_begin_nop(Io_Vtable* io, String name) { return; }
+inline void io_object_begin_nop(Io_Vtable* io, String name, bool is_external) { return; }
 inline void io_object_end_nop(Io_Vtable* io) { return; }
-inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name) { return; }
-inline void io_array_begin_u32_nop(Io_Vtable* io, u32* length, String name) { return; }
+inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name, bool is_external) { return; }
+inline void io_array_begin_u32_nop(Io_Vtable* io, u32* length, String name, bool is_external) { return; }
 inline void io_array_end_nop(Io_Vtable* io) { return; }
 inline void io_atom_u8_nop(Io_Vtable* io, u8* value, String name) { return; }
 inline void io_atom_u16_nop(Io_Vtable* io, u16* value, String name) { return; }
@@ -95,14 +95,14 @@ struct Io_Push_Buffer
 };
 
 inline void
-io_pb_array_begin_i32(Io_Vtable* io_, i32* length, String name)
+io_pb_array_begin_i32(Io_Vtable* io_, i32* length, String name, bool is_external)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
     push_buffer_append(&io->pb, *length);
 }
 
 inline void
-io_pb_array_begin_u32(Io_Vtable* io_, u32* length, String name)
+io_pb_array_begin_u32(Io_Vtable* io_, u32* length, String name, bool is_external)
 {
     Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
     push_buffer_append(&io->pb, *length);
@@ -230,14 +230,14 @@ struct Io_Slice_Reader
 };
 
 inline void
-io_slice_array_begin_i32(Io_Vtable* io_, i32* length, String name)
+io_slice_array_begin_i32(Io_Vtable* io_, i32* length, String name, bool is_external)
 {
     Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
     *length = *slice_read<i32>(&io->reader);
 }
 
 inline void
-io_slice_array_begin_u32(Io_Vtable* io_, u32* length, String name)
+io_slice_array_begin_u32(Io_Vtable* io_, u32* length, String name, bool is_external)
 {
     Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
     *length = *slice_read<u32>(&io->reader);
@@ -460,7 +460,7 @@ io_json_writer_indent(Io_Json_Writer* io_json, int indent_delta=0)
 }
 
 function void
-io_json_writer_object_begin(Io_Vtable* io, String name)
+io_json_writer_object_begin(Io_Vtable* io, String name, bool is_external)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
 
@@ -528,7 +528,7 @@ io_json_writer_object_end(Io_Vtable* io)
 }
 
 function void
-io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name)
+io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
 
@@ -574,9 +574,9 @@ io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name)
 }
 
 function void
-io_json_writer_array_begin_u32(Io_Vtable* io, u32* length, String name)
+io_json_writer_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
 {
-    io_json_writer_array_begin_i32(io, nullptr, name);
+    io_json_writer_array_begin_i32(io, nullptr, name, is_external);
 }
 
 function void
