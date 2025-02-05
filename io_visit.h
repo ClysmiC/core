@@ -403,6 +403,7 @@ io_file_writer_create(Memory_Region memory, int bytes_per_page, bool(*file_write
 }
 
 
+
 // --- I/O visitor that writes to a json file
 
 struct Io_Json_Ctx
@@ -422,6 +423,7 @@ struct Io_Json_Writer
 {
     Io_File_Writer io_file;
     DynArray<Io_Json_Ctx> ctx_stack;
+    int bytes_per_page;
     Memory_Region memory;
 };
 
@@ -809,6 +811,184 @@ io_json_writer_create(Memory_Region memory, int bytes_per_page, bool(*file_write
     result.io_file.io_pb.vtable.atom_string = io_json_writer_atom_string;
     result.io_file.io_pb.vtable.atom_blob = io_atom_blob_nop;
 
+    return result;
+}
+
+
+
+// --- I/O visitor that writes to one or more JSON files.
+//      Specific objects/arrays can be written as external JSON files.
+
+struct Io_Json_Writer_Ext
+{
+    Io_Vtable vtable;
+    DynArray<Io_Json_Writer> writer_stack;
+};
+
+function Io_Json_Writer
+io_json_writer_ext_push_new_writer(Io_Json_Writer_Ext* iox, Io_Json_Writer const& writer_template, String name)
+{
+    Io_Json_Writer result = io_json_writer_create(
+                                writer_template.io_file.io_pb.pb.memory,
+                                writer_template.io_file.io_pb.pb.pages->capacity_b,
+                                writer_template.io_file.file_write_all_pb);
+
+    Append(&iox->writer_stack, result);
+    io_json_writer_begin((Io_Vtable*)array_peek_last(&iox->writer_stack), name);
+    return result;
+}
+
+function void
+io_json_writer_ext_pop_writer(Io_Json_Writer_Ext* iox)
+{
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_end((Io_Vtable*)io_json);
+    array_remove_last(&iox->writer_stack);
+}
+
+function void
+io_json_writer_ext_object_begin(Io_Vtable* io, String name, bool is_external)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    if (is_external)
+    {
+        io_json_writer_ext_push_new_writer(iox, *array_peek_last(&iox->writer_stack), name);
+    }
+
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_object_begin((Io_Vtable*)io_json, name, is_external);
+}
+
+function void
+io_json_writer_ext_object_end(Io_Vtable* io)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_object_end((Io_Vtable*)io_json);
+
+    // NOTE - the bottom writer on the stack gets popped by end(..),
+    //  to be more symmetrical with it's initialized in create(..)
+    // HMM - maybe we just force the root object/array's is_external param to true,
+    //  then we can just rely on that and not this weird create/end logic.
+    if (iox->writer_stack.count > 1 &&
+        io_json->ctx_stack.count == 0)
+    {
+        io_json_writer_ext_pop_writer(iox);
+    }
+}
+
+function void
+io_json_writer_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    if (is_external)
+    {
+        io_json_writer_ext_push_new_writer(iox, *array_peek_last(&iox->writer_stack), name);
+    }
+
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_array_begin_i32((Io_Vtable*)io_json, length, name, is_external);
+}
+
+function void
+io_json_writer_ext_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+{
+    io_json_writer_ext_array_begin_i32(io, nullptr, name, is_external);
+}
+
+function void
+io_json_writer_ext_array_end(Io_Vtable* io)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_array_end((Io_Vtable*)io_json);
+
+    // NOTE - the bottom writer on the stack gets popped by end(..),
+    //  to be more symmetrical with it's initialized in create(..)
+    // HMM - maybe we just force the root object/array's is_external param to true,
+    //  then we can just rely on that and not this weird create/end logic.
+    if (iox->writer_stack.count > 1 &&
+        io_json->ctx_stack.count == 0)
+    {
+        io_json_writer_ext_pop_writer(iox);
+    }
+}
+
+#define IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(type)                            \
+inline void                                                                     \
+io_json_writer_ext_atom_##type(Io_Vtable* io, type* value, String name)         \
+{                                                                               \
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;                          \
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);              \
+    io_json_writer_atom_##type((Io_Vtable*)io_json, value, name);               \
+}
+
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(u8)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(u16)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(u32)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(u64)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i8)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i16)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i32)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i64)
+#undef IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER
+
+inline void
+io_json_writer_ext_atom_string(Io_Vtable* io, String* value, Memory_Region memory, String name)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
+    io_json_writer_atom_string((Io_Vtable*)io_json, value, memory, name);
+}
+
+function void
+io_json_writer_ext_begin(Io_Vtable* io, String name)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+
+    // A writer is already pushed to the stack from create(..)
+    ASSERT(iox->writer_stack.count == 1);
+    io_json_writer_begin((Io_Vtable*)array_peek_last(&iox->writer_stack), name);
+}
+
+function void
+io_json_writer_ext_end(Io_Vtable* io)
+{
+    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    io_json_writer_end((Io_Vtable*)array_peek_last(&iox->writer_stack));
+
+    ASSERT(iox->writer_stack.count == 1);
+    array_remove_last(&iox->writer_stack);
+    ASSERT(iox->writer_stack.count == 0);
+}
+
+function Io_Json_Writer_Ext
+io_json_writer_ext_create(Memory_Region memory, int bytes_per_page, bool(*file_write_all_pb)(String, Push_Buffer const& pb))
+{
+    Io_Json_Writer_Ext result = {};
+    result.writer_stack = DynArray<Io_Json_Writer>(memory);
+
+    // NOTE - Creating the first writer in the stack here, rather than begin(..), since we have the params we need
+    Append(&result.writer_stack, io_json_writer_create(memory, bytes_per_page, file_write_all_pb));
+
+    result.vtable.begin = io_json_writer_ext_begin;
+    result.vtable.end = io_json_writer_ext_end;
+    result.vtable.object_begin = io_json_writer_ext_object_begin;
+    result.vtable.object_end = io_json_writer_ext_object_end;
+    result.vtable.array_begin_i32 = io_json_writer_ext_array_begin_i32;
+    result.vtable.array_begin_u32 = io_json_writer_ext_array_begin_u32;
+    result.vtable.array_end = io_json_writer_ext_array_end;
+    result.vtable.atom_u8 = io_json_writer_ext_atom_u8;
+    result.vtable.atom_u16 = io_json_writer_ext_atom_u16;
+    result.vtable.atom_u32 = io_json_writer_ext_atom_u32;
+    result.vtable.atom_u64 = io_json_writer_ext_atom_u64;
+    result.vtable.atom_i8 = io_json_writer_ext_atom_i8;
+    result.vtable.atom_i16 = io_json_writer_ext_atom_i16;
+    result.vtable.atom_i32 = io_json_writer_ext_atom_i32;
+    result.vtable.atom_i64 = io_json_writer_ext_atom_i64;
+    result.vtable.atom_string = io_json_writer_ext_atom_string;
+    result.vtable.atom_blob = io_atom_blob_nop;
+    result.vtable.is_deserializing = io_return_false;
     return result;
 }
 
