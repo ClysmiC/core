@@ -1,7 +1,18 @@
 // Polymorphic "visitor" pattern for (de)serialization
 
+enum class Io_Visitor_Flags : u64
+{
+    NIL = 0,
+
+    DESERIALIZING   = 1 << 0,
+    TEXT            = 1 << 1
+};
+DefineFlagOps(Io_Visitor_Flags, u64);
+
 struct Io_Vtable
 {
+    Io_Visitor_Flags flags;
+
     void (*begin)(Io_Vtable* io, String name);
     void (*end)(Io_Vtable* io);
 
@@ -21,9 +32,6 @@ struct Io_Vtable
     void (*atom_i64)(Io_Vtable* io, i64* value, String name);
     void (*atom_string)(Io_Vtable* io, String* value, Memory_Region memory, String name);
     void (*atom_blob)(Io_Vtable* io, Slice<u8> bytes, String name);
-
-    // HMM -- just use a shared variable for this instead of a virtual function call?
-    bool (*is_deserializing)(Io_Vtable* io);
 
     // TODO
     // void error(u32 error_code);
@@ -64,6 +72,7 @@ inline bool io_supports_blob(Io_Vtable* io)
 }
 
 static Io_Vtable const IO_VTABLE_NOP = {
+    Io_Visitor_Flags::NIL,
     io_begin_nop,
     io_end_nop,
     io_object_begin_nop,
@@ -81,7 +90,6 @@ static Io_Vtable const IO_VTABLE_NOP = {
     io_atom_i64_nop,
     io_atom_string_nop,
     io_atom_blob_nop,
-    io_return_false,    // is_deserializing
 };
 
 
@@ -180,7 +188,7 @@ io_pb_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String na
     io_pb_atom_i32(io_, (i32*)&value->length, {});
 
     Slice<u8> blob;
-    if (io_->is_deserializing(io_))
+    if (IsFlagSet(io_->flags, Io_Visitor_Flags::DESERIALIZING))
     {
         blob.items = (u8*)allocate(memory, value->length);
         blob.count = value->length;
@@ -315,7 +323,7 @@ io_slice_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String
     io_slice_atom_i32(io_, (i32*)&value->length, {});
 
     Slice<u8> blob;
-    if (io_->is_deserializing(io_))
+    if (IsFlagSet(io_->flags, Io_Visitor_Flags::DESERIALIZING))
     {
         blob.items = (u8*)allocate(memory, value->length);
         blob.count = value->length;
@@ -345,6 +353,7 @@ io_slice_reader_create(Slice<u8> const& slice)
 
     Io_Slice_Reader result;
     result.vtable = IO_VTABLE_NOP;
+    result.vtable.flags |= Io_Visitor_Flags::DESERIALIZING;
     result.vtable.end = io_slice_end;
     result.vtable.array_begin_i32 = io_slice_array_begin_i32;
     result.vtable.array_begin_u32 = io_slice_array_begin_u32;
@@ -358,7 +367,6 @@ io_slice_reader_create(Slice<u8> const& slice)
     result.vtable.atom_i64 = io_slice_atom_i64;
     result.vtable.atom_string = io_slice_atom_string;
     result.vtable.atom_blob = io_slice_atom_blob;
-    result.vtable.is_deserializing = io_return_true;
     result.reader = slice_reader_create(slice);
     return result;
 }
@@ -988,7 +996,6 @@ io_json_writer_ext_create(Memory_Region memory, int bytes_per_page, bool(*file_w
     result.vtable.atom_i64 = io_json_writer_ext_atom_i64;
     result.vtable.atom_string = io_json_writer_ext_atom_string;
     result.vtable.atom_blob = io_atom_blob_nop;
-    result.vtable.is_deserializing = io_return_false;
     return result;
 }
 
