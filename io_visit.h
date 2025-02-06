@@ -103,103 +103,92 @@ struct Io_Push_Buffer
 };
 
 inline void
-io_pb_array_begin_i32(Io_Vtable* io_, i32* length, String name, bool is_external)
+io_pb_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *length);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *length);
 }
 
 inline void
-io_pb_array_begin_u32(Io_Vtable* io_, u32* length, String name, bool is_external)
+io_pb_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *length);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *length);
 }
 
 inline void
-io_pb_atom_u8(Io_Vtable* io_, u8* value, String name)
+io_pb_atom_u8(Io_Vtable* io, u8* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_u16(Io_Vtable* io_, u16* value, String name)
+io_pb_atom_u16(Io_Vtable* io, u16* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_u32(Io_Vtable* io_, u32* value, String name)
+io_pb_atom_u32(Io_Vtable* io, u32* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_u64(Io_Vtable* io_, u64* value, String name)
+io_pb_atom_u64(Io_Vtable* io, u64* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_i8(Io_Vtable* io_, i8* value, String name)
+io_pb_atom_i8(Io_Vtable* io, i8* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_i16(Io_Vtable* io_, i16* value, String name)
+io_pb_atom_i16(Io_Vtable* io, i16* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 inline void
-io_pb_atom_i32(Io_Vtable* io_, i32* value, String name)
+io_pb_atom_i32(Io_Vtable* io, i32* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
-}
-
-inline void
-io_pb_atom_i64(Io_Vtable* io_, i64* value, String name)
-{
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    push_buffer_append(&io->pb, *value);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
 }
 
 inline void
-io_pb_atom_blob(Io_Vtable* io_, Slice<u8> bytes, String name)
+io_pb_atom_i64(Io_Vtable* io, i64* value, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
-    u8* dst = (u8*)push_buffer_append_new_bytes(&io->pb, bytes.count);
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
+}
+
+inline void
+io_pb_atom_blob(Io_Vtable* io, Slice<u8> bytes, String name)
+{
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    u8* dst = (u8*)push_buffer_append_new_bytes(&io_pb->pb, bytes.count);
     mem_copy(dst, bytes.items, bytes.count);
 }
 
 inline void
-io_pb_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String name)
+io_pb_atom_string(Io_Vtable* io, String* value, Memory_Region memory, String name)
 {
-    Io_Push_Buffer* io = (Io_Push_Buffer*)io_;
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
     Slice<u8> value_bytes = slice_create(*value);
 
-    io_pb_atom_i32(io_, (i32*)&value->length, {});
+    io_pb_atom_i32(io, (i32*)&value->length, {});
 
-    Slice<u8> blob;
-    if (IsFlagSet(io_->flags, Io_Visitor_Flags::DESERIALIZING))
-    {
-        blob.items = (u8*)allocate(memory, value->length);
-        blob.count = value->length;
-        value->data = blob.items;
-    }
-    else
-    {
-        blob = slice_create(*value);
-    }
-
-    io_pb_atom_blob(io_, blob, {});
+    Slice<u8> blob = slice_create(*value);
+    io_pb_atom_blob(io, blob, {});
 }
 
 function Io_Push_Buffer
@@ -238,110 +227,103 @@ struct Io_Slice_Reader
 };
 
 inline void
-io_slice_reader_array_begin_i32(Io_Vtable* io_, i32* length, String name, bool is_external)
+io_slice_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *length = *slice_read<i32>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *length = *slice_read<i32>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_array_begin_u32(Io_Vtable* io_, u32* length, String name, bool is_external)
+io_slice_reader_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *length = *slice_read<u32>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *length = *slice_read<u32>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_u8(Io_Vtable* io_, u8* value, String name)
+io_slice_reader_atom_u8(Io_Vtable* io, u8* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<u8>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<u8>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_u16(Io_Vtable* io_, u16* value, String name)
+io_slice_reader_atom_u16(Io_Vtable* io, u16* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<u16>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<u16>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_u32(Io_Vtable* io_, u32* value, String name)
+io_slice_reader_atom_u32(Io_Vtable* io, u32* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<u32>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<u32>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_u64(Io_Vtable* io_, u64* value, String name)
+io_slice_reader_atom_u64(Io_Vtable* io, u64* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<u64>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<u64>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_i8(Io_Vtable* io_, i8* value, String name)
+io_slice_reader_atom_i8(Io_Vtable* io, i8* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<i8>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<i8>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_i16(Io_Vtable* io_, i16* value, String name)
+io_slice_reader_atom_i16(Io_Vtable* io, i16* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<i16>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<i16>(&io_slice->reader);
 }
 inline void
-io_slice_reader_atom_i32(Io_Vtable* io_, i32* value, String name)
+io_slice_reader_atom_i32(Io_Vtable* io, i32* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<i32>(&io->reader);
-}
-
-inline void
-io_slice_reader_atom_i64(Io_Vtable* io_, i64* value, String name)
-{
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    *value = *slice_read<i64>(&io->reader);
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<i32>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_atom_blob(Io_Vtable* io_, Slice<u8> io_bytes, String name)
+io_slice_reader_atom_i64(Io_Vtable* io, i64* value, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<i64>(&io_slice->reader);
+}
+
+inline void
+io_slice_reader_atom_blob(Io_Vtable* io, Slice<u8> io_bytes, String name)
+{
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
 
     // TODO - bounds check
-    u8* src = (u8*)slice_read_bytes(&io->reader, io_bytes.count);
+    u8* src = (u8*)slice_read_bytes(&io_slice->reader, io_bytes.count);
     mem_copy(io_bytes.items, src, io_bytes.count);
 }
 
 inline void
-io_slice_reader_atom_string(Io_Vtable* io_, String* value, Memory_Region memory, String name)
+io_slice_reader_atom_string(Io_Vtable* io, String* value, Memory_Region memory, String name)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    io_slice_reader_atom_i32(io_, (i32*)&value->length, {});
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    io_slice_reader_atom_i32(io, (i32*)&value->length, {});
 
     Slice<u8> blob;
-    if (IsFlagSet(io_->flags, Io_Visitor_Flags::DESERIALIZING))
-    {
-        blob.items = (u8*)allocate(memory, value->length);
-        blob.count = value->length;
-        value->data = blob.items;
-    }
-    else
-    {
-        blob = slice_create(*value);
-    }
+    blob.items = (u8*)allocate(memory, value->length);
+    blob.count = value->length;
+    value->data = blob.items;
 
-    io_slice_reader_atom_blob(io_, blob, {});
+    io_slice_reader_atom_blob(io, blob, {});
 }
 
 inline void
-io_slice_reader_end(Io_Vtable* io_)
+io_slice_reader_end(Io_Vtable* io)
 {
-    Io_Slice_Reader* io = (Io_Slice_Reader*)io_;
-    ASSERT(slice_reader_is_finished(io->reader));
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    ASSERT(slice_reader_is_finished(io_slice->reader));
 }
 
 function Io_Slice_Reader
