@@ -78,7 +78,7 @@ string_create(Slice<u8> slice)
 struct Slice_Reader
 {
     Slice<u8> buffer;
-    uintptr bytes_read;
+    i32 bytes_read;
 };
 
 function Slice_Reader

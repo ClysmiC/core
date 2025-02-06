@@ -202,7 +202,7 @@ CopySubstring(
 }
 
 function void
-StringConcat(
+string_concat(
     const char* srcA,
     const char* srcB,
     char* dst,
@@ -267,7 +267,7 @@ StringInsert(
 }
 
 function String
-StringConcat(String srcA, String srcB, Memory_Region memory)
+string_concat(String srcA, String srcB, Memory_Region memory)
 {
     String result;
     result.length = srcA.length + srcB.length;
