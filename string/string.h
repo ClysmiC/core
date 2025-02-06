@@ -543,22 +543,24 @@ StringFromPrintf(Memory_Region memory, int lengthBuffer, char const* fmt, ...)
 }
 
 function int
-IndexOfFirst(String string, char c)
+string_index_of_first(String string, char c)
 {
     for (int iByte = 0; iByte < string.length; iByte++)
     {
-        if (string[iByte] == c) return iByte;
+        if (string[iByte] == c)
+            return iByte;
     }
 
     return -1;
 }
 
 function int
-IndexOfLast(String string, char c)
+string_index_of_last(String string, char c)
 {
     for (int iByte = string.length - 1; iByte >= 0; iByte--)
     {
-        if (string[iByte] == c) return iByte;
+        if (string[iByte] == c)
+            return iByte;
     }
 
     return -1;
@@ -576,7 +578,7 @@ GetDirectoryFromFullFilename(String fullFilename)
 {
     String result = {};
 
-    int iLastSlash = max(IndexOfLast(fullFilename, '\\'), IndexOfLast(fullFilename, '/'));
+    int iLastSlash = max(string_index_of_last(fullFilename, '\\'), string_index_of_last(fullFilename, '/'));
 
     if (iLastSlash < 0) return result;
 

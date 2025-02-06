@@ -11,8 +11,8 @@ struct DynArray
     DynArray<T>() = default;
     explicit DynArray<T>(Memory_Region memory) { *this = {}; this->memory = memory; }
 
-    T* begin() { return items; }
-    T* end()   { return items + count; }
+    T* begin() const { return items; }
+    T* end() const { return items + count; }
     T& operator[](int iItem) const { return items[iItem]; }
 
     // HMM - This isn't an obvious overload, but it makes it work the same way as a raw ptr, which I like
