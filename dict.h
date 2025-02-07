@@ -27,7 +27,7 @@ static const uint8_t s_infoHashMsbs            = 0b11000000;
 // 1 bit indicates whether the bucket is full or empty
 
 static const uint8_t s_infoOccupiedMask        = 0b00100000;
-}
+} // namespace AlsHash
 
 // FNV-1a : http://www.isthe.com/chongo/tech/comp/fnv/
 function unsigned int
@@ -104,8 +104,8 @@ struct HashMap
     Bucket* pBuffer;
     int32_t cCapacity;
 
-    uint32_t (*hashFn)(const K & key);
-    bool (*equalFn)(const K & key0, const K & key1);
+    uint32_t (*hashFn)(K const& key);
+    bool (*equalFn)(K const& key0, K const& key1);
 };
 
 template <typename K, typename V>
@@ -171,7 +171,7 @@ HashMapIter<K, V> Iter(const HashMap<K, V> & hashmap)
 template <typename K, typename V>
 V * InsertNew(
     HashMap<K, V> * pHashmap,
-    const K & key,
+    K const& key,
     K ** ppoKeyInTable=nullptr)        // Only really useful for BiHashMap... don't set this in most cases!
 {
     typedef HashMap<K, V> hm;
@@ -311,7 +311,7 @@ V * InsertNew(
 template <typename K, typename V>
 void Insert(
     HashMap<K, V> * pHashmap,
-    const K & key,
+    K const& key,
     const V & value,
     K ** ppoKeyInTable=nullptr)        // Only really useful for BiHashMap... don't set this in most cases!
 {
@@ -333,7 +333,7 @@ enum class HashOp : uint8_t
 template <typename K, typename V>
 function bool AlsHashHelper_(
     HashMap<K, V> * pHashmap,
-    const K & key,
+    K const& key,
     HashOp hashopk,
     const V * pValueNew=nullptr,
     V ** ppoValueLookup=nullptr,
@@ -436,7 +436,7 @@ function bool AlsHashHelper_(
 template <typename K, typename V>
 V * Lookup(
     const HashMap<K, V> & pHashmap,
-    const K & key,
+    K const& key,
     K ** ppoKeyFound=nullptr)        // Only really useful for BiHashMap... don't set this in most cases!
 {
     V * pResult = nullptr;
@@ -457,7 +457,7 @@ V * Lookup(
 template <typename K, typename V>
 bool Remove(
     HashMap<K, V> * pHashmap,
-    const K & key,
+    K const& key,
     V * poValueRemoved=nullptr)
 {
     return AlsHashHelper_(
@@ -474,7 +474,7 @@ bool Remove(
 template <typename K, typename V>
 bool Update(
     HashMap<K, V> * pHashmap,
-    const K & key,
+    K const& key,
     const V & value)
 {
     return AlsHashHelper_(
@@ -535,8 +535,8 @@ void GrowHashmap(
 template <typename K, typename V>
 void Init(
     HashMap<K, V> * pHashmap,
-    uint32_t (*hashFn)(const K & key),
-    bool (*equalFn)(const K & key0, const K & key1),
+    uint32_t (*hashFn)(K const& key),
+    bool (*equalFn)(K const& key0, K const& key1),
     unsigned int startingCapacity=AlsHash::s_neighborhoodSize)
 {
     // Starting capacity can't be smaller than neighborhood size
@@ -567,4 +567,134 @@ void Dispose(HashMap<K, V> * pHashmap)
 {
     if (pHashmap->pBuffer) free(pHashmap->pBuffer);
     pHashmap->pBuffer = nullptr;
+}
+
+
+// Credit: JBlow
+//  https://pastebin.com/xMUQXshn
+
+template <typename K, typename V>
+struct Dict
+{
+    struct Kvp
+    {
+        static u32 constexpr HASH_UNOCCUPIED = 0;
+        static u32 constexpr HASH_REMOVED = 1;
+        static u32 constexpr HASH_VALID_MIN = 2;
+
+        u32 hash;
+        K key;
+        V value;
+    };
+
+    u32 max_load_factor;    // Percentage, 1-99
+    i32 count;              // Valid item count
+    i32 count_filled;       // Valid + removed item count. Need to remember removed items when linear probing.
+    i32 capacity;           // Size of backing array. Grows when max_load_factor is exceeded.
+
+    // User provided functions
+    u32 (*key_hash)(K const& key);
+    bool (*key_eq)(K const& key0, K const& key1);
+
+    Memory_Region memory;
+    Kvp* items;
+};
+
+// Adds the KVP to the table without testing existing keys for equality while probing.
+//  i.e., This function has no qualms about adding a duplicate key. Use wisely!
+template <typename K, typename V>
+function void
+dict_add_unchecked(Dict<K, V>* dict, K const& key, V const& value)
+{
+    using Kvp = Dict<K, V>::Kvp;
+
+    dict_ensure_capacity(dict, dict->count_filled + 1);
+
+    u32 hash = dict->key_hash(key);
+    if (hash < Kvp::HASH_VALID_MIN) hash += Kvp::HASH_VALID_MIN;
+
+    u32 mask = dict->capacity - 1;
+    i32 index = hash & mask;
+
+    while (true)
+    {
+        if (dict->items[index].hash == Kvp::HASH_UNOCCUPIED)
+            break;
+
+        if (dict->items[index].hash == Kvp::HASH_REMOVED)
+        {
+            dict->count_filled--;    // remove the HASH_REMOVED, we'll increment this right back below
+            break;
+        }
+
+        // HMM - consider quadratic probing with "triangular numbers"
+        // https://fgiesen.wordpress.com/2015/02/22/triangular-numbers-mod-2n/
+        // TODO - enforce power of 2 capacity and use & instead of %
+        index = (index + 1) & mask;
+    }
+
+    dict->items[index] = { hash, key, value };
+    dict->count++;
+    dict->count_filled++;
+}
+
+// Grows the table so that it can store at least this many items within its load factor
+template <typename K, typename V>
+function void
+dict_ensure_capacity(Dict<K, V>* dict, i32 capacity)
+{
+    using Kvp = Dict<K, V>::Kvp;
+
+    Slice<Kvp> old_items = slice_create(dict->items, dict->capacity);
+
+    i32 new_capacity = max(dict->capacity, capacity);
+    new_capacity = u32_ceil_power_of_2(new_capacity);
+
+    while (new_capacity * dict->max_load_factor < capacity * 100)
+    {
+        new_capacity *= 2;
+    }
+
+    if (dict->capacity >= new_capacity)
+        return;
+
+    dict->items = allocate_tracked(dict->memory, new_capacity * sizeof(Kvp));
+    dict->count = 0;
+    dict->count_filled = 0;
+    dict->capacity = new_capacity;
+
+    for (Kvp const& kvp: old_items)
+    {
+        if (kvp.hash >= Kvp::HASH_VALID_MIN)
+        {
+            dict_add_unchecked(dict, kvp.key, kvp.value);
+        }
+    }
+}
+
+template <typename K, typename V>
+function void
+dict_set(Dict<K, V>* dict, K const& key, V const& value)
+{
+    // TODO
+}
+
+template <typename K, typename V>
+function Dict<K, V>
+dict_create(
+    Memory_Region memory,
+    i32 starting_capacity,
+    u32 (*key_hash)(K const& key),
+    bool (*key_eq)(K const& key0, K const& key1)
+{
+    i32 constexpr MIN_STARTING_CAPACITY = 16;
+    starting_capacity = max(starting_capacity, MIN_STARTING_CAPACITY);
+
+    Dict<K, V> result = {};
+    result.max_load_factor = 70;
+    result.key_hash = key_hash;
+    result.key_eq = key_eq;
+    result.memory = memory;
+    dict_ensure_capacity(&result, starting_capacity);
+    return result;
 }

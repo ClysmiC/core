@@ -282,4 +282,59 @@ RotateRight(u32 value, int shift)
 }
 #endif
 
+// Credit: Hacker's Delight, Chapter 3 Section 2 - Rounding Up/Down to the Next Power of 2
+// https://github.com/hcs0/Hackers-Delight/blob/master/clp2.c.txt
+inline u32
+u32_ceil_power_of_2(u32 x)
+{
+    x--;
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    x++;
+    return x;
+}
+
+inline u64
+u64_ceil_power_of_2(u64 x)
+{
+    x--;
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    x |= (x >> 32);
+    x++;
+    return x;
+}
+
+// https://github.com/hcs0/Hackers-Delight/blob/master/flp2.c.txt
+inline u32
+u32_floor_power_of_2(u32 x)
+{
+   x |= (x >> 1);
+   x |= (x >> 2);
+   x |= (x >> 4);
+   x |= (x >> 8);
+   x |= (x >> 16);
+   x -= (x >> 1);
+   return x;
+}
+
+inline u64
+u64_floor_power_of_2(u64 x)
+{
+   x |= (x >> 1);
+   x |= (x >> 2);
+   x |= (x >> 4);
+   x |= (x >> 8);
+   x |= (x >> 16);
+   x |= (x >> 32);
+   x -= (x >> 1);
+   return x;
+}
+
 DEBUG_OPTIMIZE_OFF
