@@ -22,6 +22,8 @@
  #define ENABLE_ASSERT BUILD_DEBUG
 #endif
 
+//#define DO_WHILE0(STATEMENT) do { STATEMENT } while(0)
+
 // TODO - Better way to force breakpoint
 #if COMPILER_MSVC
  #define FORCE_BREAKPOINT() __debugbreak()
@@ -29,10 +31,8 @@
  #define FORCE_BREAKPOINT() (*(int*)0 = 0)
 #endif
 
-#define DO_WHILE0(STATEMENT) do { STATEMENT } while(0)
-
 #if BUILD_DEBUG && ENABLE_ASSERT
- #define ASSERT(EXPRESSION) DO_WHILE0(if (!(EXPRESSION)) { FORCE_BREAKPOINT(); })
+ #define ASSERT(EXPRESSION) ((EXPRESSION) ? true : (FORCE_BREAKPOINT(), false))
 #else
  #define ASSERT(EXPRESSION)
 #endif
@@ -43,13 +43,12 @@
 #define ASSERT_WARN(EXPRESSION) ASSERT(EXPRESSION)
 
 
-// TODO - implement these, or remove them...
-#if BUILD_DEBUG
- #define VERIFY(expression) (bool)(expression)
- #define VERIFY_WARN(expression) (bool)(expression)
+#if BUILD_DEBUG && ENABLE_ASSERT
+  #define VERIFY(expression) ASSERT(expression)
+  #define VERIFY_WARN(expression) ASSERT(expression)
 #else
- #define VERIFY(expression) expression
- #define VERIFY_WARN(expression) expression
+ #define VERIFY(expression) (expression)
+ #define VERIFY_WARN(expression) (expression)
 #endif
 
 // TODO - more informative error...

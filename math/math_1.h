@@ -6,8 +6,8 @@
 // - sollya
 
 // @Cleanup
-#define IncrementIfZero(value) DO_WHILE0((value) = (decltype(value))((value) + !bool(value));)
-#define DecrementIfNonZero(value) DO_WHILE0((value) = (decltype(value))((value) - bool(value));)
+#define IncrementIfZero(value) do {(value) = (decltype(value))((value) + !bool(value));} while(0)
+#define DecrementIfNonZero(value) do {(value) = (decltype(value))((value) - bool(value));} while(0)
 
 struct Range
 {
