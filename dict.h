@@ -673,10 +673,100 @@ dict_ensure_capacity(Dict<K, V>* dict, i32 capacity)
 }
 
 template <typename K, typename V>
+function typename Dict<K, V>::Kvp*
+dict_find_kvp_ptr(Dict<K, V>* dict, K const& key)
+{
+    using Kvp = Dict<K, V>::Kvp;
+
+    if (dict->capacity <= 0)
+    {
+        ASSERT_FALSE_WARN;
+        return nullptr;
+    }
+
+    u32 hash = dict->key_hash(key);
+    if (hash < Kvp::HASH_VALID_MIN) hash += Kvp::HASH_VALID_MIN;
+
+    u32 mask = dict->capacity - 1;
+    i32 index = hash & mask;
+
+    Kvp* result = nullptr;
+    while (true)
+    {
+        if (dict->items[index].hash == Kvp::HASH_UNOCCUPIED)
+            break;
+
+        if (dict->items[index].hash == hash &&
+            dict->key_eq(dict->items[index].key, key))
+        {
+            result = dict->items + index;
+            break;
+        }
+
+        // HMM - consider quadratic probing with "triangular numbers"
+        // https://fgiesen.wordpress.com/2015/02/22/triangular-numbers-mod-2n/
+        // TODO - enforce power of 2 capacity and use & instead of %
+        index = (index + 1) & mask;
+    }
+
+    return result;
+}
+
+template <typename K, typename V>
+function V*
+dict_find_ptr(Dict<K, V>* dict, K const& key)
+{
+    V* result = nullptr;
+    if (Dict<K, V>::Kvp* kvp = dict_find_kvp_ptr(dict, key))
+    {
+        result = &kvp->value;
+    }
+    return result;
+}
+
+template <typename K, typename V>
+function V
+dict_find(Dict<K, V>* dict, K const& key, bool* success)
+{
+    if (V* result = dict_find_ptr(dict, key))
+    {
+        *success = true;
+        return *result;
+    }
+
+    *success = false;
+    return V{};
+}
+
+template <typename K, typename V>
 function void
 dict_set(Dict<K, V>* dict, K const& key, V const& value)
 {
-    // TODO
+    if (V* value_ptr = dict_find_ptr(dict, key))
+    {
+        *value_ptr = value;
+    }
+    else
+    {
+        dict_add_unchecked(dict, key, value);
+    }
+}
+
+template <typename K, typename V>
+function bool
+dict_remove(Dict<K, V>* dict, K const& key)
+{
+    using Kvp = Dict<K, V>::Kvp;
+
+    if (Kvp* kvp_ptr = dict_find_kvp_ptr(dict, key))
+    {
+        kvp_ptr->hash = Kvp::HASH_REMOVED;
+        dict->count--;
+        // HMM - should we return the removed value?
+        return true;
+    }
+
+    return false;
 }
 
 template <typename K, typename V>
@@ -685,7 +775,7 @@ dict_create(
     Memory_Region memory,
     i32 starting_capacity,
     u32 (*key_hash)(K const& key),
-    bool (*key_eq)(K const& key0, K const& key1)
+    bool (*key_eq)(K const& key0, K const& key1))
 {
     i32 constexpr MIN_STARTING_CAPACITY = 16;
     starting_capacity = max(starting_capacity, MIN_STARTING_CAPACITY);
