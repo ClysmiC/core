@@ -208,9 +208,9 @@ dict_ensure_capacity(Dict<K, V>* dict, i32 capacity)
     dict->capacity = new_capacity;
 
     // Clear all new slots to unoccupied
-    for (Kvp& kvp: slice_create(dict->items, dict->capacity))
+    for (Kvp* kvp: ByPtr(slice_create(dict->items, dict->capacity)))
     {
-        kvp.hash = Kvp::HASH_UNOCCUPIED;
+        kvp->hash = Kvp::HASH_UNOCCUPIED;
     }
 
     // Re-add old items
