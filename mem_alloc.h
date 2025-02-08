@@ -462,6 +462,9 @@ allocate_tracked_from_region(Region_Header* region, uintptr byte_count)
 function void
 free_tracked_allocation_from_region(Region_Header* region, void* allocation)
 {
+    if (!allocation)
+        return;
+
     Tracked_Block_Header* tracked_header = (Tracked_Block_Header*)((u8*)allocation - sizeof(Tracked_Block_Header));
     ASSERT(tracked_header->state == Tracked_State::ALLOCATED);
     debug_validate_left_and_right(tracked_header);

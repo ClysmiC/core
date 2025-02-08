@@ -8,6 +8,8 @@ struct Slice
 
     T* begin() { return items; }
     T* end()   { return items + count; }
+    T const* begin() const { return items; }
+    T const* end() const { return items + count; }
     T& operator[](int iItem) const { return items[iItem]; }
     bool operator == (const Slice & other) { return other.items == items && other.count == count; }
 
