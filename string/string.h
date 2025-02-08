@@ -28,12 +28,21 @@ struct String
     u8 & operator[](int i) const { return data[i]; }
 };
 
-function String
+inline String
 string_create(u8* data, int length)
 {
     String result;
     result.data = data;
-    result.length = length;
+    result.length = max(0, length);
+    return result;
+}
+
+inline String
+string_create_empty()
+{
+    String result;
+    result.data = nullptr;
+    result.length = 0;
     return result;
 }
 
@@ -314,6 +323,7 @@ string_hash_lowercase(String const& str)
     // @Slow
     for (int i = 0; i < str.length; i++)
     {
+        // TODO - this isn't even forcing to lowercase? Uh... don't trust this code.
         result = BuildHash((void*)(str.data + i), 1, result);
     }
 
@@ -364,11 +374,11 @@ string_eq(String const& str0, String const& str1)
         if (*cursor0 != *cursor1)
             return false;
 
-        *cursor0++;
-        *cursor1++;
+        cursor0++;
+        cursor1++;
     }
 
-    return (cursor0 == endCursor0) && (cursor1 == endCursor1);
+    return true;
 }
 
 function char
