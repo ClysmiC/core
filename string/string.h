@@ -40,6 +40,7 @@ string_create(u8* data, int length)
 // NOTE - ArrayLen runs at compile time for string literals, which is why this
 //  macro is better than the ctor if you know the string at comp-time
 #define STRING(zstr_literal) String(zstr_literal, ARRAY_LEN(zstr_literal) - 1)
+#define STRING_CHAR(c) String(&c, 1);
 
 enum class Null_Terminate : u8
 {
