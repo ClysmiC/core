@@ -116,7 +116,12 @@ operator*(
     Value<T, D> v1)
 {
     Value<T, D> result;
-    result.n = (v0.n * v1.n) / D;
+    // Intermediate calculation is 64 bit to mitigate overflows
+    // TODO - if we add support for unsigned numerator, need to use u64 here.
+    //  could reuse integer_type template specialization
+    i64 n = (i64)v0.n * (i64)v1.n;
+    n /= D;
+    result.n = (T)n;
     return result;
 }
 
