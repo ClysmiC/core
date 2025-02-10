@@ -149,3 +149,15 @@ rect_is_zero(Rect<T, N> const& rect)
     }
     return result;
 }
+
+template<class T, uint N>
+function bool
+rect_has_area(Rect<T, N> const& rect)
+{
+    bool result = true;
+    for (int i = 0; i < N; i++)
+    {
+        result &= (rect.min.elements[i] < rect.max.elements[i]);
+    }
+    return result;
+}
