@@ -43,7 +43,7 @@ template<class T, uint N>
 function Vec<T, N>
 rect_center(Rect<T, N> const& rect)
 {
-    Vec<T, N> result = 0.5f * (rect.min + rect.max);
+    Vec<T, N> result = T(0.5f) * (rect.min + rect.max);
     return result;
 }
 
