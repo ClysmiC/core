@@ -11,6 +11,7 @@ DefineFlagOps(Io_Visitor_Flags, u64);
 
 struct Io_Vtable
 {
+    Memory_Region memory;
     Io_Visitor_Flags flags;
 
     void (*begin)(Io_Vtable* io, String name);
@@ -72,6 +73,7 @@ inline bool io_supports_blob(Io_Vtable* io)
 }
 
 static Io_Vtable const IO_VTABLE_NOP = {
+    nullptr,
     Io_Visitor_Flags::NIL,
     io_begin_nop,
     io_end_nop,
@@ -200,6 +202,7 @@ io_pb_create(Memory_Region memory, int bytes_per_page)
 
     Io_Push_Buffer result;
     result.vtable = IO_VTABLE_NOP;
+    result.vtable.memory = memory;
     result.vtable.array_begin_i32 = io_pb_array_begin_i32;
     result.vtable.array_begin_u32 = io_pb_array_begin_u32;
     result.vtable.atom_u8 = io_pb_atom_u8;
@@ -327,7 +330,7 @@ io_slice_reader_end(Io_Vtable* io)
 }
 
 function Io_Slice_Reader
-io_slice_reader_create(Slice<u8> const& slice)
+io_slice_reader_create(Slice<u8> const& slice, Memory_Region memory)
 {
     // HMM
     //  - return a pointer? the vtable is kinda large...
@@ -335,6 +338,7 @@ io_slice_reader_create(Slice<u8> const& slice)
 
     Io_Slice_Reader result;
     result.vtable = IO_VTABLE_NOP;
+    result.vtable.memory = memory;
     result.vtable.flags |= Io_Visitor_Flags::DESERIALIZING;
     result.vtable.end = io_slice_reader_end;
     result.vtable.array_begin_i32 = io_slice_reader_array_begin_i32;

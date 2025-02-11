@@ -14,6 +14,8 @@ zstr_length(char* zstr)
     return result;
 }
 
+function bool string_eq(struct String const& str0, struct String const& str1);
+
 struct String
 {
     u8* data;
@@ -22,10 +24,16 @@ struct String
     // TODO - Capacity? String "building" capabilities?
     String() = default;
 
+    u8* begin() { return data; }
+    u8* end()   { return data + length; }
+    u8 const* begin() const { return data; }
+    u8 const* end() const { return data + length; }
+
     explicit String(char* zstr) { this->data = (u8*)zstr; this->length = zstr_length(zstr); }
     String(char* zstr, uint byte_count) { this->data = (u8*)zstr; this->length = byte_count; }
 
     u8 & operator[](int i) const { return data[i]; }
+    bool operator == (String const& other) { return string_eq(*this, other); }
 };
 
 inline String
@@ -140,6 +148,59 @@ string_create(String src, Memory_Region memory)
         result.data = nullptr;
     }
     return result;
+}
+
+function String
+string_create_from_escaped(String src, Memory_Region memory)
+{
+    String result = {};
+    if (src.length > 0)
+    {
+        result.data = (u8*)allocate(memory, src.length + 1);
+
+        bool escaped_prev = false;
+        for (int i = 0; i < src.length; i++)
+        {
+            char c = src[i];
+            if (escaped_prev)
+            {
+                switch (c)
+                {
+                    case 'n': c = '\n'; break;
+                    case 't': c = '\t'; break;
+                    case 'r': c = '\r'; break;
+                    case 'b': c = '\b'; break;
+                    case 'f': c = '\f'; break;
+                }
+
+                escaped_prev = false;
+            }
+            else if (src[i] == '\\')
+            {
+                escaped_prev = true;
+                continue;
+            }
+
+            result.data[result.length] = c;
+            result.length++;
+        }
+
+        ASSERT(result.length <= src.length);
+    }
+    else
+    {
+        result.data = nullptr;
+    }
+    return result;
+}
+
+function void
+string_replace_char(String* string, char from, char to)
+{
+    for (u8& c: *string)
+    {
+        if (c == from) c = to;
+    }
 }
 
 function char*

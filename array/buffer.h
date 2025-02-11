@@ -103,6 +103,13 @@ Insert(DynArray<T>* array, const T & item, int iItem)
     array->count++;
 }
 
+template <typename T>
+function void
+array_prepend(DynArray<T>* array, const T & item)
+{
+    Insert(array, item, 0);
+}
+
 // @Slow - Prefer RemoveUnordered when possible
 template <typename T>
 function T

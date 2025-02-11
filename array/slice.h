@@ -11,7 +11,7 @@ struct Slice
     T const* begin() const { return items; }
     T const* end() const { return items + count; }
     T& operator[](int iItem) const { return items[iItem]; }
-    bool operator == (const Slice & other) { return other.items == items && other.count == count; }
+    bool operator == (Slice const& other) { return other.items == items && other.count == count; }
 
     // Implicitly cast to pointer
     operator T*() const { return items; }
