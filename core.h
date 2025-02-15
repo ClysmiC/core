@@ -96,67 +96,69 @@ using f64 = double;
 
 namespace U64
 {
-static u64 constexpr MIN = 0;
-static u64 constexpr MAX = 0xFF'FF'FF'FF'FF'FF'FF'FF;
+u64 constexpr MIN = 0;
+u64 constexpr MAX = 0xFF'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace U32
 {
-static u32 constexpr MIN = 0;
-static u32 constexpr MAX = 0xFF'FF'FF'FF;
+u32 constexpr MIN = 0;
+u32 constexpr MAX = 0xFF'FF'FF'FF;
 }
 
 namespace U16
 {
-static u16 constexpr MIN = 0;
-static u16 constexpr MAX = 0xFF'FF;
+u16 constexpr MIN = 0;
+u16 constexpr MAX = 0xFF'FF;
 }
 
 namespace U8
 {
-static u8 constexpr MIN = 0;
-static u8 constexpr MAX = 0xFF;
+u8 constexpr MIN = 0;
+u8 constexpr MAX = 0xFF;
 }
 
 namespace I64
 {
-static i64 constexpr MIN = 0x80'00'00'00'00'00'00'00;
-static i64 constexpr MAX = 0x7F'FF'FF'FF'FF'FF'FF'FF;
+i64 constexpr MIN = 0x80'00'00'00'00'00'00'00;
+i64 constexpr MAX = 0x7F'FF'FF'FF'FF'FF'FF'FF;
 }
 
 namespace I32
 {
-static i32 constexpr MIN = 0x80'00'00'00;
-static i32 constexpr MAX = 0x7F'FF'FF'FF;
+i32 constexpr MIN = 0x80'00'00'00;
+i32 constexpr MAX = 0x7F'FF'FF'FF;
 }
 
 namespace I16
 {
-static i16 constexpr MIN = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
-static i16 constexpr MAX = 0x7F'FF;
+i16 constexpr MIN = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
+i16 constexpr MAX = 0x7F'FF;
 }
 
 namespace I8
 {
-static i8 constexpr MIN = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
-static i8 constexpr MAX = 0x7F;
+i8 constexpr MIN = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
+i8 constexpr MAX = 0x7F;
 }
 
 namespace F32
 {
 
-static f32 constexpr HALF_PI = 1.57079632679f;
-static f32 constexpr PI = 3.14159265359f;
-static f32 constexpr THREE_HALVES_PI = 4.71238898038f;
-static f32 constexpr TWO_PI = 6.28318530718f;
+f32 constexpr HALF_PI = 1.57079632679f;
+f32 constexpr PI = 3.14159265359f;
+f32 constexpr THREE_HALVES_PI = 4.71238898038f;
+f32 constexpr TWO_PI = 6.28318530718f;
 
-static f32 constexpr TO_DEG = 57.2958f;
-static f32 constexpr TO_RAD = 0.0174533f;
+f32 constexpr TO_DEG = 57.2958f;
+f32 constexpr TO_RAD = 0.0174533f;
 
-static f32 constexpr SQRT2 = 1.41421356237f;
-static f32 constexpr HALF_SQRT2 = 0.70710678118f;
+f32 constexpr SQRT2 = 1.41421356237f;
+f32 constexpr HALF_SQRT2 = 0.70710678118f;
 
-static f32 constexpr GOLDEN_RATIO = 1.61803398875f;
+f32 constexpr GOLDEN_RATIO = 1.61803398875f;
+
+f32 constexpr MAX = 3.402823466e38f;
 
 } // namespace F32
 
