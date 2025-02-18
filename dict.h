@@ -65,7 +65,7 @@ u32_hash(u32 const& value)
 }
 
 function u32
-u16_hash(u16 value)
+u16_hash(u16 const& value)
 {
     const u32 PRIME = 0x9E3779B9;
     u32 result = value;
@@ -76,7 +76,7 @@ u16_hash(u16 value)
 }
 
 function u32
-u8_hash(u8 value)
+u8_hash(u8 const& value)
 {
     const u32 PRIME = 0x9E3779B9;
     u32 result = value;
