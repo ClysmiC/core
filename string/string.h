@@ -56,7 +56,7 @@ string_create_empty()
 
 // NOTE - ArrayLen runs at compile time for string literals, which is why this
 //  macro is better than the ctor if you know the string at comp-time
-#define STRING(zstr_literal) String(zstr_literal, ARRAY_LEN(zstr_literal) - 1)
+#define STR(zstr_literal) String(zstr_literal, ARRAY_LEN(zstr_literal) - 1)
 
 enum class Null_Terminate : u8
 {

@@ -42,13 +42,54 @@ StartHash(const void* pBytes=nullptr, int cBytes=0)
     return BuildHash(pBytes, cBytes, s_fnvOffsetBasis);
 }
 
-// Use "id" hash functions for things like counters, ids, enums.
-//  This is a bad hash function if used for generic integer data sets,
-//  since data common divisors can lead to many collisions.
-function u32 u16_id_hash(u16 const& id) { return (u32)id; }
-function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
-function u32 u32_id_hash(u32 const& id) { return id; }
+function u32
+u64_hash(u64 const& value)
+{
+    const u64 PRIME = 0x9E3779B97F4A7C15ull;
+    u64 result = value;
+    result ^= result >> 33;
+    result *= PRIME;
+    result ^= result >> 29;
+    return (u32)result;
+}
+
+function u32
+u32_hash(u32 const& value)
+{
+    const u32 PRIME = 0x9E3779B9;
+    u32 result = value;
+    result ^= result >> 16;
+    result *= PRIME;
+    result ^= result >> 13;
+    return result;
+}
+
+function u32
+u16_hash(u16 value)
+{
+    const u32 PRIME = 0x9E3779B9;
+    u32 result = value;
+    result ^= result >> 7;
+    result *= PRIME;
+    result ^= result >> 5;
+    return result;
+}
+
+function u32
+u8_hash(u8 value)
+{
+    const u32 PRIME = 0x9E3779B9;
+    u32 result = value;
+    result ^= result >> 3;
+    result *= PRIME;
+    result ^= result >> 2;
+    return result;
+}
+
+function bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
 function bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
+function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
+function bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
 
 function unsigned int
 StartHashzstr(const char* zstr)
@@ -142,11 +183,10 @@ struct Dict
     }
 };
 
-// Adds the KVP to the table without testing existing keys for equality while probing.
-//  i.e., This function has no qualms about adding a duplicate key. Use wisely!
+// This function has no qualms about adding a duplicate key. Use wisely!
 template <typename K, typename V>
-function void
-dict_add_unchecked(Dict<K, V>* dict, K const& key, V const& value)
+function typename Dict<K, V>::Kvp*
+dict_add_key_unchecked(Dict<K, V>* dict, K const& key)
 {
     using Kvp = Dict<K, V>::Kvp;
 
@@ -175,9 +215,23 @@ dict_add_unchecked(Dict<K, V>* dict, K const& key, V const& value)
         index = (index + 1) & mask;
     }
 
-    dict->items[index] = { hash, key, value };
+    auto* result = dict->items + index;
+    result->hash = hash;
+    result->key = key;
     dict->count++;
     dict->count_filled++;
+
+    return result;
+}
+
+// This function has no qualms about adding a duplicate key. Use wisely!
+template <typename K, typename V>
+function void
+dict_add_unchecked(Dict<K, V>* dict, K const& key, V const& value)
+{
+    using Kvp = Dict<K, V>::Kvp;
+    Kvp* kvp = dict_add_key_unchecked(dict, key);
+    kvp->value = value;
 }
 
 // Grows the table so that it can store at least this many items within its load factor
@@ -207,7 +261,7 @@ dict_ensure_capacity(Dict<K, V>* dict, i32 capacity)
     dict->count_filled = 0;
     dict->capacity = new_capacity;
 
-    // Clear all new slots to unoccupied
+    // Clear all slots to unoccupied
     for (Kvp* kvp: ByPtr(slice_create(dict->items, dict->capacity)))
     {
         kvp->hash = Kvp::HASH_UNOCCUPIED;
@@ -297,6 +351,28 @@ dict_find(Dict<K, V> const& dict, K const& key, bool* success)
 }
 
 template <typename K, typename V>
+function V*
+dict_find_or_new(Dict<K, V>* dict, K const& key)
+{
+    if (V* value_ptr = dict_find_ptr(*dict, key))
+    {
+        return value_ptr;
+    }
+    else
+    {
+        dict_add_key_unchecked(dict, key);
+    }
+}
+
+template <typename K, typename V>
+function bool
+dict_contains(Dict<K, V> const& dict, K const& key)
+{
+    bool result = (dict_find_ptr(dict, key) != nullptr);
+    return result;
+}
+
+template <typename K, typename V>
 function void
 dict_set(Dict<K, V>* dict, K const& key, V const& value)
 {
@@ -360,3 +436,195 @@ dict_reset(Dict<K, V>* dict)
         dict->items[i].hash = Kvp::HASH_UNOCCUPIED;
     }
 }
+
+//  --- Bi-directional dict (all values are unique)
+// template <typename K, typename V>
+// function void
+// struct Dict_Unique
+// {
+//     // Values are const, because they are keys in the complimentary dict.
+//     //  Modifying them would break change the hash calculation for the complimentary dict's lookups.
+//     Dict<K, V const*> forward;
+//     Dict<V, K const*> reverse;
+// };
+
+// template <typename K, typename V>
+// function void
+// dict_unique_fixup_forward(Dict_Unique<K, V>* dict)
+// {
+//     using Kvp_Forward = typename Dict<K, V*>::Kvp;
+//     using Kvp_Reverse = typename Dict<V, K*>::Kvp;
+
+//     // Iterate over reverse, since it's currently all valid
+//     for (Kvp_Reverse const& kvp_reverse: dict->reverse)
+//     {
+//         // @Slow - lots of lookups needed to do this fixup. There's probably a better
+//         //  design for Dict_Unique. Something like Dict<Key_Or_Value, int> that would let
+//         //  us fixup both in one pass without doing a bunch of lookups. Consider implementing
+//         //  that and then profiling both to see if it's noticable.
+//         Kvp_Forward* kvp_forward = dict_find_kvp_ptr(dict->forward, *kvp_reverse.value);
+//         ASSERT(kvp_reverse);
+
+//         // Fix-up the V*
+//         kvp_forward->value = &kvp_reverse->key;
+//     }
+// }
+
+// template <typename K, typename V>
+// function void
+// dict_unique_fixup_reverse(Dict_Unique<K, V>* dict)
+// {
+//     using Kvp_Forward = typename Dict<K, V*>::Kvp;
+//     using Kvp_Reverse = typename Dict<V, K*>::Kvp;
+
+//     // Iterate over forward, since it's currently all valid
+//     for (Kvp_Forward const& kvp_forward: dict->forward)
+//     {
+//         // @Slow - See note in dict_unique_fixup_forward(..)
+//         Kvp_Reverse* kvp_reverse = dict_find_kvp_ptr(dict->reverse, *kvp_forward.value);
+//         ASSERT(kvp_reverse);
+
+//         // Fix-up the K*
+//         kvp_reverse->value = &kvp_forward->key; // is this line const-correct?
+//     }
+// }
+
+// template <typename K, typename V>
+// function bool
+// dict_unique_try_set(Dict_Unique<K, V>* dict, K const& key, V const& value)
+// {
+//     using Kvp_Forward = typename Dict<K, V*>::Kvp;
+//     using Kvp_Reverse = typename Dict<V, K*>::Kvp;
+
+//     // If the key or value aren't unique, do nothing
+//     if (dict_contains(&dict->forward, key) || dict_contains(&dict->reverse, value))
+//     {
+//         // HMM - may make sense to return true if key and value already exist
+//         //  and are mapped to each other... but for now I'm assuming the
+//         //  caller will only set the mapping once.
+//         return false;
+//     }
+
+//     Kvp_Forward* kvp_forward;
+//     bool is_forward_rehashed;
+//     {
+//         // Add key
+//         i32 old_capacity = dict->forward.capacity;
+//         kvp_forward = dict_add_key_unchecked(&dict->forward, key);
+
+//         is_forward_rehashed = (dict->forward.capacity != old_capacity);
+//         if (is_forward_rehashed)
+//         {
+//             // Fixup the reverse dict to point to the rehashed keys
+//             dict_unique_fixup_reverse(dict);
+//         }
+//     }
+
+//     Kvp_Reverse* kvp_reverse;
+//     {
+//         // Add value
+//         i32 old_capacity = dict->reverse.capacity;
+//         kvp_reverse = dict_add_key_unchecked(&dict->reverse, value);
+
+//         bool is_reverse_rehashed = (dict->reverse.capacity != old_capacity);
+
+//         // Both dicts are expected to grow in lockstep. Technically it should still work if they don't, but why wouldn't they?
+//         ASSERT_WARN(is_forward_rehashed == is_reverse_rehashed);
+
+//         if (is_reverse_rehashed)
+//         {
+//             // Fixup the forward dict to point to the rehashed values
+//             dict_unique_fixup_forward(dict);
+//         }
+//     }
+
+//     kvp_forward->value = &kvp_reverse->key;
+//     kvp_reverse->value = &kvp_forward->key;
+
+//     ASSERT(kvp_forward->value);
+//     ASSERT(kvp_reverse->value);
+//     return true;
+// }
+
+// template <typename K, typename V>
+// function bool
+// dict_unique_remove_by_key(Dict_Unique<K, V>* dict, K const& key)
+// {
+//     V const** value = dict_find_ptr(dict->forward, key);
+
+//     if (value)
+//     {
+//         ASSERT(*value);
+
+//         VERIFY(dict_remove(&dict->forward, key));
+//         VERIFY(dict_remove(&dict->reverse, **value));
+//         return true;
+//     }
+
+//     return false;
+// }
+
+// template <typename K, typename V>
+// function bool
+// dict_unique_remove_by_value(Dict_Unique<K, V>* dict, V const& value)
+// {
+//     K const** key = dict_find_ptr(dict->reverse, value);
+
+//     if (key)
+//     {
+//         ASSERT(*key);
+
+//         VERIFY(dict_remove(&dict->forward, **key));
+//         VERIFY(dict_remove(&dict->reverse, value));
+//         return true;
+//     }
+//     return false;
+// }
+
+// // Finds a value by key
+// template <typename K, typename V>
+// function V const*
+// dict_unique_find_by_key(Dict_Unique<K, V> const& dict, K const& key)
+// {
+//     V const** found = dict_find_ptr(dict.forward, key);
+//     V const* result = (found) ? *found : nullptr;
+//     return result;
+// }
+
+// // Finds a key by value
+// template <typename K, typename V>
+// function K const*
+// dict_unique_find_by_value(Dict_Unique<K, V> const& dict, V const& value)
+// {
+//     K const** found = dict_find_ptr(dict.reverse, value);
+//     K const* result = (found) ? *found : nullptr;
+//     return result;
+// }
+
+// template <typename K, typename V>
+// function Dict_Unique<K, V>
+// dict_unique_create(
+//     Memory_Region memory,
+//     u32 (*key_hash)(K const& key),
+//     bool (*key_eq)(K const& key0, K const& key1),
+//     u32 (*value_hash)(V const& value),
+//     bool (*value_eq)(V const& value0, 1 const& value1)
+//     i32 starting_capacity=16)
+// {
+//     starting_capacity = max(starting_capacity, 16);
+
+//     using Kov = typename Dict_Unique<K, V>::Key_Or_Value;
+
+//     Dict_Unique<K, V> result = {};
+//     result.dict = dict_create<K, V const*>(memory, key_hash, key_eq, starting_capacity);
+//     result.reverse = dict_create<V, K const*>(memory, value_hash, value_eq, starting_capacity);
+//     return result;
+// }
+
+// template <typename K, typename V>
+// function void
+// dict_unique_reset(Dict_Unique<K, V>* dict)
+// {
+//     dict_reset(&dict->forward);
+//     dict_reset(&dict->reverse);
+// }

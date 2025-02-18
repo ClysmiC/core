@@ -1,6 +1,6 @@
 // --- Cardinal and Ordinal directions. Useful for UI and 2D stuff
 
-enum class CardinalDir : u8
+enum class Cardinal_Dir : u8
 {
     NIL = 0,
 
@@ -11,9 +11,9 @@ enum class CardinalDir : u8
 
     ENUM_COUNT,
 };
-DefineEnumOps(CardinalDir, u8);
+DefineEnumOps(Cardinal_Dir, u8);
 
-enum class OrdinalDir : u8
+enum class Ordinal_Dir : u8
 {
     NIL = 0,
 
@@ -24,22 +24,22 @@ enum class OrdinalDir : u8
 
     ENUM_COUNT
 };
-DefineEnumOps(OrdinalDir, u8);
+DefineEnumOps(Ordinal_Dir, u8);
 
 function Vec2
-rect_corner(Rect2 rect, OrdinalDir dir)
+rect_corner(Rect2 rect, Ordinal_Dir dir)
 {
     // NOTE - +Y is up (N)
 
     Vec2 result = {};
     switch (dir)
     {
-        case OrdinalDir::NE:    result = rect.max; break;
-        case OrdinalDir::SE:    result = Vec2(rect.max.x, rect.min.y); break;
-        case OrdinalDir::SW:    result = rect.min; break;
-        case OrdinalDir::NW:    result = Vec2(rect.min.x, rect.max.y); break;
+        case Ordinal_Dir::NE:    result = rect.max; break;
+        case Ordinal_Dir::SE:    result = Vec2(rect.max.x, rect.min.y); break;
+        case Ordinal_Dir::SW:    result = rect.min; break;
+        case Ordinal_Dir::NW:    result = Vec2(rect.min.x, rect.max.y); break;
 
-        DefaultNilInvalidEnum(OrdinalDir);
+        DefaultNilInvalidEnum(Ordinal_Dir);
     }
 
     return result;
@@ -63,14 +63,14 @@ enum class Dir : u8
 DefineEnumOps(Dir, u8);
 
 function bool
-IsCardinal(Dir dir)
+dir_is_cardinal(Dir dir)
 {
     bool result = (dir == Dir::N) || (dir == Dir::E) || (dir == Dir::S) || (dir == Dir::W);
     return result;
 }
 
 function bool
-IsOrdinal(Dir dir)
+dir_is_ordinal(Dir dir)
 {
     bool result = (dir == Dir::NE) || (dir == Dir::SE) || (dir == Dir::SW) || (dir == Dir::NW);
     return result;
@@ -93,14 +93,3 @@ enum class Dir_Flags : u8
     SW = Dir_Flags::S | Dir_Flags::W,
 };
 DefineFlagOps(Dir_Flags, u8);
-
-
-enum class MajorOrder : u8
-{
-    Row = 0,
-    NIL = 0,
-
-    Column,
-
-    ENUM_COUNT
-};

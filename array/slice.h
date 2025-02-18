@@ -30,6 +30,16 @@ slice_create(T* ptr, int count)
     return result;
 }
 
+template <typename T>
+function Slice<T>
+slice_create(int count, Memory_Region memory, CTZ ctz=CTZ::NO)
+{
+    Slice<T> result;
+    result.items = allocate_array<T>(memory, count, ctz);
+    result.count = count;
+    return result;
+}
+
 // template <typename T>
 // function Slice<T>
 // slice_create(T* ptr, uintptr count)

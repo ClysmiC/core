@@ -176,8 +176,8 @@ enum AllocType : u8
 };
 
 // @Cleanup - forward declarations because core module doesn't run hgen
-function void* allocate(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NIL);
-function void* allocate_tracked(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NIL);
+function void* allocate(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NO);
+function void* allocate_tracked(MEM::Region_Header* region, uintptr byte_count, CTZ ctz=CTZ::NO);
 function void free_tracked_allocation(MEM::Region_Header* region, void* allocation);
 function bool mem_region_end(MEM::Region_Header* region);
 function bool mem_region_reset(MEM::Region_Header* region);
@@ -648,7 +648,7 @@ template <typename T>
 T*
 allocate(
     Memory_Region region,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     T* result = (T*)allocate(region, sizeof(T), ctz);
     return result;
@@ -659,7 +659,7 @@ T*
 allocate_array(
     Memory_Region region,
     uintptr count,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     T* result = (T*)allocate(region, sizeof(T) * count, ctz);
     return result;
@@ -690,7 +690,7 @@ template <typename T>
 T*
 allocate_tracked(
     Memory_Region region,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     T* result = (T*)allocate_tracked(region, sizeof(T), ctz);
     return result;
@@ -701,7 +701,7 @@ T*
 allocate_array_tracked(
     Memory_Region region,
     uintptr count,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     T* result = (T*)allocate_tracked(region, sizeof(T) * count, ctz);
     return result;
@@ -907,7 +907,7 @@ template <typename T>
 function T*
 allocate(
     Recycle_Allocator<T> * alloc,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     T* result;
 
@@ -947,7 +947,7 @@ function void
 PreallocateRecycleListContiguous(
     Recycle_Allocator<T> * alloc,
     int cntItemPreallocate,
-    CTZ ctz=CTZ::NIL)
+    CTZ ctz=CTZ::NO)
 {
     auto * slots = (Recycle_Allocator<T>::Slot*)allocate(alloc->memory,
                                                          cntItemPreallocate * sizeof(Recycle_Allocator<T>::Slot),
