@@ -80,7 +80,7 @@ array_append_and_id(DynArray<T>* array, const T & item)
 
 template <typename T>
 function T*
-AppendNew(DynArray<T>* array)
+array_append_new(DynArray<T>* array)
 {
     EnsureCapacity(array, array->count + 1);
     T* result = array->items + array->count;
@@ -279,7 +279,7 @@ IsEmpty(BufferBuilder* builder)
 }
 
 function u8*
-AppendNewBytes(BufferBuilder* builder, int length)
+buffer_append_new_bytes(BufferBuilder* builder, int length)
 {
     int lengthOld = builder->bytes.count;
     int lengthNew = lengthOld + length;
@@ -293,21 +293,21 @@ AppendNewBytes(BufferBuilder* builder, int length)
 function void
 Append(BufferBuilder* builder, u8 value)
 {
-    u8 * ptr = AppendNewBytes(builder, 1);
+    u8 * ptr = buffer_append_new_bytes(builder, 1);
     *ptr = value;
 }
 
 function void
 Append(BufferBuilder* builder, u16 value)
 {
-    u16 * ptr = (u16 *)AppendNewBytes(builder, 2);
+    u16 * ptr = (u16 *)buffer_append_new_bytes(builder, 2);
     *ptr = value;
 }
 
 function void
 Append(BufferBuilder* builder, u32 value)
 {
-    u32 * ptr = (u32 *)AppendNewBytes(builder, 4);
+    u32 * ptr = (u32 *)buffer_append_new_bytes(builder, 4);
     *ptr = value;
 }
 
@@ -317,7 +317,7 @@ AppendStringCopy(BufferBuilder* builder, String string)
     if (string_is_empty(string))
         return;
 
-    u8* ptr = (u8*)AppendNewBytes(builder, string.length);
+    u8* ptr = (u8*)buffer_append_new_bytes(builder, string.length);
     string_copy(string, ptr, string.length, Null_Terminate::NO);
 }
 

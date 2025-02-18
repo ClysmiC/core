@@ -60,15 +60,23 @@ inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { ASSE
 inline bool io_return_false(Io_Vtable* io) { return false; }
 inline bool io_return_true(Io_Vtable* io) { return true; }
 
-inline bool io_supports_string(Io_Vtable* io)
+inline bool
+io_supports_string(Io_Vtable* io)
 {
     bool result = (io->atom_string != io_atom_string_nop);
     return result;
 }
 
-inline bool io_supports_blob(Io_Vtable* io)
+inline bool
+io_supports_blob(Io_Vtable* io)
 {
     bool result = (io->atom_blob != io_atom_blob_nop);
+    return result;
+}
+
+inline bool io_is_deserializing(Io_Vtable* io)
+{
+    bool result = IsFlagSet(io->flags, Io_Visitor_Flags::DESERIALIZING);
     return result;
 }
 
