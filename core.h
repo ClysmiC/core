@@ -181,8 +181,6 @@ f32 constexpr MAX = 3.402823466e38f;
 #define OptionalArg(name, defaultValue) name
 #define OptionalArg0(name) name
 
-
-
 #include "enum.h"
 #include "math/math.h"
 #include "mem_util.h"
@@ -191,7 +189,9 @@ f32 constexpr MAX = 3.402823466e38f;
 #include "string/string.h"
 #include "string/string_parse.h"
 #include "array/array.h"
-#include "io_visit.h"
+#include "io/io_visit.h"
+#include "io/io_file.h"
+#include "io/io_file.cpp"
 #include "tree.h"
 #include "string/utf.h"
 #include "string/gap_buffer.h"
