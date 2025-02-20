@@ -348,7 +348,7 @@ struct Push_Buffer
     Memory_Region memory;
     Page_Header* pages;
     Page_Header* pageTail;
-    int lengthPushed;
+    u64 lengthPushed;
 
     Push_Buffer() = default;
     Push_Buffer(Memory_Region memory, int lengthPerPage)
