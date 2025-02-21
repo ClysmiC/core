@@ -23,6 +23,7 @@ struct Io_Json_Ctx
     } type;
 };
 
+
 // --- Context for writing a single JSON array, or object
 
 struct Io_Json_Writer_Ctx : Io_Json_Ctx
@@ -55,14 +56,35 @@ struct Io_Json_Writer_Ext
 
 // --- Context for reading a single JSON array, or object.
 
+enum class Io_Json_Value_Type : u32
+{
+    NIL = 0,    // also used for actual "null" values in the json... maybe a bad idea?
+
+    STRING,
+    NUMBER,
+    OBJECT,
+    ARRAY,
+    BOOLEAN,
+
+    ENUM_COUNT
+};
+
 struct Io_Json_Value
 {
+    Io_Json_Value_Type type;
+
     int start_index;        // view into the json string
     int length;             //  ...
 
     int sub_value_count;    // Object and Array values track how many sub-values they have
                             //  as they're parsed, so the visitor caller can know how many
                             //  items to visit in the array.
+};
+
+struct Io_Json_Property
+{
+    String name;
+    Io_Json_Value value;
 };
 
 struct Io_Json_Reader_Ctx : Io_Json_Ctx

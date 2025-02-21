@@ -183,7 +183,7 @@ i64_parse(String string)
     return (i64)result;
 }
 function f32
-float_parse(String string)
+f32_parse(String string)
 {
     // @HACK - fixed buffer to guarantee null-termination, since atof expects it
     char zstr[1024];

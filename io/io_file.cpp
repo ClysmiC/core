@@ -799,6 +799,7 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
     i32 start_index = slice_reader->bytes_read;
     i32 end_index = -1;
     i32 sub_value_count = 0;
+    Io_Json_Value_Type value_type = {};
 
     u8 c = slice_reader->buffer[start_index];
     switch (c)
@@ -815,6 +816,8 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
         case '8':
         case '9':
         {
+            value_type = Io_Json_Value_Type::NUMBER;
+
             do
             {
                 slice_read_bytes(slice_reader, 1);
@@ -830,6 +833,8 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
 
         case '\"':
         {
+            value_type = Io_Json_Value_Type::STRING;
+
             slice_read_bytes(slice_reader, 1);
             bool found_end_quote = false;
             io_json_reader_consume_all_until_unescaped(io_json, '\"', &found_end_quote);
@@ -840,6 +845,8 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
 
         case '[':
         {
+            value_type = Io_Json_Value_Type::ARRAY;
+
             slice_read_bytes(slice_reader, 1);
             io_json_reader_consume_whitespace(io_json);
 
@@ -873,6 +880,8 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
 
         case '{':
         {
+            value_type = Io_Json_Value_Type::OBJECT;
+
             slice_read_bytes(slice_reader, 1);
             io_json_reader_consume_whitespace(io_json);
 
@@ -912,24 +921,32 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
 
         case 't':
         {
+            value_type = Io_Json_Value_Type::BOOLEAN;
+
             VERIFY(io_json_reader_match_and_consume(io_json, STR("rue")));
             end_index = slice_reader->bytes_read;
         } break;
 
         case 'f':
         {
+            value_type = Io_Json_Value_Type::BOOLEAN;
+
             VERIFY(io_json_reader_match_and_consume(io_json, STR("alse")));
             end_index = slice_reader->bytes_read;
         } break;
 
         case 'n':
         {
+            value_type = Io_Json_Value_Type::NIL;
+
             VERIFY(io_json_reader_match_and_consume(io_json, STR("ull")));
             end_index = slice_reader->bytes_read;
         } break;
 
         default:
         {
+            value_type = Io_Json_Value_Type::NIL;
+
             ASSERT(end_index < 0);
             ASSERT_FALSE_WARN;
         } break;
@@ -938,6 +955,7 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
     Io_Json_Value result = {};
     if (end_index > 0)
     {
+        result.type = value_type;
         result.start_index = start_index;
         result.length = max(0, end_index - start_index);
         result.sub_value_count = sub_value_count;
@@ -948,7 +966,7 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
 
 // This is more complicated than it needs to be. It supports scanning ahead to an arbitrary
 //  index, which isn't that useful. But it's mostly re-using the necessary complexity to scan
-//  ahead to arbitrary object values, which we *do* need to support
+//  ahead to arbitrary object properties, which we *do* want to support
 //  ... so we'll leave it complicated for the symmetry!
 function Io_Json_Value
 io_json_reader_find_array_item(Io_Json_Reader* io_json, int index)
@@ -1044,6 +1062,65 @@ io_json_reader_find_array_item(Io_Json_Reader* io_json, int index)
     return {};
 }
 
+function Io_Json_Property
+io_json_reader_consume_next_property(Io_Json_Reader* io_json)
+{
+    Io_Json_Reader_Ctx* ctx = array_peek_last(&io_json->ctx_stack);
+    if (!ctx || ctx->type != Io_Json_Ctx::OBJECT)
+    {
+        ASSERT_FALSE_WARN;
+        return {};
+    }
+
+    io_json_reader_consume_whitespace(io_json);
+    if (io_json_reader_match_and_consume(io_json, STR("}")))
+    {
+        // --- Pop context. We didn't find a next property.
+        mem_region_end(ctx->memory);
+        array_remove_last(&io_json->ctx_stack);
+        return {};
+    }
+
+    // Parse comma
+    if (ctx->values.count > 0)
+    {
+        io_json_reader_consume_whitespace(io_json);
+        VERIFY(io_json_reader_match_and_consume(io_json, STR(",")));
+    }
+
+    // Parse property name
+    io_json_reader_consume_whitespace(io_json);
+
+    // TODO - this name doesn't get un-escaped... it probably should...
+    //  but it's not the end of the world if we don't support escape characters in property names... probably.
+    String prop_name = io_json_reader_parse_and_consume_string(io_json);
+
+    io_json_reader_consume_whitespace(io_json);
+    VERIFY(io_json_reader_match_and_consume(io_json, STR(":")));
+
+    // Parse value
+    Io_Json_Value value = io_json_reader_parse_and_consume_value(io_json);
+
+    if (Io_Json_Value* found = dict_find_ptr(ctx->values, prop_name))
+    {
+        // There are two properties with the same name!
+        // Let's always use the first value for a given prop name.
+        ASSERT_FALSE_WARN;
+        value = *found;
+    }
+    else
+    {
+        // Dict key string points directly into file memory.
+        //  It's valid as long as the file is valid.
+        dict_set(&ctx->values, prop_name, value);
+    }
+
+    Io_Json_Property result;
+    result.name = prop_name;
+    result.value = value;
+    return result;
+}
+
 function Io_Json_Value
 io_json_reader_find_property(Io_Json_Reader* io_json, String name)
 {
@@ -1061,57 +1138,69 @@ io_json_reader_find_property(Io_Json_Reader* io_json, String name)
     // --- Parse forward (validating the JSON as we go) until we find this property
     while (!slice_reader_is_finished(io_json->io_slice.reader))
     {
-        io_json_reader_consume_whitespace(io_json);
-        if (io_json_reader_match_and_consume(io_json, STR("}")))
-        {
-            // --- Pop context. We didn't find the property.
-            mem_region_end(ctx->memory);
-            array_remove_last(&io_json->ctx_stack);
-            return {};
-        }
-
-        // Parse comma
-        if (ctx->values.count > 0)
-        {
-            io_json_reader_consume_whitespace(io_json);
-            VERIFY(io_json_reader_match_and_consume(io_json, STR(",")));
-        }
-
-        // Parse property name
-        io_json_reader_consume_whitespace(io_json);
-        String prop_name = io_json_reader_parse_and_consume_string(io_json);
-
-        io_json_reader_consume_whitespace(io_json);
-        VERIFY(io_json_reader_match_and_consume(io_json, STR(":")));
-
-        // Parse value
-        Io_Json_Value value = io_json_reader_parse_and_consume_value(io_json);
-
-        if (Io_Json_Value* found = dict_find_ptr(ctx->values, prop_name))
-        {
-            // There are two properties with the same name!
-            // Let's not overwrite the entry in the dict to ensure we always
-            // return the same (first) value for a given prop name.
-            ASSERT_FALSE_WARN;
-            continue;
-        }
-        else
-        {
-            // Dict key string points directly into file memory.
-            //  It's valid as long as the file is valid.
-            dict_set(&ctx->values, prop_name, value);
-        }
-
-        if (string_eq(prop_name, name))
+        Io_Json_Property prop = io_json_reader_consume_next_property(io_json);
+        if (prop.name.data && string_eq(prop.name, name))
         {
             // Found it!
-            return value;
+            return prop.value;
         }
     }
 
     // --- Handle unexpected end of file
     ASSERT_FALSE_WARN;
     return {};
+}
+
+function String
+io_json_reader_consume_next_key(Io_Json_Reader* io_json)
+{
+    // TODO
+}
+
+function Slice<f32>
+io_json_reader_parse_array_f32(Io_Json_Reader* io_json, Io_Json_Value array_value)
+{
+    // Result is valid as long as reader memory is valid. Caller may want to copy out into own memory.
+    DynArray<f32> result(io_json->memory);
+
+    // Transiently parsing with a dummy reader; no side-effect on the parameter.
+    Io_Json_Reader dummy_reader = *io_json;
+    dummy_reader.io_slice.reader.bytes_read = array_value.start_index;
+    io_json = &dummy_reader;
+
+    if (VERIFY(array_value.type == Io_Json_Value_Type::ARRAY) &&
+        io_json_reader_match_and_consume(io_json, STR("[")))
+    {
+        io_json_reader_consume_whitespace(io_json);
+
+        // NOTE - this function doesn't strictly enforce that the string it parses is well-formed...
+        //  it just guarantees that it will parse a well-formed string correctly. Presumably if
+        //  the caller has an Io_Json_Value to pass in, they got it from a function that enforces
+        //  it to be well-formed.
+        while (!io_json_reader_match_and_consume(io_json, STR("]")))
+        {
+            if (result.count > 0)
+            {
+                io_json_reader_match_and_consume(io_json, STR(","));
+                io_json_reader_consume_whitespace(io_json);
+            }
+
+            Io_Json_Value item_value = io_json_reader_parse_and_consume_value(io_json);
+            io_json_reader_consume_whitespace(io_json);
+
+            if (item_value.type != Io_Json_Value_Type::NUMBER)
+            {
+                ASSERT_FALSE_WARN;
+                break;
+            }
+
+            String item_value_str = string_create(io_json, item_value);
+            Append(&result, f32_parse(item_value_str));
+        }
+    }
+
+    Slice<f32> result_slice = slice_create(result.items, result.count);
+    return result_slice;
 }
 
 inline void
@@ -1551,11 +1640,6 @@ io_json_reader_atom_i32(Io_Vtable* io, i32* value, String name)
 function Io_Json_Reader
 io_json_reader_create(String filename, Memory_Region memory, Io_Fn_File_Read file_read_all)
 {
-    if (!string_ends_with_ignore_case(filename, STR(".json")))
-    {
-        filename = string_concat(filename, STR(".json"), memory);
-    }
-
     Io_Json_Reader result = {};
     result.memory = memory;
     result.ctx_stack = DynArray<Io_Json_Reader_Ctx>(memory);

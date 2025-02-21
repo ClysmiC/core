@@ -3,7 +3,7 @@
 // @Cleanup hash utilities
 
 // FNV-1a : http://www.isthe.com/chongo/tech/comp/fnv/
-function unsigned int
+function u32
 BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
 {
     unsigned int result = runningHash;
@@ -19,7 +19,7 @@ BuildHash(const void* pBytes, int cBytes, unsigned int runningHash)
     return result;
 }
 
-function unsigned int
+function u32
 BuildHashzstr(const char* zstr, unsigned int runningHash)
 {
     unsigned int result = runningHash;
@@ -35,7 +35,7 @@ BuildHashzstr(const char* zstr, unsigned int runningHash)
     return result;
 }
 
-function unsigned int
+function u32
 StartHash(const void* pBytes=nullptr, int cBytes=0)
 {
     static const unsigned int s_fnvOffsetBasis = 2166136261;
@@ -86,10 +86,36 @@ u8_hash(u8 const& value)
     return result;
 }
 
+function u32
+f32_hash(f32 const& value)
+{
+    const u32 PRIME = 0x9E3779B9;
+
+    u32 bits;
+    mem_copy(&bits, &value, sizeof(f32));
+
+    // Normalize -0.0 to 0.0
+    if ((bits & 0x7FFFFFFF) == 0) bits = 0;
+
+    // Treat all NaNs the same
+    if ((bits & 0x7F800000) == 0x7F800000 && (bits & 0x007FFFFF) != 0)
+    {
+        bits = 0x7FC00000; // Canonical NaN
+    }
+
+    // Hashing
+    bits ^= bits >> 16;
+    bits *= PRIME;
+    bits ^= bits >> 13;
+
+    return bits;
+}
+
 function bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
 function bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
 function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
 function bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
+function bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
 
 function unsigned int
 StartHashzstr(const char* zstr)
