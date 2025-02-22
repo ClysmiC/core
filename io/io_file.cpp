@@ -1729,6 +1729,11 @@ io_json_reader_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, bool
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
     if (is_external)
     {
+        // @Hack
+        if (!string_ends_with_ignore_case(name, STR(".json")))
+        {
+            name = string_concat(name, STR(".json"), iox->memory);
+        }
         io_json_reader_ext_push_new_reader(iox, name, iox->file_read_all);
     }
 
