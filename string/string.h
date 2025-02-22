@@ -466,7 +466,7 @@ AsciiUpperCase(char ascii)
 }
 
 function bool
-zstr_eq_ignore_case(char* str0, char* str1)
+zstr_eq_lowercase(char* str0, char* str1)
 {
     ASSERT(str0);
     ASSERT(str1);
@@ -488,7 +488,7 @@ zstr_eq_ignore_case(char* str0, char* str1)
 }
 
 function bool
-string_eq_ignore_case(String const& str0, char* str1)
+string_eq_lowercase(String const& str0, char* str1)
 {
     u8* cursor0 = str0.data;
     u8* endCursor0 = str0.data + str0.length;
@@ -509,14 +509,14 @@ string_eq_ignore_case(String const& str0, char* str1)
 }
 
 function bool
-string_eq_ignore_case(char* str0, String const& str1)
+string_eq_lowercase(char* str0, String const& str1)
 {
-    bool result = string_eq_ignore_case(str1, str0);
+    bool result = string_eq_lowercase(str1, str0);
     return result;
 }
 
 function bool
-string_eq_ignore_case(String const& str0, String const& str1)
+string_eq_lowercase(String const& str0, String const& str1)
 {
     if (str0.length != str1.length) return false;
     if (str0.data == str1.data)   return true;
@@ -562,7 +562,7 @@ string_ends_with_ignore_case(String const& str, String const& suffix)
     int prefix_length = str.length - suffix.length;
     String end = string_create(str.data + prefix_length, suffix.length);
 
-    bool result = string_eq_ignore_case(end, suffix);
+    bool result = string_eq_lowercase(end, suffix);
     return result;
 }
 
