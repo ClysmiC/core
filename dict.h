@@ -117,6 +117,9 @@ function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
 function bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
 function bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
 
+// Sometimes you want to compute a hash yourself, then use it directly as the key
+function u32 u32_identity(u32 const& value) { return value; }
+
 function unsigned int
 StartHashzstr(const char* zstr)
 {
