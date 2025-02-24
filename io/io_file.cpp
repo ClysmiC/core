@@ -57,6 +57,9 @@ inline void
 io_json_writer_begin(Io_Vtable* io, String name)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+
+    // @HACK - would be nice to allow more control over the extension, but I don't want the "name" to
+    //  include a file extension... maybe make an extension field on thie Io_Json_Writer?
     if (!string_ends_with_ignore_case(name, STR(".json")))
     {
         name = string_concat(name, STR(".json"), io_json->memory);
@@ -336,6 +339,53 @@ io_json_writer_atom_i64(Io_Vtable* io, i64* value, String name)
 }
 
 function void
+io_json_writer_atom_f64(Io_Vtable* io, f64* value, String name)
+{
+    Io_Json_Writer* io_json = (Io_Json_Writer*)io;
+    if (io_json->ctx_stack.count > 0)
+    {
+        // TODO - better string builder
+        u8 new_line = '\n';
+        u8 quote = '\"';
+        u8 colon = ':';
+        u8 space = ' ';
+        u8 comma = ',';
+
+        Io_Json_Writer_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        if (prev_ctx->item_count > 0)
+        {
+            io_pb_atom_u8(io, &comma, {});
+        }
+
+        io_pb_atom_u8(io, &new_line, {});
+        io_json_writer_indent(io_json);
+
+        if (prev_ctx->type != Io_Json_Ctx::ARRAY)
+        {
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_blob(io, slice_create(name), {});
+            io_pb_atom_u8(io, &quote, {});
+            io_pb_atom_u8(io, &colon, {});
+            io_pb_atom_u8(io, &space, {});
+        }
+
+        u8 printf_buffer[32];
+        String value_str;
+        value_str.data = printf_buffer;
+        value_str.length = stbsp_snprintf((char*)printf_buffer, ARRAY_LEN(printf_buffer), "%.6f", *value);
+        io_pb_atom_blob(io, slice_create(value_str), {});
+
+        prev_ctx->item_count++;
+    }
+    else
+    {
+        // Technically, json allows an atom value as a root object, but for our
+        //  purpose we only allow object and array as the root value
+        ASSERT_FALSE;
+    }
+}
+
+function void
 io_json_writer_atom_string(Io_Vtable* io, String* string, Memory_Region memory, String name)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
@@ -441,6 +491,13 @@ io_json_writer_atom_i32(Io_Vtable* io, i32* value, String name)
     io_json_writer_atom_i64(io, &v, name);
 }
 
+inline void
+io_json_writer_atom_f32(Io_Vtable* io, f32* value, String name)
+{
+    f64 v = *value;
+    io_json_writer_atom_f64(io, &v, name);
+}
+
 function Io_Json_Writer
 io_json_writer_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_Write_From_Pb file_write_all_pb)
 {
@@ -465,6 +522,8 @@ io_json_writer_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_Write
     result.io_file.io_pb.vtable.atom_i16 = io_json_writer_atom_i16;
     result.io_file.io_pb.vtable.atom_i32 = io_json_writer_atom_i32;
     result.io_file.io_pb.vtable.atom_i64 = io_json_writer_atom_i64;
+    result.io_file.io_pb.vtable.atom_f32 = io_json_writer_atom_f32;
+    result.io_file.io_pb.vtable.atom_f64 = io_json_writer_atom_f64;
     result.io_file.io_pb.vtable.atom_string = io_json_writer_atom_string;
     result.io_file.io_pb.vtable.atom_blob = io_atom_blob_nop;
 
@@ -580,6 +639,8 @@ IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i8)
 IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i16)
 IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i32)
 IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(i64)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(f32)
+IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER(f64)
 #undef IO_JSON_WRITER_EXT_DEFINE_ATOM_WRAPPER
 
 inline void
@@ -637,6 +698,8 @@ io_json_writer_ext_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_W
     result.vtable.atom_i16 = io_json_writer_ext_atom_i16;
     result.vtable.atom_i32 = io_json_writer_ext_atom_i32;
     result.vtable.atom_i64 = io_json_writer_ext_atom_i64;
+    result.vtable.atom_f32 = io_json_writer_ext_atom_f32;
+    result.vtable.atom_f64 = io_json_writer_ext_atom_f64;
     result.vtable.atom_string = io_json_writer_ext_atom_string;
     result.vtable.atom_blob = io_atom_blob_nop;
     return result;
@@ -818,15 +881,14 @@ io_json_reader_parse_and_consume_value(Io_Json_Reader* io_json)
         {
             value_type = Io_Json_Value_Type::NUMBER;
 
+            int decimal_count = 0;
             do
             {
                 slice_read_bytes(slice_reader, 1);
                 if (slice_reader_is_finished(*slice_reader)) break;
                 c = slice_reader->buffer[slice_reader->bytes_read];
 
-                // TODO - handle decimal to support floats... if we add floats to i/o visitor
-                //  for sim purposes we haven't need it; sim uses fixed point.
-            } while (char_is_decimal(c));
+            } while (char_is_decimal(c) || (c == '.' && (decimal_count++ == 0)));
 
             end_index = slice_reader->bytes_read;
         } break;
@@ -1151,12 +1213,6 @@ io_json_reader_find_property(Io_Json_Reader* io_json, String name)
     return {};
 }
 
-function String
-io_json_reader_consume_next_key(Io_Json_Reader* io_json)
-{
-    // TODO
-}
-
 function Slice<f32>
 io_json_reader_parse_array_f32(Io_Json_Reader* io_json, Io_Json_Value array_value)
 {
@@ -1478,6 +1534,46 @@ io_json_reader_atom_i64(Io_Vtable* io, i64* value, String name)
 }
 
 function void
+io_json_reader_atom_f64(Io_Vtable* io, f64* value, String name)
+{
+    Io_Json_Reader* io_json = (Io_Json_Reader*)io;
+    *value = 0;
+
+    if (io_json->ctx_stack.count > 0)
+    {
+        Io_Json_Reader_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        Io_Json_Value atom;
+
+        if (prev_ctx->type == Io_Json_Ctx::ARRAY)
+        {
+            ASSERT_WARN(string_is_empty(name));
+            atom = io_json_reader_find_array_item(io_json, prev_ctx->values.count);
+        }
+        else
+        {
+            atom = io_json_reader_find_property(io_json, name);
+        }
+
+        String atom_string = string_create(io_json, atom);
+        if (atom_string.length <= 0 ||
+            !(char_is_decimal(atom_string[0]) || atom_string[0] == '-'))
+        {
+            ASSERT_FALSE;
+        }
+        else
+        {
+            *value = f64_parse(atom_string);
+        }
+    }
+    else
+    {
+        // Technically, json allows an atom value as a root object, but for our
+        //  purpose we only allow object and array as the root value
+        ASSERT_FALSE;
+    }
+}
+
+function void
 io_json_reader_atom_string(Io_Vtable* io, String* string, Memory_Region memory, String name)
 {
     Io_Json_Reader* io_json = (Io_Json_Reader*)io;
@@ -1637,9 +1733,24 @@ io_json_reader_atom_i32(Io_Vtable* io, i32* value, String name)
     }
 }
 
+inline void
+io_json_reader_atom_f32(Io_Vtable* io, f32* value, String name)
+{
+    f64 v = *value;
+    io_json_reader_atom_f64(io, &v, name);
+    *value = (f32)v;
+}
+
 function Io_Json_Reader
 io_json_reader_create(String filename, Memory_Region memory, Io_Fn_File_Read file_read_all)
 {
+    // @HACK - would be nice to allow more control over the extension, but I don't want the "name" to
+    //  include a file extension... maybe make an extension field on thie Io_Json_Reader?
+    if (!string_ends_with_ignore_case(filename, STR(".json")))
+    {
+        filename = string_concat(filename, STR(".json"), memory);
+    }
+
     Io_Json_Reader result = {};
     result.memory = memory;
     result.ctx_stack = DynArray<Io_Json_Reader_Ctx>(memory);
@@ -1664,6 +1775,8 @@ io_json_reader_create(String filename, Memory_Region memory, Io_Fn_File_Read fil
     result.io_slice.vtable.atom_i16 = io_json_reader_atom_i16;
     result.io_slice.vtable.atom_i32 = io_json_reader_atom_i32;
     result.io_slice.vtable.atom_i64 = io_json_reader_atom_i64;
+    result.io_slice.vtable.atom_f32 = io_json_reader_atom_f32;
+    result.io_slice.vtable.atom_f64 = io_json_reader_atom_f64;
     result.io_slice.vtable.atom_string = io_json_reader_atom_string;
     result.io_slice.vtable.atom_blob = io_atom_blob_nop;
 
@@ -1784,6 +1897,8 @@ IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(i8)
 IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(i16)
 IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(i32)
 IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(i64)
+IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(f32)
+IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER(f64)
 #undef IO_JSON_READER_EXT_DEFINE_ATOM_WRAPPER
 
 inline void
@@ -1841,6 +1956,8 @@ io_json_reader_ext_create(String name, Memory_Region memory, Io_Fn_File_Read fil
     result.vtable.atom_i16 = io_json_reader_ext_atom_i16;
     result.vtable.atom_i32 = io_json_reader_ext_atom_i32;
     result.vtable.atom_i64 = io_json_reader_ext_atom_i64;
+    result.vtable.atom_f32 = io_json_reader_ext_atom_f32;
+    result.vtable.atom_f64 = io_json_reader_ext_atom_f64;
     result.vtable.atom_string = io_json_reader_ext_atom_string;
     result.vtable.atom_blob = io_atom_blob_nop;
     result.file_read_all = file_read_all;

@@ -26,7 +26,7 @@
 
 #if BUILD_DEBUG && ENABLE_ASSERT
  #define ASSERT_TRACKER_COUNT 32768
- static bool g_assert_tracker[ASSERT_TRACKER_COUNT] = {};
+ static bool g_assert_tracker_[ASSERT_TRACKER_COUNT] = {};
 
  #if COMPILER_MSVC
   #define FORCE_BREAKPOINT() __debugbreak()
@@ -35,7 +35,7 @@
   #define FORCE_BREAKPOINT() (*(int*)0 = 0)
  #endif
 
- #define FORCE_BREAKPOINT_ONCE(counter) ((counter) > 0 && (counter) < ASSERT_TRACKER_COUNT && !g_assert_tracker[counter] ? (FORCE_BREAKPOINT(), g_assert_tracker[counter] = true) : (g_assert_tracker[counter] = true))
+ #define FORCE_BREAKPOINT_ONCE(counter) ((counter) >= 0 && (counter) < ASSERT_TRACKER_COUNT && !g_assert_tracker_[counter] ? (FORCE_BREAKPOINT(), g_assert_tracker_[counter] = true) : true)
  #define ASSERT(EXPRESSION) ((EXPRESSION) ? true : (FORCE_BREAKPOINT_ONCE(__COUNTER__), false))
 #else
  #define ASSERT(EXPRESSION)

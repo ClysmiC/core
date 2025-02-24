@@ -182,8 +182,8 @@ i64_parse(String string)
 
     return (i64)result;
 }
-function f32
-f32_parse(String string)
+function f64
+f64_parse(String string)
 {
     // @HACK - fixed buffer to guarantee null-termination, since atof expects it
     char zstr[1024];
@@ -192,6 +192,13 @@ f32_parse(String string)
     mem_copy(zstr, string.data, length);
 
     // TODO - better API that includes errors... atoi silently returns 0
-    double result = std::atof(zstr);
-    return (f32)result;
+    f64 result = std::atof(zstr);
+    return result;
+}
+
+function f32
+f32_parse(String string)
+{
+    f32 result = (f32)f64_parse(string);
+    return result;
 }

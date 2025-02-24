@@ -31,6 +31,8 @@ struct Io_Vtable
     void (*atom_i16)(Io_Vtable* io, i16* value, String name);
     void (*atom_i32)(Io_Vtable* io, i32* value, String name);
     void (*atom_i64)(Io_Vtable* io, i64* value, String name);
+    void (*atom_f32)(Io_Vtable* io, f32* value, String name);
+    void (*atom_f64)(Io_Vtable* io, f64* value, String name);
     void (*atom_string)(Io_Vtable* io, String* value, Memory_Region memory, String name);
     void (*atom_blob)(Io_Vtable* io, Slice<u8> bytes, String name);
 
@@ -54,6 +56,8 @@ inline void io_atom_i8_nop(Io_Vtable* io, i8* value, String name) { return; }
 inline void io_atom_i16_nop(Io_Vtable* io, i16* value, String name) { return; }
 inline void io_atom_i32_nop(Io_Vtable* io, i32* value, String name) { return; }
 inline void io_atom_i64_nop(Io_Vtable* io, i64* value, String name) { return; }
+inline void io_atom_f32_nop(Io_Vtable* io, f32* value, String name) { return; }
+inline void io_atom_f64_nop(Io_Vtable* io, f64* value, String name) { return; }
 inline void io_atom_string_nop(Io_Vtable* io, String* value, Memory_Region memory, String name) { return; }
 inline void io_atom_blob_nop(Io_Vtable* io, Slice<u8> bytes, String name) { ASSERT_FALSE_WARN; return; }
 
@@ -98,6 +102,8 @@ static Io_Vtable const IO_VTABLE_NOP = {
     io_atom_i16_nop,
     io_atom_i32_nop,
     io_atom_i64_nop,
+    io_atom_f32_nop,
+    io_atom_f64_nop,
     io_atom_string_nop,
     io_atom_blob_nop,
 };
@@ -167,6 +173,7 @@ io_pb_atom_i16(Io_Vtable* io, i16* value, String name)
     Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
     push_buffer_append(&io_pb->pb, *value);
 }
+
 inline void
 io_pb_atom_i32(Io_Vtable* io, i32* value, String name)
 {
@@ -176,6 +183,20 @@ io_pb_atom_i32(Io_Vtable* io, i32* value, String name)
 
 inline void
 io_pb_atom_i64(Io_Vtable* io, i64* value, String name)
+{
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
+}
+
+inline void
+io_pb_atom_f32(Io_Vtable* io, f32* value, String name)
+{
+    Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
+    push_buffer_append(&io_pb->pb, *value);
+}
+
+inline void
+io_pb_atom_f64(Io_Vtable* io, f64* value, String name)
 {
     Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
     push_buffer_append(&io_pb->pb, *value);
@@ -221,6 +242,8 @@ io_pb_create(Memory_Region memory, int bytes_per_page)
     result.vtable.atom_i16 = io_pb_atom_i16;
     result.vtable.atom_i32 = io_pb_atom_i32;
     result.vtable.atom_i64 = io_pb_atom_i64;
+    result.vtable.atom_f32 = io_pb_atom_f32;
+    result.vtable.atom_f64 = io_pb_atom_f64;
     result.vtable.atom_string = io_pb_atom_string;
     result.vtable.atom_blob = io_pb_atom_blob;
     result.pb = Push_Buffer(memory, bytes_per_page);
@@ -292,6 +315,7 @@ io_slice_reader_atom_i16(Io_Vtable* io, i16* value, String name)
     Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
     *value = *slice_read<i16>(&io_slice->reader);
 }
+
 inline void
 io_slice_reader_atom_i32(Io_Vtable* io, i32* value, String name)
 {
@@ -304,6 +328,20 @@ io_slice_reader_atom_i64(Io_Vtable* io, i64* value, String name)
 {
     Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
     *value = *slice_read<i64>(&io_slice->reader);
+}
+
+inline void
+io_slice_reader_atom_f32(Io_Vtable* io, f32* value, String name)
+{
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<f32>(&io_slice->reader);
+}
+
+inline void
+io_slice_reader_atom_f64(Io_Vtable* io, f64* value, String name)
+{
+    Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
+    *value = *slice_read<f64>(&io_slice->reader);
 }
 
 inline void
@@ -359,6 +397,8 @@ io_slice_reader_create(Slice<u8> const& slice, Memory_Region memory)
     result.vtable.atom_i16 = io_slice_reader_atom_i16;
     result.vtable.atom_i32 = io_slice_reader_atom_i32;
     result.vtable.atom_i64 = io_slice_reader_atom_i64;
+    result.vtable.atom_f32 = io_slice_reader_atom_f32;
+    result.vtable.atom_f64 = io_slice_reader_atom_f64;
     result.vtable.atom_string = io_slice_reader_atom_string;
     result.vtable.atom_blob = io_slice_reader_atom_blob;
     result.reader = slice_reader_create(slice);
