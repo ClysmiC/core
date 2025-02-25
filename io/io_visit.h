@@ -9,6 +9,16 @@ enum class Io_Visitor_Flags : u64
 };
 DefineFlagOps(Io_Visitor_Flags, u64);
 
+enum class Io_Ctx_Flags : u64
+{
+    NIL = 0,
+
+    // HMM - these should probably be defined at the "subclass" level...
+    EXTERNAL        = 1 << 0,
+    COMPACT         = 1 << 1,
+};
+DefineFlagOps(Io_Ctx_Flags, u64);
+
 struct Io_Vtable
 {
     Memory_Region memory;
@@ -17,10 +27,10 @@ struct Io_Vtable
     void (*begin)(Io_Vtable* io, String name);
     void (*end)(Io_Vtable* io);
 
-    void (*object_begin)(Io_Vtable* io, String name, bool is_external);
+    void (*object_begin)(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags);
     void (*object_end)(Io_Vtable* io);
-    void (*array_begin_i32)(Io_Vtable* io, i32* length, String name, bool is_external);
-    void (*array_begin_u32)(Io_Vtable* io, u32* length, String name, bool is_external);
+    void (*array_begin_i32)(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags);
+    void (*array_begin_u32)(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags);
     void (*array_end)(Io_Vtable* io);
 
     void (*atom_u8)(Io_Vtable* io, u8* value, String name);
@@ -43,10 +53,10 @@ struct Io_Vtable
 
 inline void io_begin_nop(Io_Vtable* io, String name) { return; }
 inline void io_end_nop(Io_Vtable* io) { return; }
-inline void io_object_begin_nop(Io_Vtable* io, String name, bool is_external) { return; }
+inline void io_object_begin_nop(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags) { return; }
 inline void io_object_end_nop(Io_Vtable* io) { return; }
-inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name, bool is_external) { return; }
-inline void io_array_begin_u32_nop(Io_Vtable* io, u32* length, String name, bool is_external) { return; }
+inline void io_array_begin_i32_nop(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags) { return; }
+inline void io_array_begin_u32_nop(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags) { return; }
 inline void io_array_end_nop(Io_Vtable* io) { return; }
 inline void io_atom_u8_nop(Io_Vtable* io, u8* value, String name) { return; }
 inline void io_atom_u16_nop(Io_Vtable* io, u16* value, String name) { return; }
@@ -119,14 +129,14 @@ struct Io_Push_Buffer
 };
 
 inline void
-io_pb_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_pb_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
     push_buffer_append(&io_pb->pb, *length);
 }
 
 inline void
-io_pb_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_pb_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Push_Buffer* io_pb = (Io_Push_Buffer*)io;
     push_buffer_append(&io_pb->pb, *length);
@@ -261,14 +271,14 @@ struct Io_Slice_Reader
 };
 
 inline void
-io_slice_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_slice_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
     *length = *slice_read<i32>(&io_slice->reader);
 }
 
 inline void
-io_slice_reader_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_slice_reader_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Slice_Reader* io_slice = (Io_Slice_Reader*)io;
     *length = *slice_read<u32>(&io_slice->reader);

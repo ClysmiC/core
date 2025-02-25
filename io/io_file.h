@@ -21,6 +21,8 @@ struct Io_Json_Ctx
 
         ENUM_COUNT
     } type;
+
+    Io_Ctx_Flags flags;
 };
 
 
@@ -49,7 +51,10 @@ struct Io_Json_Writer_Ext
 {
     Io_Vtable vtable;
     Memory_Region memory;
+    String external_dir;
     DynArray<Io_Json_Writer> writer_stack;
+    Io_Fn_File_Write_From_Pb file_write_all_pb;
+    int bytes_per_page;
 };
 
 
@@ -106,6 +111,7 @@ struct Io_Json_Reader
     Io_Slice_Reader io_slice;
     Memory_Region memory;
     DynArray<Io_Json_Reader_Ctx> ctx_stack;
+    Io_Fn_File_Read file_read_all;
     bool file_loaded;
 };
 
@@ -116,6 +122,7 @@ struct Io_Json_Reader_Ext
 {
     Io_Vtable vtable;
     Memory_Region memory;
+    String external_dir;
     DynArray<Io_Json_Reader> reader_stack;
     Io_Fn_File_Read file_read_all;
 };

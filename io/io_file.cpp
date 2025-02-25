@@ -80,6 +80,10 @@ io_json_writer_end(Io_Vtable* io)
 function void
 io_json_writer_indent(Io_Json_Writer* io_json, int indent_delta=0)
 {
+    if (io_json->ctx_stack.count > 0 &&
+        IsFlagSet(io_json->ctx_stack[io_json->ctx_stack.count - 1].flags, Io_Ctx_Flags::COMPACT))
+        return;
+
     static u8 space_buffer[] = {
         ' ', ' ', ' ', ' ',
         ' ', ' ', ' ', ' ',
@@ -103,7 +107,7 @@ io_json_writer_indent(Io_Json_Writer* io_json, int indent_delta=0)
 }
 
 function void
-io_json_writer_object_begin(Io_Vtable* io, String name, bool is_external)
+io_json_writer_object_begin(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
 
@@ -125,8 +129,12 @@ io_json_writer_object_begin(Io_Vtable* io, String name, bool is_external)
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -134,7 +142,8 @@ io_json_writer_object_begin(Io_Vtable* io, String name, bool is_external)
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         prev_ctx->item_count++;
@@ -145,6 +154,7 @@ io_json_writer_object_begin(Io_Vtable* io, String name, bool is_external)
     // Push context
     Io_Json_Writer_Ctx* ctx = array_append_new(&io_json->ctx_stack);
     ctx->type = Io_Json_Ctx::OBJECT;
+    ctx->flags = ctx_flags;
     ctx->item_count = 0;
 }
 
@@ -157,8 +167,15 @@ io_json_writer_object_end(Io_Vtable* io)
     {
         u8 new_line = '\n';
         u8 close_brace = '}';
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json, -1);
+
+        Io_Json_Writer_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json, -1);
+        }
+
         io_pb_atom_u8(io, &close_brace, {});
 
         // Pop context
@@ -171,7 +188,7 @@ io_json_writer_object_end(Io_Vtable* io)
 }
 
 function void
-io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Writer* io_json = (Io_Json_Writer*)io;
 
@@ -193,8 +210,12 @@ io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -202,7 +223,8 @@ io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         prev_ctx->item_count++;
@@ -213,13 +235,14 @@ io_json_writer_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_
     // Push context
     Io_Json_Writer_Ctx* ctx = array_append_new(&io_json->ctx_stack);
     ctx->type = Io_Json_Ctx::ARRAY;
+    ctx->flags = ctx_flags;
     ctx->item_count = 0;
 }
 
 function void
-io_json_writer_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_json_writer_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
-    io_json_writer_array_begin_i32(io, nullptr, name, is_external);
+    io_json_writer_array_begin_i32(io, nullptr, name, ctx_flags);
 }
 
 function void
@@ -231,8 +254,15 @@ io_json_writer_array_end(Io_Vtable* io)
     {
         u8 new_line = '\n';
         u8 close_bracket = ']';
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json, -1);
+
+        Io_Json_Writer_Ctx* prev_ctx = array_peek_last(&io_json->ctx_stack);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json, -1);
+        }
+
         io_pb_atom_u8(io, &close_bracket, {});
 
         // Pop context
@@ -263,8 +293,12 @@ io_json_writer_atom_u64(Io_Vtable* io, u64* value, String name)
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -272,7 +306,8 @@ io_json_writer_atom_u64(Io_Vtable* io, u64* value, String name)
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         u8 printf_buffer[32];
@@ -310,8 +345,12 @@ io_json_writer_atom_i64(Io_Vtable* io, i64* value, String name)
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -319,7 +358,8 @@ io_json_writer_atom_i64(Io_Vtable* io, i64* value, String name)
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         u8 printf_buffer[32];
@@ -357,8 +397,12 @@ io_json_writer_atom_f64(Io_Vtable* io, f64* value, String name)
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -366,7 +410,8 @@ io_json_writer_atom_f64(Io_Vtable* io, f64* value, String name)
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         u8 printf_buffer[32];
@@ -405,8 +450,12 @@ io_json_writer_atom_string(Io_Vtable* io, String* string, Memory_Region memory, 
             io_pb_atom_u8(io, &comma, {});
         }
 
-        io_pb_atom_u8(io, &new_line, {});
-        io_json_writer_indent(io_json);
+        bool is_prev_compact = IsFlagSet(prev_ctx->flags, Io_Ctx_Flags::COMPACT);
+        if (!is_prev_compact)
+        {
+            io_pb_atom_u8(io, &new_line, {});
+            io_json_writer_indent(io_json);
+        }
 
         if (prev_ctx->type != Io_Json_Ctx::ARRAY)
         {
@@ -414,7 +463,8 @@ io_json_writer_atom_string(Io_Vtable* io, String* string, Memory_Region memory, 
             io_pb_atom_blob(io, slice_create(name), {});
             io_pb_atom_u8(io, &quote, {});
             io_pb_atom_u8(io, &colon, {});
-            io_pb_atom_u8(io, &space, {});
+
+            if (!is_prev_compact) io_pb_atom_u8(io, &space, {});
         }
 
         io_pb_atom_u8(io, &quote, {});
@@ -507,6 +557,7 @@ io_json_writer_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_Write
     EnsureCapacity(&result.ctx_stack, 16);
 
     result.io_file = io_file_writer_create(memory, bytes_per_page, file_write_all_pb);
+    result.io_file.io_pb.vtable.flags |= Io_Visitor_Flags::TEXT;
     result.io_file.io_pb.vtable.begin = io_json_writer_begin;
     result.io_file.io_pb.vtable.end = io_json_writer_end;
     result.io_file.io_pb.vtable.object_begin = io_json_writer_object_begin;
@@ -535,9 +586,9 @@ io_json_writer_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_Write
 // --- JSON writer. Specific objects/arrays can be written as external JSON files.
 
 function Io_Json_Writer
-io_json_writer_ext_push_new_writer(Io_Json_Writer_Ext* iox, String name, int bytes_per_page, Io_Fn_File_Write_From_Pb file_write_all_pb)
+io_json_writer_ext_push_new_writer(Io_Json_Writer_Ext* iox, String name)
 {
-    Io_Json_Writer result = io_json_writer_create(iox->memory, bytes_per_page, file_write_all_pb);
+    Io_Json_Writer result = io_json_writer_create(iox->memory, iox->bytes_per_page, iox->file_write_all_pb);
 
     Append(&iox->writer_stack, result);
     io_json_writer_begin((Io_Vtable*)array_peek_last(&iox->writer_stack), name);
@@ -553,70 +604,81 @@ io_json_writer_ext_pop_writer(Io_Json_Writer_Ext* iox)
 }
 
 function void
-io_json_writer_ext_object_begin(Io_Vtable* io, String name, bool is_external)
+io_json_writer_ext_object_begin(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
-    if (is_external)
+    if (iox->writer_stack.count == 0)
     {
-        Io_File_Writer* io_file_prev = &array_peek_last(&iox->writer_stack)->io_file;
-        io_json_writer_ext_push_new_writer(iox, name, io_file_prev->io_pb.pb.pages->capacity_b, io_file_prev->file_write_all_pb);
+        ASSERT_WARN(IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL));
+        ctx_flags |= Io_Ctx_Flags::EXTERNAL;
+    }
+
+    if (IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL))
+    {
+        if (iox->external_dir.length > 0)
+        {
+            name = string_concat(iox->external_dir, name, iox->memory);
+        }
+
+        io_json_writer_ext_push_new_writer(iox, name);
     }
 
     Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
-    io_json_writer_object_begin((Io_Vtable*)io_json, name, is_external);
+    io_json_writer_object_begin((Io_Vtable*)io_json, name, ctx_flags);
 }
 
 function void
 io_json_writer_ext_object_end(Io_Vtable* io)
 {
     Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+
+    ASSERT(iox->writer_stack.count > 0);
     Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
     io_json_writer_object_end((Io_Vtable*)io_json);
-
-    // NOTE - the bottom writer on the stack gets popped by end(..),
-    //  to be more symmetrical with it's initialized in create(..)
-    // HMM - maybe we just force the root object/array's is_external param to true,
-    //  then we can just rely on that and not this weird create/end logic.
-    if (iox->writer_stack.count > 1 &&
-        io_json->ctx_stack.count == 0)
+    if (io_json->ctx_stack.count == 0)
     {
         io_json_writer_ext_pop_writer(iox);
     }
 }
 
 function void
-io_json_writer_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_json_writer_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
-    if (is_external)
+    if (iox->writer_stack.count == 0)
     {
-        Io_File_Writer* io_file_prev = &array_peek_last(&iox->writer_stack)->io_file;
-        io_json_writer_ext_push_new_writer(iox, name, io_file_prev->io_pb.pb.pages->capacity_b, io_file_prev->file_write_all_pb);
+        ASSERT_WARN(IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL));
+        ctx_flags |= Io_Ctx_Flags::EXTERNAL;
+    }
+
+    if (IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL))
+    {
+        if (iox->external_dir.length > 0)
+        {
+            name = string_concat(iox->external_dir, name, iox->memory);
+        }
+
+        io_json_writer_ext_push_new_writer(iox, name);
     }
 
     Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
-    io_json_writer_array_begin_i32((Io_Vtable*)io_json, length, name, is_external);
+    io_json_writer_array_begin_i32((Io_Vtable*)io_json, length, name, ctx_flags);
 }
 
 function void
-io_json_writer_ext_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_json_writer_ext_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
-    io_json_writer_ext_array_begin_i32(io, nullptr, name, is_external);
+    io_json_writer_ext_array_begin_i32(io, nullptr, name, ctx_flags);
 }
 
 function void
 io_json_writer_ext_array_end(Io_Vtable* io)
 {
     Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
+    ASSERT(iox->writer_stack.count > 0);
     Io_Json_Writer* io_json = array_peek_last(&iox->writer_stack);
     io_json_writer_array_end((Io_Vtable*)io_json);
-
-    // NOTE - the bottom writer on the stack gets popped by end(..),
-    //  to be more symmetrical with it's initialized in create(..)
-    // HMM - maybe we just force the root object/array's is_external param to true,
-    //  then we can just rely on that and not this weird create/end logic.
-    if (iox->writer_stack.count > 1 &&
-        io_json->ctx_stack.count == 0)
+    if (io_json->ctx_stack.count == 0)
     {
         io_json_writer_ext_pop_writer(iox);
     }
@@ -654,33 +716,29 @@ io_json_writer_ext_atom_string(Io_Vtable* io, String* value, Memory_Region memor
 function void
 io_json_writer_ext_begin(Io_Vtable* io, String name)
 {
-    Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
-
-    // A writer is already pushed to the stack from create(..)
-    ASSERT(iox->writer_stack.count == 1);
-    io_json_writer_begin((Io_Vtable*)array_peek_last(&iox->writer_stack), name);
+    // no-op
 }
 
 function void
 io_json_writer_ext_end(Io_Vtable* io)
 {
     Io_Json_Writer_Ext* iox = (Io_Json_Writer_Ext*)io;
-    io_json_writer_end((Io_Vtable*)array_peek_last(&iox->writer_stack));
-
-    ASSERT(iox->writer_stack.count == 1);
-    array_remove_last(&iox->writer_stack);
     ASSERT(iox->writer_stack.count == 0);
 }
 
 function Io_Json_Writer_Ext
-io_json_writer_ext_create(Memory_Region memory, int bytes_per_page, Io_Fn_File_Write_From_Pb file_write_all_pb)
+io_json_writer_ext_create(
+    String external_dir,
+    Memory_Region memory,
+    int bytes_per_page,
+    Io_Fn_File_Write_From_Pb file_write_all_pb)
 {
     Io_Json_Writer_Ext result = {};
     result.memory = memory;
+    result.external_dir = string_create(external_dir, memory);
     result.writer_stack = DynArray<Io_Json_Writer>(memory);
-
-    // NOTE - Creating the first writer in the stack here, rather than begin(..), since we have the params we need
-    Append(&result.writer_stack, io_json_writer_create(memory, bytes_per_page, file_write_all_pb));
+    result.bytes_per_page = bytes_per_page;
+    result.file_write_all_pb = file_write_all_pb;
 
     result.vtable.flags |= Io_Visitor_Flags::TEXT;
     result.vtable.begin = io_json_writer_ext_begin;
@@ -1262,10 +1320,21 @@ io_json_reader_parse_array_f32(Io_Json_Reader* io_json, Io_Json_Value array_valu
 inline void
 io_json_reader_begin(Io_Vtable* io, String name)
 {
-    // HMM - should io_slice_reader_create_from_file(..) be called here, instead of in create(..)?
-    //  it would be give the API more granularity... but blegh
     Io_Json_Reader* io_json = (Io_Json_Reader*)io;
-    ASSERT(io_json->file_loaded);
+
+    // @HACK - would be nice to allow more control over the extension, but I don't want the "name" to
+    //  include a file extension... maybe make an extension field on thie Io_Json_Reader?
+    if (!string_ends_with_ignore_case(name, STR(".json")))
+    {
+        name = string_concat(name, STR(".json"), io_json->memory);
+    }
+
+    Io_Slice_Reader dummy = io_slice_reader_create_from_file(name, io_json->memory, io_json->file_read_all);
+
+    // Just copy the reader, since copying the whole dummy would overwrite the vtable
+    io_json->io_slice.reader = dummy.reader;
+    io_json->file_loaded = (io_json->io_slice.reader.buffer.count > 0);
+    ASSERT_WARN(io_json->file_loaded);
 }
 
 inline void
@@ -1281,7 +1350,7 @@ io_json_reader_end(Io_Vtable* io)
 }
 
 function void
-io_json_reader_object_begin(Io_Vtable* io, String name, bool is_external)
+io_json_reader_object_begin(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Reader* io_json = (Io_Json_Reader*)io;
 
@@ -1360,7 +1429,7 @@ io_json_reader_object_end(Io_Vtable* io)
 }
 
 function void
-io_json_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_json_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Reader* io_json = (Io_Json_Reader*)io;
     *length = 0;
@@ -1418,10 +1487,10 @@ io_json_reader_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_
 }
 
 function void
-io_json_reader_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_json_reader_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     i32 length_i32;
-    io_json_reader_array_begin_i32(io, &length_i32, name, is_external);
+    io_json_reader_array_begin_i32(io, &length_i32, name, ctx_flags);
     *length = (u32)length_i32;
 }
 
@@ -1742,22 +1811,16 @@ io_json_reader_atom_f32(Io_Vtable* io, f32* value, String name)
 }
 
 function Io_Json_Reader
-io_json_reader_create(String filename, Memory_Region memory, Io_Fn_File_Read file_read_all)
+io_json_reader_create(Memory_Region memory, Io_Fn_File_Read file_read_all)
 {
-    // @HACK - would be nice to allow more control over the extension, but I don't want the "name" to
-    //  include a file extension... maybe make an extension field on thie Io_Json_Reader?
-    if (!string_ends_with_ignore_case(filename, STR(".json")))
-    {
-        filename = string_concat(filename, STR(".json"), memory);
-    }
-
     Io_Json_Reader result = {};
     result.memory = memory;
     result.ctx_stack = DynArray<Io_Json_Reader_Ctx>(memory);
     EnsureCapacity(&result.ctx_stack, 16);
 
-    result.io_slice = io_slice_reader_create_from_file(filename, memory, file_read_all);
-    result.file_loaded = (result.io_slice.reader.buffer.count > 0);
+    result.io_slice = {};
+    result.file_loaded = false;
+    result.file_read_all = file_read_all;
 
     result.io_slice.vtable.flags |= (Io_Visitor_Flags::DESERIALIZING | Io_Visitor_Flags::TEXT);
     result.io_slice.vtable.begin = io_json_reader_begin;
@@ -1788,9 +1851,14 @@ io_json_reader_create(String filename, Memory_Region memory, Io_Fn_File_Read fil
 // --- JSON reader. Specific objects/arrays can be read as external JSON files.
 
 function Io_Json_Reader
-io_json_reader_ext_push_new_reader(Io_Json_Reader_Ext* iox, String name, Io_Fn_File_Read file_read_all)
+io_json_reader_ext_push_new_reader(Io_Json_Reader_Ext* iox, String name)
 {
-    Io_Json_Reader result = io_json_reader_create(name, iox->memory, file_read_all);
+    if (VERIFY_WARN(iox->external_dir.length > 0))
+    {
+        name = string_concat(iox->external_dir, name, iox->memory);
+    }
+
+    Io_Json_Reader result = io_json_reader_create(iox->memory, iox->file_read_all);
 
     Append(&iox->reader_stack, result);
     io_json_reader_begin((Io_Vtable*)array_peek_last(&iox->reader_stack), name);
@@ -1806,59 +1874,62 @@ io_json_reader_ext_pop_reader(Io_Json_Reader_Ext* iox)
 }
 
 function void
-io_json_reader_ext_object_begin(Io_Vtable* io, String name, bool is_external)
+io_json_reader_ext_object_begin(Io_Vtable* io, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
-    if (is_external)
+    if (iox->reader_stack.count == 0)
     {
-        io_json_reader_ext_push_new_reader(iox, name, iox->file_read_all);
+        ASSERT_WARN(IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL));
+        ctx_flags |= Io_Ctx_Flags::EXTERNAL;
+    }
+
+    if (IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL))
+    {
+        io_json_reader_ext_push_new_reader(iox, name);
     }
 
     Io_Json_Reader* io_json = array_peek_last(&iox->reader_stack);
-    io_json_reader_object_begin((Io_Vtable*)io_json, name, is_external);
+    io_json_reader_object_begin((Io_Vtable*)io_json, name, ctx_flags);
 }
 
 function void
 io_json_reader_ext_object_end(Io_Vtable* io)
 {
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
+
+    ASSERT(iox->reader_stack.count > 0);
     Io_Json_Reader* io_json = array_peek_last(&iox->reader_stack);
     io_json_reader_object_end((Io_Vtable*)io_json);
-
-    // NOTE - the bottom reader on the stack gets popped by end(..),
-    //  to be more symmetrical with it's initialized in create(..)
-    // HMM - maybe we just force the root object/array's is_external param to true,
-    //  then we can just rely on that and not this weird create/end logic.
-    if (iox->reader_stack.count > 1 &&
-        io_json->ctx_stack.count == 0)
+    if (io_json->ctx_stack.count == 0)
     {
         io_json_reader_ext_pop_reader(iox);
     }
 }
 
 function void
-io_json_reader_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, bool is_external)
+io_json_reader_ext_array_begin_i32(Io_Vtable* io, i32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
-    if (is_external)
+    if (iox->reader_stack.count == 0)
     {
-        // @Hack
-        if (!string_ends_with_ignore_case(name, STR(".json")))
-        {
-            name = string_concat(name, STR(".json"), iox->memory);
-        }
-        io_json_reader_ext_push_new_reader(iox, name, iox->file_read_all);
+        ASSERT_WARN(IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL));
+        ctx_flags |= Io_Ctx_Flags::EXTERNAL;
+    }
+
+    if (IsFlagSet(ctx_flags, Io_Ctx_Flags::EXTERNAL))
+    {
+        io_json_reader_ext_push_new_reader(iox, name);
     }
 
     Io_Json_Reader* io_json = array_peek_last(&iox->reader_stack);
-    io_json_reader_array_begin_i32((Io_Vtable*)io_json, length, name, is_external);
+    io_json_reader_array_begin_i32((Io_Vtable*)io_json, length, name, ctx_flags);
 }
 
 function void
-io_json_reader_ext_array_begin_u32(Io_Vtable* io, u32* length, String name, bool is_external)
+io_json_reader_ext_array_begin_u32(Io_Vtable* io, u32* length, String name, Io_Ctx_Flags ctx_flags)
 {
     i32 length_i32;
-    io_json_reader_ext_array_begin_i32(io, &length_i32, name, is_external);
+    io_json_reader_ext_array_begin_i32(io, &length_i32, name, ctx_flags);
     *length = (u32)length_i32;
 }
 
@@ -1866,15 +1937,10 @@ function void
 io_json_reader_ext_array_end(Io_Vtable* io)
 {
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
+    ASSERT(iox->reader_stack.count > 0);
     Io_Json_Reader* io_json = array_peek_last(&iox->reader_stack);
     io_json_reader_array_end((Io_Vtable*)io_json);
-
-    // NOTE - the bottom reader on the stack gets popped by end(..),
-    //  to be more symmetrical with it's initialized in create(..)
-    // HMM - maybe we just force the root object/array's is_external param to true,
-    //  then we can just rely on that and not this weird create/end logic.
-    if (iox->reader_stack.count > 1 &&
-        io_json->ctx_stack.count == 0)
+    if (io_json->ctx_stack.count == 0)
     {
         io_json_reader_ext_pop_reader(iox);
     }
@@ -1912,33 +1978,27 @@ io_json_reader_ext_atom_string(Io_Vtable* io, String* value, Memory_Region memor
 function void
 io_json_reader_ext_begin(Io_Vtable* io, String name)
 {
-    Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
-
-    // A reader is already pushed to the stack from create(..)
-    ASSERT(iox->reader_stack.count == 1);
-    io_json_reader_begin((Io_Vtable*)array_peek_last(&iox->reader_stack), name);
+    // no-op
 }
 
 function void
 io_json_reader_ext_end(Io_Vtable* io)
 {
     Io_Json_Reader_Ext* iox = (Io_Json_Reader_Ext*)io;
-    io_json_reader_end((Io_Vtable*)array_peek_last(&iox->reader_stack));
-
-    ASSERT(iox->reader_stack.count == 1);
-    array_remove_last(&iox->reader_stack);
     ASSERT(iox->reader_stack.count == 0);
 }
 
 function Io_Json_Reader_Ext
-io_json_reader_ext_create(String name, Memory_Region memory, Io_Fn_File_Read file_read_all)
+io_json_reader_ext_create(
+    String external_dir,
+    Memory_Region memory,
+    Io_Fn_File_Read file_read_all)
 {
     Io_Json_Reader_Ext result = {};
     result.memory = memory;
+    result.external_dir = string_create(external_dir, memory);
     result.reader_stack = DynArray<Io_Json_Reader>(memory);
-
-    // NOTE - Creating the first reader in the stack here, rather than begin(..), since we have the params we need
-    Append(&result.reader_stack, io_json_reader_create(name, memory, file_read_all));
+    result.file_read_all = file_read_all;
 
     result.vtable.flags |= (Io_Visitor_Flags::TEXT | Io_Visitor_Flags::DESERIALIZING);
     result.vtable.begin = io_json_reader_ext_begin;
@@ -1960,6 +2020,5 @@ io_json_reader_ext_create(String name, Memory_Region memory, Io_Fn_File_Read fil
     result.vtable.atom_f64 = io_json_reader_ext_atom_f64;
     result.vtable.atom_string = io_json_reader_ext_atom_string;
     result.vtable.atom_blob = io_atom_blob_nop;
-    result.file_read_all = file_read_all;
     return result;
 }
