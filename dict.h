@@ -111,14 +111,14 @@ f32_hash(f32 const& value)
     return bits;
 }
 
-function bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
-function bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
-function bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
-function bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
-function bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
+inline bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
+inline bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
+inline bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
+inline bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
+inline bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
 
 // Sometimes you want to compute a hash yourself, then use it directly as the key
-function u32 u32_identity(u32 const& value) { return value; }
+inline u32 u32_identity(u32 const& value) { return value; }
 
 function unsigned int
 StartHashzstr(const char* zstr)
@@ -211,6 +211,12 @@ struct Dict
         return result;
     }
 };
+
+// Convenience wrapper for when you don't care about the values. Functionality is
+//  still exposed through the dict(..) API. The idiom is to set the key's value to
+//  true to add it to the set, but false also works. All that matters is the key's presence.
+template<typename K>
+using Set = Dict<K, bool>;
 
 // This function has no qualms about adding a duplicate key. Use wisely!
 template <typename K, typename V>
