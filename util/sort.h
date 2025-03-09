@@ -1,3 +1,16 @@
+inline int u64_compare(u64 const& lhs, u64 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int u32_compare(u32 const& lhs, u32 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int u16_compare(u16 const& lhs, u16 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int u8_compare(u8 const& lhs, u8 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int i64_compare(i64 const& lhs, i64 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int i32_compare(i32 const& lhs, i32 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int i16_compare(i16 const& lhs, i16 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int i8_compare(i8 const& lhs, i8 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+
+// NOTE - does not correctly handle NAN
+inline int f32_compare(f32 const& lhs, f32 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+inline int f64_compare(f64 const& lhs, f64 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
+
 // TODO - Way to reduce copypasta here?
 // template <class T>
 // using FnComparator = int (*)(T const&, T const&);
