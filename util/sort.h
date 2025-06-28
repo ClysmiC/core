@@ -11,24 +11,16 @@ inline int i8_compare(i8 const& lhs, i8 const& rhs) { return (lhs > rhs) - (lhs 
 inline int f32_compare(f32 const& lhs, f32 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
 inline int f64_compare(f64 const& lhs, f64 const& rhs) { return (lhs > rhs) - (lhs < rhs); }
 
-// TODO - Way to reduce copypasta here?
-// template <class T>
-// using FnComparator = int (*)(T const&, T const&);
-// template <class T>
-// using FnComparatorByPtr = int (*)(T const*, T const*);
-// template <class T, class CTX>
-// using FnComparatorWithCtx = int (*)(T const&, T const&, CTX *);
-// template <class T, class CTX>
-// using FnComparatorByPtrWithCtx = int (*)(T const*, T const*, CTX *);
-
 // NOTE - If not found, returns a negative value that can be bit-flipped with ~
 //    to find the index that the item *should* go into to keep the list sorted
 template <class T, class FN_COMPARATOR>
-int BinarySearch(Slice<T> sorted, T const& item, FN_COMPARATOR compare)
+int BinarySearch(Slice<T> sorted, T const& item, int iLow, int iHigh, FN_COMPARATOR compare)
 {
-    // --- Binary search to find desired index
-    int iLow = 0;
-    int iHigh = sorted.count - 1;
+    if (sorted.count <= 0)
+        return ~0;
+
+    iLow = clamp(iLow, 0, sorted.count - 1);
+    iHigh = clamp(iHigh, 0, sorted.count - 1); // NOTE - iHigh is inclusive! Hmm should it be?
 
     while (iHigh >= iLow)
     {
@@ -51,6 +43,13 @@ int BinarySearch(Slice<T> sorted, T const& item, FN_COMPARATOR compare)
 
     int result = ~iLow;
     ASSERT(result < 0);
+    return result;
+}
+
+template <class T, class FN_COMPARATOR>
+int BinarySearch(Slice<T> sorted, T const& item, FN_COMPARATOR compare)
+{
+    int result = BinarySearch(sorted, item, 0, sorted.count - 1, compare);
     return result;
 }
 

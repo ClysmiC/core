@@ -337,4 +337,45 @@ u64_floor_power_of_2(u64 x)
    return x;
 }
 
+#if COMPILER_MSVC
+#pragma intrinsic(_BitScanReverse)
+#pragma intrinsic(_BitScanReverse64)
+#endif
+
+inline bool
+bitscan_msb_index_u32(u32 value, int* out)
+{
+#if COMPILER_MSVC
+    unsigned long result;
+    if (_BitScanReverse(&result, value))
+    {
+        *out = (int)result;
+        return true;
+    }
+
+    return false;
+#else
+    ASSERT_TODO;
+    return false;
+#endif
+}
+
+inline bool
+bitscan_msb_index_u64(u64 value, int* out)
+{
+#if COMPILER_MSVC
+    unsigned long result;
+    if (_BitScanReverse64(&result, value))
+    {
+        *out = (int)result;
+        return true;
+    }
+
+    return false;
+#else
+    ASSERT_TODO;
+    return false;
+#endif
+}
+
 DEBUG_OPTIMIZE_OFF
