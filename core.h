@@ -25,6 +25,7 @@
 //#define DO_WHILE0(STATEMENT) do { STATEMENT } while(0)
 
 #if BUILD_DEBUG && ENABLE_ASSERT
+// TODO - better implementation of this...
  #define ASSERT_TRACKER_COUNT 32768
  static bool g_assert_tracker_[ASSERT_TRACKER_COUNT] = {};
 
@@ -39,6 +40,8 @@
  #define ASSERT(EXPRESSION) ((EXPRESSION) ? true : (FORCE_BREAKPOINT_ONCE(__COUNTER__), false))
 #else
  #define ASSERT(EXPRESSION)
+ #define FORCE_BREAKPOINT()
+ #define FORCE_BREAKPOINT_ONCE()
 #endif
 
 #define ASSERT_FALSE_WARN ASSERT(false)

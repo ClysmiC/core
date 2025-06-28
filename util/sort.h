@@ -121,9 +121,6 @@ template <class T, class FN_COMPARATOR>
 function void
 BubbleSort(DynArray<T>* array, FN_COMPARATOR compare)
 {
-    // NOTE - The array param technically doesn't need to be a pointer, but since
-    //  we are potentially modifying the items array, a pointer communicates the intent better.
-
     BubbleSort(slice_create(*array), compare);
 }
 
