@@ -249,7 +249,7 @@ function T
 vec_length(Vec<T, N> v)
 {
     T result = vec_length_sq(v);
-    result = Sqrt((f32)result); // @HACK - casting to float to support fixed point for now... switch to CORDIC or suffer desyncs!
+    result = sqrt(result);
     return result;
 }
 

@@ -10,8 +10,8 @@ namespace fxp
 // --- A unitless fixed point value
 
 template<class> struct integer_type { static bool constexpr is_supported = false; };
-template<> struct integer_type<i32> { static bool constexpr is_supported = true; };
-template<> struct integer_type<i64> { static bool constexpr is_supported = true; };
+template<> struct integer_type<i32> { static bool constexpr is_supported = true; using unsigned_t = u32;};
+template<> struct integer_type<i64> { static bool constexpr is_supported = true; using unsigned_t = u64;};
 // TODO - support u32 and u64? Any extra work required?
 
 using denom_t = i32;
@@ -140,7 +140,7 @@ operator/(
     Value<T, D> v1)
 {
     Value<T, D> result;
-    result.n = (D * v0.n) / v1.n;
+    result.n = (T)((D * (i64)v0.n) / v1.n);
     return result;
 }
 
@@ -214,6 +214,37 @@ operator<=(
     return result;
 }
 
+template<class T, denom_t D>
+Value<T, D>
+sqrt(Value<T, D> v)
+{
+    Value<T, D> result = {};
+    if (v.n <= 0)
+        return result;
+
+    int msb = 0;
+    bitscan_msb_index((integer_type<T>::unsigned_t)v.n, &msb);
+
+    int denom_msb = 0;
+    bitscan_msb_index((u32)D, &denom_msb);
+
+    // Initial guess
+    result = T(1) << ((msb - denom_msb) / 2);
+
+
+    // Empirically, all integers from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
+    int constexpr ITERATION_COUNT = 3;
+    Value<T, D> constexpr TWO(2);
+
+    // Newton's Method
+    for (int i = 0; i < ITERATION_COUNT; i++)
+    {
+        Value<T, D> div = v / result;
+        result = (result + div) / TWO;
+    }
+
+    return result;
+}
 
 #undef FXPCONSTEVAL
 

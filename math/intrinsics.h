@@ -70,7 +70,7 @@ SignOf(T value)
 }
 
 TODO_MATH_CONSTEXPR f32
-Sqrt(f32 value)
+sqrt(f32 value)
 {
     // @SSE
     f32 Result = _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(value)));
@@ -343,7 +343,7 @@ u64_floor_power_of_2(u64 x)
 #endif
 
 inline bool
-bitscan_msb_index_u32(u32 value, int* out)
+bitscan_msb_index(u32 value, int* out)
 {
 #if COMPILER_MSVC
     unsigned long result;
@@ -361,7 +361,7 @@ bitscan_msb_index_u32(u32 value, int* out)
 }
 
 inline bool
-bitscan_msb_index_u64(u64 value, int* out)
+bitscan_msb_index(u64 value, int* out)
 {
 #if COMPILER_MSVC
     unsigned long result;

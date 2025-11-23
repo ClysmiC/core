@@ -798,7 +798,7 @@ FullTestCircleOverlapsCircle(Circle2 c0, Circle2 c1)
         result.overlaps = true;
 
         Vec2 displacementDir = NormalizeSafeXAxis(c0.center - c1.center);
-        f32 displacementDist = c0.radius + c1.radius - Sqrt(distSq);
+        f32 displacementDist = c0.radius + c1.radius - sqrt(distSq);
         result.penetration = displacementDir * displacementDist;
     }
     
