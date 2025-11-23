@@ -78,7 +78,7 @@ debug_id_from_name(char const* name)
         return 0;
 
     char const* c = name;
-    u32 constexpr magic = 2147463569;   // big prime number to "distribute" characters to 0-2^32 before x-oring for debug id
+    u32 constexpr magic = 2147463569;   // big prime number to "distribute" characters to 0-2^32 before xoring for debug id
     u32 result = 0;
     while (*c)
     {

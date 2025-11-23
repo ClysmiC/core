@@ -226,7 +226,7 @@ function void
 Clear(DynArray<T>* array, bool shouldFreeMemory=false)
 {
     array->count = 0;
-    if (array->count > 0 && shouldFreeMemory)
+    if (shouldFreeMemory)
     {
         free_tracked_allocation(array->memory, array->items);
 
