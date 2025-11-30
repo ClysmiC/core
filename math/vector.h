@@ -359,13 +359,10 @@ vec_cross(Vec<T, 3> lhs, Vec<T, 3> rhs)
 }
 
 template<class T>
-function Vec<T, 3>
+function T
 vec_cross_xy(Vec<T, 2> lhs, Vec<T, 2> rhs)
 {
-    Vec<T, 3> result;
-    result.x = 0;
-    result.y = 0;
-    result.z = lhs.x * rhs.y - lhs.y * rhs.x;
+    T result = lhs.x * rhs.y - lhs.y * rhs.x;
     return result;
 }
 

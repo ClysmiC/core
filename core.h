@@ -196,6 +196,7 @@ f32 constexpr MAX = 3.402823466e38f;
 #include "string/string.h"
 #include "string/string_parse.h"
 #include "array/array.h"
+#include "math/extra/geometry2d.h"
 #include "io/io_visit.h"
 #include "io/io_file.h"
 #include "io/io_file.cpp"
