@@ -230,9 +230,13 @@ sqrt(Value<T, D> v)
 
     // Initial guess
     result = T(1) << ((msb - denom_msb) / 2);
+    if (result.n <= 0)
+    {
+        // Avoid divide by 0
+        result = v;
+    }
 
-
-    // Empirically, all integers from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
+    // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
     int constexpr ITERATION_COUNT = 3;
     Value<T, D> constexpr TWO(2);
 

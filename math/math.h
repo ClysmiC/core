@@ -9,8 +9,8 @@ DEBUG_OPTIMIZE_ON
 #include "vector.h"
 #include "rgba.h"
 #include "rect.h"
-#include "math_1.h"
-#include "math_2.h"
+#include "util.h"
+#include "matrix.h"
 #include "fixed_math.h"
 #include "fixed_math_cordic.h"
 

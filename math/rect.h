@@ -1,20 +1,3 @@
-struct Range2
-{
-    f32 min;
-    f32 max;
-
-    Range2() = default;
-    Range2(f32 min, f32 max) : min(min), max(max) {}
-    Range2(Range2 const& other) : min(other.min), max(other.max) {}
-};
-
-function f32
-range_dim(Range2 range)
-{
-    f32 result = range.max - range.min;
-    return result;
-}
-
 template<class T, uint N>
 struct Rect
 {
