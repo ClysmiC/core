@@ -14,20 +14,21 @@ triangle_contains_ccw(Vec2 p0, Vec2 p1, Vec2 p2, Vec2 point)
     return result;
 }
 
-function f32
-area_compute_signed_ccw(Slice<Vec2> ccw_points)
+template <typename T>
+function T
+area_compute_signed_ccw(Slice<Vec<T, 2>> ccw_points)
 {
     // --- Shoelace formula
     if (ccw_points.count < 3)
-        return 0.0f;
+        return T(0.0f);
 
-    f32 result = 0;
+    T result = T(0);
     for (int i = 0; i < ccw_points.count; i++)
     {
         int j = (i + 1) % ccw_points.count;
         result += vec_cross_xy(ccw_points[i], ccw_points[j]);
     }
-    result *= 0.5f;
+    result /= T(2);
     return result;
 }
 
