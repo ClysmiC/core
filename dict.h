@@ -23,12 +23,12 @@ function u32
 BuildHashzstr(const char* zstr, unsigned int runningHash)
 {
     unsigned int result = runningHash;
-    static const unsigned int s_fnvPrime = 16777619;
+    unsigned int constexpr PRIME = 16777619;
 
     while (*zstr)
     {
         result ^= *zstr;
-        result *= s_fnvPrime;
+        result *= PRIME;
         zstr++;
     }
 
@@ -45,7 +45,7 @@ StartHash(const void* pBytes=nullptr, int cBytes=0)
 function u32
 u64_hash(u64 const& value)
 {
-    const u64 PRIME = 0x9E3779B97F4A7C15ull;
+    u64 constexpr PRIME = 0x9E3779B97F4A7C15ull;
     u64 result = value;
     result ^= result >> 33;
     result *= PRIME;
@@ -56,7 +56,7 @@ u64_hash(u64 const& value)
 function u32
 u32_hash(u32 const& value)
 {
-    const u32 PRIME = 0x9E3779B9;
+    u32 constexpr PRIME = 0x9E3779B9;
     u32 result = value;
     result ^= result >> 16;
     result *= PRIME;
@@ -67,7 +67,7 @@ u32_hash(u32 const& value)
 function u32
 u16_hash(u16 const& value)
 {
-    const u32 PRIME = 0x9E3779B9;
+    u32 constexpr PRIME = 0x9E3779B9;
     u32 result = value;
     result ^= result >> 7;
     result *= PRIME;
@@ -78,7 +78,7 @@ u16_hash(u16 const& value)
 function u32
 u8_hash(u8 const& value)
 {
-    const u32 PRIME = 0x9E3779B9;
+    u32 constexpr PRIME = 0x9E3779B9;
     u32 result = value;
     result ^= result >> 3;
     result *= PRIME;
@@ -89,7 +89,7 @@ u8_hash(u8 const& value)
 function u32
 f32_hash(f32 const& value)
 {
-    const u32 PRIME = 0x9E3779B9;
+    u32 constexpr PRIME = 0x9E3779B9;
 
     u32 bits;
     mem_copy(&bits, &value, sizeof(f32));
@@ -97,10 +97,10 @@ f32_hash(f32 const& value)
     // Normalize -0.0 to 0.0
     if ((bits & 0x7FFFFFFF) == 0) bits = 0;
 
-    // Treat all NaNs the same
+    // Treat all NaNs the same... maybe not that useful since we still use == for f32_eq(..)
     if ((bits & 0x7F800000) == 0x7F800000 && (bits & 0x007FFFFF) != 0)
     {
-        bits = 0x7FC00000; // Canonical NaN
+        bits = 0x7FC00000;
     }
 
     // Hashing
@@ -117,7 +117,6 @@ inline bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
 inline bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
 inline bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
 
-// Sometimes you want to compute a hash yourself, then use it directly as the key
 inline u32 u32_identity(u32 const& value) { return value; }
 
 function unsigned int
@@ -136,8 +135,6 @@ CombineHash(unsigned int hash0, unsigned int hash1)
 
 
 // --- Simple dictionary with linear probing
-// Credit: JBlow
-//  https://pastebin.com/xMUQXshn
 
 template <typename K, typename V>
 struct Dict
@@ -211,12 +208,6 @@ struct Dict
         return result;
     }
 };
-
-// Convenience wrapper for when you don't care about the values. Functionality is
-//  still exposed through the dict(..) API. The idiom is to set the key's value to
-//  true to add it to the set, but false also works. All that matters is the key's presence.
-template<typename K>
-using Set = Dict<K, bool>;
 
 // This function has no qualms about adding a duplicate key. Use wisely!
 template <typename K, typename V>
@@ -663,3 +654,23 @@ dict_reset(Dict<K, V>* dict)
 //     dict_reset(&dict->forward);
 //     dict_reset(&dict->reverse);
 // }
+
+
+
+// Convenience wrapper for when you don't care about the values. Most functionality is
+//  still exposed through the dict(..) API. The idiom is to set the key's value to
+//  true to add it to the set.
+template<typename K>
+using Set = Dict<K, bool>;
+
+template <typename K>
+function Set<K>
+set_create(
+    Memory_Region memory,
+    u32 (*key_hash)(K const& key),
+    bool (*key_eq)(K const& key0, K const& key1),
+    i32 starting_capacity=16)
+{
+    Set<K> result = dict_create<K, bool>(memory, key_hash, key_eq, starting_capacity);
+    return result;
+}
