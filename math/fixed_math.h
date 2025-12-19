@@ -16,13 +16,14 @@ template<> struct integer_type<i64> { static bool constexpr is_supported = true;
 
 using denom_t = i32;
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 struct Value
 {
-    STATIC_ASSERT(D >= 1);
+    STATIC_ASSERT(DBITS >= 0);
     STATIC_ASSERT(integer_type<T>::is_supported);
 
-    static denom_t constexpr d = D;
+    static denom_t constexpr D_BITS = DBITS;
+    static denom_t constexpr D = (1 << DBITS);
     T n;
 
     // --- Implicitly convert from...
@@ -30,7 +31,7 @@ struct Value
     constexpr Value() = default;
 
     template <class T_OTHER>
-    constexpr Value(Value<T_OTHER, D> const& v) : n(T(v.n)) {}
+    constexpr Value(Value<T_OTHER, DBITS> const& v) : n(T(v.n)) {}
     constexpr Value(i8 v)   : n(T(v * D)) {}
     constexpr Value(i16 v)  : n(T(v * D)) {}
     constexpr Value(i32 v)  : n(T(v * D)) {}
@@ -42,11 +43,6 @@ struct Value
 
     FXPCONSTEVAL Value(f32 v)   : n(T(v * D)) {}
     FXPCONSTEVAL Value(f64 v)   : n(T(v * D)) {}
-
-    // --- Explicitly convert from...
-
-    // template <class T_OTHER, denom_t D_OTHER>
-    // explicit constexpr Value(Value<T_OTHER, D_OTHER> const& v) : n(T(v.n * D / D_OTHER)) {}
 
     // --- Explicitly convert to...
 
@@ -62,163 +58,159 @@ struct Value
     explicit constexpr operator f64() const { return f64(n / (f64)D); }
 };
 
-// All intermediate calculations are 64 bit.
-// template <denom_t D> using intermediate_t = Value<i64, D>;
-
 // --- Math operations
 
-template<class T, denom_t D>
-Value<T, D> constexpr
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr
 operator+(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
-    Value<T, D> result;
+    Value<T, DBITS> result;
     result.n = v0.n + v1.n;
     return result;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr&
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr&
 operator+=(
-    Value<T, D>& v0,
-    Value<T, D> v1)
+    Value<T, DBITS>& v0,
+    Value<T, DBITS> v1)
 {
     v0 = v0 + v1;
     return v0;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr
 operator-(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
-    Value<T, D> result;
+    Value<T, DBITS> result;
     result.n = v0.n - v1.n;
     return result;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr&
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr&
 operator-=(
-    Value<T, D>& v0,
-    Value<T, D> v1)
+    Value<T, DBITS>& v0,
+    Value<T, DBITS> v1)
 {
     v0 = v0 - v1;
     return v0;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr
 operator*(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
-    Value<T, D> result;
-    // Intermediate calculation is 64 bit to mitigate overflows
+    Value<T, DBITS> result;
     i64 n = (i64)v0.n * (i64)v1.n;
-    n /= D;
+    n /= (1 << DBITS);
     result.n = (T)n;
     return result;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr&
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr&
 operator*=(
-    Value<T, D>& v0,
-    Value<T, D> v1)
+    Value<T, DBITS>& v0,
+    Value<T, DBITS> v1)
 {
     v0 = v0 * v1;
     return v0;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr
 operator/(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
-    Value<T, D> result;
-    result.n = (T)((D * (i64)v0.n) / v1.n);
+    Value<T, DBITS> result;
+    result.n = (T)(((1 << DBITS) * (i64)v0.n) / v1.n);
     return result;
 }
 
-template<class T, denom_t D>
-Value<T, D> constexpr&
+template<class T, denom_t DBITS>
+Value<T, DBITS> constexpr&
 operator/=(
-    Value<T, D>& v0,
-    Value<T, D> v1)
+    Value<T, DBITS>& v0,
+    Value<T, DBITS> v1)
 {
     v0 = v0 / v1;
     return v0;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator==(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n == v1.n);
     return result;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator!=(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n != v1.n);
     return result;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator>(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n > v1.n);
     return result;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator>=(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n >= v1.n);
     return result;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator<(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n < v1.n);
     return result;
 }
 
-template<class T, denom_t D>
+template<class T, denom_t DBITS>
 bool constexpr
 operator<=(
-    Value<T, D> v0,
-    Value<T, D> v1)
+    Value<T, DBITS> v0,
+    Value<T, DBITS> v1)
 {
     bool result = (v0.n <= v1.n);
     return result;
 }
 
-template<class T, denom_t D>
-Value<T, D>
-sqrt(Value<T, D> v)
+template<class T, denom_t DBITS>
+Value<T, DBITS>
+sqrt(Value<T, DBITS> v)
 {
-    Value<T, D> result = {};
+    Value<T, DBITS> result = {};
     if (v.n <= 0)
         return result;
 
@@ -226,7 +218,7 @@ sqrt(Value<T, D> v)
     bitscan_msb_index((integer_type<T>::unsigned_t)v.n, &msb);
 
     int denom_msb = 0;
-    bitscan_msb_index((u32)D, &denom_msb);
+    bitscan_msb_index((u32)(1 << DBITS), &denom_msb);
 
     // Initial guess
     result = T(1) << ((msb - denom_msb) / 2);
@@ -238,12 +230,12 @@ sqrt(Value<T, D> v)
 
     // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
     int constexpr ITERATION_COUNT = 3;
-    Value<T, D> constexpr TWO(2);
+    Value<T, DBITS> constexpr TWO(2);
 
     // Newton's Method
     for (int i = 0; i < ITERATION_COUNT; i++)
     {
-        Value<T, D> div = v / result;
+        Value<T, DBITS> div = v / result;
         result = (result + div) / TWO;
     }
 
