@@ -139,14 +139,14 @@ i32 constexpr MAX = 0x7F'FF'FF'FF;
 
 namespace I16
 {
-i16 constexpr MIN = -32768; // HMM - Compiler complains about truncation if I put 0x80'00 ?
-i16 constexpr MAX = 0x7F'FF;
+i16 constexpr MIN = -32768;
+i16 constexpr MAX = 32767;
 }
 
 namespace I8
 {
-i8 constexpr MIN = -128;    // HMM - Compiler complains about truncation if I put 0x80 ?
-i8 constexpr MAX = 0x7F;
+i8 constexpr MIN = -128;
+i8 constexpr MAX = 127;
 }
 
 namespace F32

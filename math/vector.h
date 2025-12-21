@@ -396,3 +396,7 @@ using Vec4 = Vec<f32, 4>;
 using Vec2i = Vec<i32, 2>;
 using Vec3i = Vec<i32, 3>;
 using Vec4i = Vec<i32, 4>;
+
+using Vec2i64 = Vec<i64, 2>;
+using Vec3i64 = Vec<i64, 3>;
+using Vec4i64 = Vec<i64, 4>;
