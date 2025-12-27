@@ -26,7 +26,7 @@
 
 #if BUILD_DEBUG && ENABLE_ASSERT
 // TODO - better implementation of this...
- #define ASSERT_TRACKER_COUNT 32768
+ #define ASSERT_TRACKER_COUNT 100000
  static bool g_assert_tracker_[ASSERT_TRACKER_COUNT] = {};
 
  #if COMPILER_MSVC
@@ -41,7 +41,6 @@
 #else
  #define ASSERT(EXPRESSION)
  #define FORCE_BREAKPOINT()
- #define FORCE_BREAKPOINT_ONCE()
 #endif
 
 #define ASSERT_FALSE_WARN ASSERT(false)
