@@ -78,7 +78,6 @@ clamp_01(T const& value)
     return result;
 }
 
-
 function f32
 divide_safe_n(f32 numerator, f32 denominator, f32 n)
 {

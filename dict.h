@@ -111,12 +111,15 @@ f32_hash(f32 const& value)
     return bits;
 }
 
-inline bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
-inline bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
-inline bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
 inline bool u8_eq(u8 const& lhs, u8 const& rhs) { return lhs == rhs; }
+inline bool u16_eq(u16 const& lhs, u16 const& rhs) { return lhs == rhs; }
+inline bool u32_eq(u32 const& lhs, u32 const& rhs) { return lhs == rhs; }
+inline bool u64_eq(u64 const& lhs, u64 const& rhs) { return lhs == rhs; }
 inline bool f32_eq(f32 const& lhs, f32 const& rhs) { return lhs == rhs; }
 
+// Identity hash function for ID keys
+inline u32 u8_identity(u8 const& value) { return value; }
+inline u32 u16_identity(u16 const& value) { return value; }
 inline u32 u32_identity(u32 const& value) { return value; }
 
 function unsigned int

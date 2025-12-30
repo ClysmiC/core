@@ -60,7 +60,7 @@ EnsureCapacity(DynArray<T>* array, int capacity)
 
 template <typename T>
 function void
-Append(DynArray<T>* array, const T & item)
+Append(DynArray<T>* array, const T& item)
 {
     EnsureCapacity(array, array->count + 1);
     array->items[array->count] = item;
@@ -69,7 +69,7 @@ Append(DynArray<T>* array, const T & item)
 
 template <typename T>
 function u32
-array_append_and_id(DynArray<T>* array, const T & item)
+array_append_and_id(DynArray<T>* array, const T& item)
 {
     u32 result = array->count;
     EnsureCapacity(array, array->count + 1);
@@ -90,11 +90,11 @@ array_append_new(DynArray<T>* array)
 
 template <typename T>
 function void
-Insert(DynArray<T>* array, const T & item, int iItem)
+Insert(DynArray<T>* array, const T& item, int iItem)
 {
     EnsureCapacity(array, array->count + 1);
 
-    int cntItemShift = array->count - iItem; // @ArrayBoundsCheck
+    int cntItemShift = array->count - iItem;
     T* dst = array->items + iItem + 1;
     T* src = array->items + iItem;
     mem_move(dst, src, sizeof(T) * cntItemShift);
@@ -105,7 +105,7 @@ Insert(DynArray<T>* array, const T & item, int iItem)
 
 template <typename T>
 function void
-array_prepend(DynArray<T>* array, const T & item)
+array_prepend(DynArray<T>* array, const T& item)
 {
     Insert(array, item, 0);
 }

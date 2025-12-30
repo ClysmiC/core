@@ -135,3 +135,42 @@ triangulate(Slice<Vec2> positions, Memory_Region memory)
     mem_region_end(temp_memory);
     return slice_create(result, result_count);
 }
+
+template <class T>
+function Vec<T, 2>
+point_to_segment_closest(Vec<T, 2> point, Vec<T, 2> segment_start, Vec<T, 2> segment_end)
+{
+    // Reference: https://paulbourke.net/geometry/pointlineplane/
+    if (segment_start == segment_end)
+        return segment_start;
+
+    Vec<T, 2> start_to_point = point - segment_start;
+    Vec<T, 2> start_to_end =  segment_end - segment_start;
+    T u = vec_dot(start_to_point, start_to_end) / vec_length_sq(start_to_end);
+
+    Vec<T, 2> result;
+    if (u <= T(0.0f))
+    {
+        result = segment_start;
+    }
+    else if (u >= T(1.0f))
+    {
+        result = segment_end;
+    }
+    else
+    {
+        // Closest point is along the edge
+        result = segment_start + u * start_to_end;
+    }
+
+    return result;
+}
+
+template <class T>
+function T
+point_to_segment_dist_sq(Vec<T, 2> point, Vec<T, 2> segment_start, Vec<T, 2> segment_end)
+{
+    Vec<T, 2> closest = point_to_segment_closest(point, segment_start, segment_end);
+    T result = vec_length_sq(closest - point);
+    return result;
+}
