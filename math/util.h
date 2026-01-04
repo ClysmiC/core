@@ -103,8 +103,6 @@ divide_safe_0(f32 numerator, f32 denominator)
     return result;
 }
 
-// --- Vectors
-
 enum class Axis : u8
 {
     NIL = 0,
@@ -114,18 +112,4 @@ enum class Axis : u8
     Z,
 
     ENUM_COUNT,
-};
-
-enum class Signed_Axis : u8
-{
-    NIL = 0,
-    
-    X_PLUS,
-    X_MINUS,
-    Y_PLUS,
-    Y_MINUS,
-    Z_PLUS,
-    Z_MINUS,
-
-    ENUM_COUNT
 };
