@@ -367,15 +367,15 @@ dict_find_ptr(Dict<K, V> const& dict, K const& key)
 
 template <typename K, typename V>
 function V
-dict_find(Dict<K, V> const& dict, K const& key, bool* success)
+dict_find(Dict<K, V> const& dict, K const& key, bool* success=nullptr)
 {
     if (V* result = dict_find_ptr(dict, key))
     {
-        *success = true;
+        if (success) *success = true;
         return *result;
     }
 
-    *success = false;
+    if (success) *success = false;
     return V{};
 }
 

@@ -315,7 +315,6 @@ struct Vec<T, 2>
     union
     {
         struct { T x, y; };
-        struct { T u, v; };
         T elements[2];
     };
 
