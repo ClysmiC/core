@@ -7,12 +7,9 @@ namespace fxp
  #define FXPCONSTEVAL constexpr
 #endif
 
-// --- A unitless fixed point value
-
 template<class> struct integer_type { static bool constexpr is_supported = false; };
-template<> struct integer_type<i32> { static bool constexpr is_supported = true; using unsigned_t = u32;};
-template<> struct integer_type<i64> { static bool constexpr is_supported = true; using unsigned_t = u64;};
-// TODO - support u32 and u64? Any extra work required?
+template<> struct integer_type<i32> { static bool constexpr is_supported = true; using unsigned_t = u32; };
+template<> struct integer_type<i64> { static bool constexpr is_supported = true; using unsigned_t = u64; };
 
 using denom_t = i32;
 
@@ -206,6 +203,7 @@ operator<=(
     return result;
 }
 
+// TODO - delete this function in favor of vec scaling functions
 template<class T, denom_t DBITS>
 Value<T, DBITS>
 sqrt(Value<T, DBITS> v)
