@@ -87,7 +87,7 @@ struct fix64
     }
 };
 
-// --- Math operations
+// --- fix32 math operations
 
 function fix32 constexpr
 operator+(fix32 v0, fix32 v1)
@@ -118,6 +118,24 @@ operator-=(fix32& v0, fix32 v1)
     v0 = v0 - v1;
     return v0;
 }
+
+#if 0
+function fix64 constexpr
+operator*(fix32 v0, fix32 v1)
+{
+    fix32 result;
+    result.n = (i64)v0.n * (i64)v1.n;
+    return result;
+}
+
+function fix32 constexpr&
+operator*=(fix32& v0, fix32 v1)
+{
+    fix64 product = v0 * v1;
+    v0.n = (i32)(product.n / (1 << (fix64::DBITS - fix32::DBITS)));
+    return v0;
+}
+#endif
 
 function fix32 constexpr
 operator*(fix32 v0, fix32 v1)
@@ -229,5 +247,111 @@ sqrt(fix32 v)
     return result;
 }
 
-} // namespace fxp
 
+// --- fix64 math operations
+
+function fix64 constexpr
+operator+(fix64 v0, fix64 v1)
+{
+    fix64 result;
+    result.n = v0.n + v1.n;
+    return result;
+}
+
+function fix64 constexpr&
+operator+=(fix64& v0, fix64 v1)
+{
+    v0 = v0 + v1;
+    return v0;
+}
+
+function fix64 constexpr
+operator-(fix64 v0, fix64 v1)
+{
+    fix64 result;
+    result.n = v0.n - v1.n;
+    return result;
+}
+
+function fix64 constexpr&
+operator-=(fix64& v0, fix64 v1)
+{
+    v0 = v0 - v1;
+    return v0;
+}
+
+function fix64 constexpr
+operator*(fix64 v0, fix64 v1)
+{
+    fix64 result;
+    i64 n = v0.n * v1.n;
+    n /= (1 << fix64::DBITS);
+    result.n = n;
+    return result;
+}
+
+function fix64 constexpr&
+operator*=(fix64& v0, fix64 v1)
+{
+    v0 = v0 * v1;
+    return v0;
+}
+
+function fix64 constexpr
+operator/(fix64 v0, fix64 v1)
+{
+    fix64 result;
+    result.n = (((1 << fix64::DBITS) * v0.n) / v1.n);
+    return result;
+}
+
+function fix64 constexpr&
+operator/=(fix64& v0, fix64 v1)
+{
+    v0 = v0 / v1;
+    return v0;
+}
+
+bool constexpr
+operator==(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n == v1.n);
+    return result;
+}
+
+bool constexpr
+operator!=(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n != v1.n);
+    return result;
+}
+
+bool constexpr
+operator>(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n > v1.n);
+    return result;
+}
+
+bool constexpr
+operator>=(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n >= v1.n);
+    return result;
+}
+
+bool constexpr
+operator<(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n < v1.n);
+    return result;
+}
+
+bool constexpr
+operator<=(fix64 v0, fix64 v1)
+{
+    bool result = (v0.n <= v1.n);
+    return result;
+}
+
+} // namespace fxp
