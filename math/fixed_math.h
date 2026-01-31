@@ -366,7 +366,7 @@ sqrt(fix64 v)
     bitscan_msb_index((u64)v.n, &msb);
 
     int denom_msb = 0;
-    bitscan_msb_index((u64)(1 << fix32::DBITS), &denom_msb);
+    bitscan_msb_index((u64)(1 << fix64::DBITS), &denom_msb);
 
     // Initial guess
     result = 1 << ((msb - denom_msb) / 2);
@@ -376,8 +376,7 @@ sqrt(fix64 v)
         result = v;
     }
 
-    // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
-    int constexpr ITERATION_COUNT = 3;
+    int constexpr ITERATION_COUNT = 8;
     fix64 constexpr TWO(2);
 
     // Newton's Method
