@@ -78,8 +78,9 @@ template<class T, uint N, class U>
 function Vec<T, N>
 operator*(Vec<T, N> lhs, U rhs)
 {
+    // TODO - better support for Vec2x ... this automatically converts result back to fix32
     Vec<T, N> result;
-    for (int i = 0; i < N; i++) result[i] = lhs[i] * rhs;
+    for (int i = 0; i < N; i++) result[i] = (T)(lhs[i] * rhs);
 
     return result;
 }
@@ -218,28 +219,28 @@ vec_ceil(Vec<f32, N> v)
 }
 
 template<class T, uint N>
-function T
+function auto
 vec_dot(Vec<T, N> lhs, Vec<T, N> rhs)
 {
-    T result = 0;
+    decltype(lhs[0] * rhs[0]) result = 0;
     for (int i = 0; i < N; i++) result += lhs[i] * rhs[i];
 
     return result;
 }
 
 template<class T, uint N>
-function T
+function auto
 vec_length_sq(Vec<T, N> v)
 {
-    T result = vec_dot(v, v);
+    auto result = vec_dot(v, v);
     return result;
 }
 
 template<class T, uint N>
-function T
+function auto
 vec_dist_sq(Vec<T, N> v0, Vec<T, N> v1)
 {
-    T result = vec_length_sq(v1 - v0);
+    auto result = vec_length_sq(v1 - v0);
     return result;
 }
 
@@ -248,8 +249,8 @@ template<class T, uint N>
 function T
 vec_length(Vec<T, N> v)
 {
-    T result = vec_length_sq(v);
-    result = sqrt(result);
+    auto result_sq = vec_length_sq(v);
+    T result = (T)sqrt(result_sq);
     return result;
 }
 
@@ -358,10 +359,10 @@ vec_cross(Vec<T, 3> lhs, Vec<T, 3> rhs)
 }
 
 template<class T>
-function T
+function auto
 vec_cross_xy(Vec<T, 2> lhs, Vec<T, 2> rhs)
 {
-    T result = lhs.x * rhs.y - lhs.y * rhs.x;
+    auto result = lhs.x * rhs.y - lhs.y * rhs.x;
     return result;
 }
 

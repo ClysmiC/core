@@ -146,14 +146,14 @@ point_to_segment_closest(Vec<T, 2> point, Vec<T, 2> segment_start, Vec<T, 2> seg
 
     Vec<T, 2> start_to_point = point - segment_start;
     Vec<T, 2> start_to_end =  segment_end - segment_start;
-    T u = vec_dot(start_to_point, start_to_end) / vec_length_sq(start_to_end);
+    auto u = vec_dot(start_to_point, start_to_end) / vec_length_sq(start_to_end);
 
     Vec<T, 2> result;
-    if (u <= T(0.0f))
+    if (u <= (decltype(u))(0))
     {
         result = segment_start;
     }
-    else if (u >= T(1.0f))
+    else if (u >= (decltype(u))(1))
     {
         result = segment_end;
     }
@@ -167,10 +167,10 @@ point_to_segment_closest(Vec<T, 2> point, Vec<T, 2> segment_start, Vec<T, 2> seg
 }
 
 template <class T>
-function T
+function auto
 point_to_segment_dist_sq(Vec<T, 2> point, Vec<T, 2> segment_start, Vec<T, 2> segment_end)
 {
     Vec<T, 2> closest = point_to_segment_closest(point, segment_start, segment_end);
-    T result = vec_length_sq(closest - point);
+    auto result = vec_length_sq(closest - point);
     return result;
 }

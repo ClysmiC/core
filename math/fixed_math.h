@@ -82,7 +82,7 @@ struct fix64
     explicit constexpr operator fix32() const
     {
         fix32 result;
-        result.n = (i32)(n / (1 << (DBITS - fix32::DBITS)));
+        result.n = (i32)(n >> (DBITS - fix32::DBITS));
         return result;
     }
 };
@@ -119,11 +119,11 @@ operator-=(fix32& v0, fix32 v1)
     return v0;
 }
 
-#if 0
+#if 1
 function fix64 constexpr
 operator*(fix32 v0, fix32 v1)
 {
-    fix32 result;
+    fix64 result;
     result.n = (i64)v0.n * (i64)v1.n;
     return result;
 }
@@ -135,8 +135,7 @@ operator*=(fix32& v0, fix32 v1)
     v0.n = (i32)(product.n / (1 << (fix64::DBITS - fix32::DBITS)));
     return v0;
 }
-#endif
-
+#else
 function fix32 constexpr
 operator*(fix32 v0, fix32 v1)
 {
@@ -153,6 +152,7 @@ operator*=(fix32& v0, fix32 v1)
     v0 = v0 * v1;
     return v0;
 }
+#endif
 
 function fix32 constexpr
 operator/(fix32 v0, fix32 v1)
@@ -208,42 +208,6 @@ bool constexpr
 operator<=(fix32 v0, fix32 v1)
 {
     bool result = (v0.n <= v1.n);
-    return result;
-}
-
-// TODO - delete this function in favor of vec scaling functions
-function fix32
-sqrt(fix32 v)
-{
-    fix32 result = {};
-    if (v.n <= 0)
-        return result;
-
-    int msb = 0;
-    bitscan_msb_index((u32)v.n, &msb);
-
-    int denom_msb = 0;
-    bitscan_msb_index((u32)(1 << fix32::DBITS), &denom_msb);
-
-    // Initial guess
-    result = 1 << ((msb - denom_msb) / 2);
-    if (result.n <= 0)
-    {
-        // Avoid divide by 0
-        result = v;
-    }
-
-    // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
-    int constexpr ITERATION_COUNT = 3;
-    fix32 constexpr TWO(2);
-
-    // Newton's Method
-    for (int i = 0; i < ITERATION_COUNT; i++)
-    {
-        fix32 div = v / result;
-        result = (result + div) / TWO;
-    }
-
     return result;
 }
 
@@ -354,4 +318,77 @@ operator<=(fix64 v0, fix64 v1)
     return result;
 }
 
+// TODO - delete sqrt functions in favor of vec scaling functions
+function fix32
+sqrt(fix32 v)
+{
+    fix32 result = {};
+    if (v.n <= 0)
+        return result;
+
+    int msb = 0;
+    bitscan_msb_index((u32)v.n, &msb);
+
+    int denom_msb = 0;
+    bitscan_msb_index((u32)(1 << fix32::DBITS), &denom_msb);
+
+    // Initial guess
+    result = 1 << ((msb - denom_msb) / 2);
+    if (result.n <= 0)
+    {
+        // Avoid divide by 0
+        result = v;
+    }
+
+    // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
+    int constexpr ITERATION_COUNT = 3;
+    fix32 constexpr TWO(2);
+
+    // Newton's Method
+    for (int i = 0; i < ITERATION_COUNT; i++)
+    {
+        fix32 div = v / result;
+        result = (result + div) / TWO;
+    }
+
+    return result;
+}
+
+// TODO - delete sqrt functions in favor of vec scaling functions
+function fix64
+sqrt(fix64 v)
+{
+    fix64 result = {};
+    if (v.n <= 0)
+        return result;
+
+    int msb = 0;
+    bitscan_msb_index((u64)v.n, &msb);
+
+    int denom_msb = 0;
+    bitscan_msb_index((u64)(1 << fix32::DBITS), &denom_msb);
+
+    // Initial guess
+    result = 1 << ((msb - denom_msb) / 2);
+    if (result.n <= 0)
+    {
+        // Avoid divide by 0
+        result = v;
+    }
+
+    // Empirically, all integer 22.10 values from 0 to (1<<21)-1 converge to within < 0.035% of the actual value after 3 iterations
+    int constexpr ITERATION_COUNT = 3;
+    fix64 constexpr TWO(2);
+
+    // Newton's Method
+    for (int i = 0; i < ITERATION_COUNT; i++)
+    {
+        fix64 div = v / result;
+        result = (result + div) / TWO;
+    }
+
+    return result;
+}
+
 } // namespace fxp
+
