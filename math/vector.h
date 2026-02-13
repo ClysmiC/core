@@ -78,10 +78,8 @@ template<class T, uint N, class U>
 function Vec<T, N>
 operator*(Vec<T, N> lhs, U rhs)
 {
-    // TODO - better support for Vec2x ... this automatically converts result back to fix32
     Vec<T, N> result;
     for (int i = 0; i < N; i++) result[i] = (T)(lhs[i] * rhs);
-
     return result;
 }
 
@@ -89,9 +87,7 @@ template<class T, uint N, class U>
 function Vec<T, N>
 operator*(U lhs, Vec<T, N> rhs)
 {
-    // NOTE - assumes commutative property
-    Vec<T, N> result = rhs * lhs;
-    return result;
+    return rhs * lhs;
 }
 
 template<class T, uint N, class U>

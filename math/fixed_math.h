@@ -119,7 +119,6 @@ operator-=(fix32& v0, fix32 v1)
     return v0;
 }
 
-#if 1
 function fix64 constexpr
 operator*(fix32 v0, fix32 v1)
 {
@@ -127,32 +126,6 @@ operator*(fix32 v0, fix32 v1)
     result.n = (i64)v0.n * (i64)v1.n;
     return result;
 }
-
-function fix32 constexpr&
-operator*=(fix32& v0, fix32 v1)
-{
-    fix64 product = v0 * v1;
-    v0.n = (i32)(product.n / (1 << (fix64::DBITS - fix32::DBITS)));
-    return v0;
-}
-#else
-function fix32 constexpr
-operator*(fix32 v0, fix32 v1)
-{
-    fix32 result;
-    i64 n = (i64)v0.n * (i64)v1.n;
-    n /= (1 << fix32::DBITS);
-    result.n = (i32)n;
-    return result;
-}
-
-function fix32 constexpr&
-operator*=(fix32& v0, fix32 v1)
-{
-    v0 = v0 * v1;
-    return v0;
-}
-#endif
 
 function fix32 constexpr
 operator/(fix32 v0, fix32 v1)
