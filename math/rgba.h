@@ -45,6 +45,7 @@ struct Rgba
 
     Rgba() = default;
     explicit constexpr  Rgba(f32 r, f32 g, f32 b, f32 a) :  r(r),       g(g),       b(b),       a(a)        {}
+    explicit constexpr  Rgba(f32 r, f32 g, f32 b) :         r(r),       g(g),       b(b),       a(1.0)        {}
     explicit constexpr  Rgba(Rgb rgb) :                     r(rgb.r),   g(rgb.g),   b(rgb.b),   a(1.0f)     {}
     explicit constexpr  Rgba(Rgb rgb, f32 a) :              r(rgb.r),   g(rgb.g),   b(rgb.b),   a(a)        {}
     explicit constexpr  Rgba(Vec3 rgb) :                    r(rgb.x),   g(rgb.y),   b(rgb.z),   a(1.0f)     {}

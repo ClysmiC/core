@@ -90,6 +90,14 @@ struct fix64
 // --- fix32 math operations
 
 function fix32 constexpr
+operator-(fix32 v)
+{
+    fix32 result;
+    result.n = -v.n;
+    return result;
+}
+
+function fix32 constexpr
 operator+(fix32 v0, fix32 v1)
 {
     fix32 result;
@@ -186,6 +194,14 @@ operator<=(fix32 v0, fix32 v1)
 
 
 // --- fix64 math operations
+
+function fix64 constexpr
+operator-(fix64 v)
+{
+    fix64 result;
+    result.n = -v.n;
+    return result;
+}
 
 function fix64 constexpr
 operator+(fix64 v0, fix64 v1)
