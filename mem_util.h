@@ -8,8 +8,6 @@
 // Using _ for now as a hack workaround
 #define offsetof_(type, member) ((uintptr)&(((type*)0)->member))
 
-#define ARRAY_LEN(array) (sizeof(array) / sizeof((array)[0]))
-
 #define KILOBYTES(value) ((value) * 1024LL)
 #define MEGABYTES(value) (KILOBYTES(value) * 1024LL)
 #define GIGABYTES(value) (MEGABYTES(value) * 1024LL)

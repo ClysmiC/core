@@ -187,6 +187,8 @@ f32 constexpr MAX = 3.402823466e38f;
 #define OptionalArg(name, defaultValue) name
 #define OptionalArg0(name) name
 
+#define ARRAY_LEN(array) (sizeof(array) / sizeof((array)[0]))
+
 #include "enum.h"
 #include "math/math.h"
 #include "mem_util.h"
