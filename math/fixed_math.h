@@ -516,39 +516,50 @@ vec_rotate(Vec2x v, anglex a)
     // I.e., Each entry is the chosen theta we can rotate by so that multiplying by tan(theta) is just a bit shift.
     i64 constexpr theta_table[32] = {
         1152921504606846976ll,
-         680609306067436544ll,
-         359615265290440512ll,
-         182546323762760992ll,
-          91627395746647424ll,
-          45858365146018112ll,
-          22934778241356568ll,
-          11468088963375448ll,
-           5734131974037916ll,
-           2867076923938204ll,
-           1433539829095742ll,
-            716770085439068ll,
-            358385064080945ll,
-            179192534710649ll,
-             89596267689097ll,
-             44798133886270ll,
-             22399066948350ll,
-             11199533474827ll,
-              5599766737495ll,
-              2799883368758ll,
-              1399941684380ll,
-               699970842190ll,
-               349985421095ll,
-               174992710548ll,
-                87496355274ll,
-                43748177637ll,
-                21874088818ll,
-                10937044409ll,
-                 5468522205ll,
-                 2734261102ll,
-                 1367130551ll,
-                  683565276ll,
+        680609306067436544ll,
+        359615265290440512ll,
+        182546323762760992ll,
+        91627395746647424ll,
+        45858365146018112ll,
+        22934778241356568ll,
+        11468088963375448ll,
+        5734131974037916ll,
+        2867076923938204ll,
+        1433539829095742ll,
+        716770085439068ll,
+        358385064080945ll,
+        179192534710649ll,
+        89596267689097ll,
+        44798133886270ll,
+        22399066948350ll,
+        11199533474827ll,
+        5599766737495ll,
+        2799883368758ll,
+        1399941684380ll,
+        699970842190ll,
+        349985421095ll,
+        174992710548ll,
+        87496355274ll,
+        43748177637ll,
+        21874088818ll,
+        10937044409ll,
+        5468522205ll,
+        2734261102ll,
+        1367130551ll,
+        683565276ll,
+#if 0
+        // Calculated using this snippet
+        for (int i = 0; i < 32; i++)
+        {
+            f64 tan_theta = pow(2, -i);
+            f64 theta = atan(tan_theta);
+            theta /= 6.283185307179586476925;
+            i64 value = (i64)(theta * double(1ull << 63) + 0.5);
+        }
+#endif
     };
-    // int constexpr iter_count = 16;   // lower precision, but probably good enough?
+
+    // int constexpr iter_count = 16;   // lower precision, but maybe good enough?
     int constexpr iter_count = 32;
     STATIC_ASSERT(ARRAY_LEN(theta_table) == iter_count);
 
@@ -562,8 +573,7 @@ vec_rotate(Vec2x v, anglex a)
         // 0 (for positive) or -1 (for negative)
         i64 zero_or_minus_one = angle >> 63;
 
-        // Branchless negate all of our results when sign == -1.
-        //  Two's complement says (N xor -1) + 1 = -N
+        // Negate result of this iteration if angle is negative
         i64 dx = (y ^ zero_or_minus_one) - zero_or_minus_one;
         i64 dy = (x ^ zero_or_minus_one) - zero_or_minus_one;
 
@@ -571,6 +581,8 @@ vec_rotate(Vec2x v, anglex a)
         x -= (dx >> i);
         y += (dy >> i);
 
+        // TODO - verify that compiler unrolls this loop and uses a constant instead of the lookup table...
+        //  or manually force it, possibly using templates =/
         i64 delta_angle = (theta_table[i] ^ zero_or_minus_one) - zero_or_minus_one;
         angle -= delta_angle;
     }

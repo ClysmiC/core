@@ -6,11 +6,11 @@ DEBUG_OPTIMIZE_ON
 #define TODO_MATH_CONSTEXPR
 
 #include "intrinsics.h"
+#include "util.h"
 #include "vector.h"
 #include "fixed_math.h"
 #include "rgba.h"
 #include "rect.h"
-#include "util.h"
 #include "matrix.h"
 
 DEBUG_OPTIMIZE_OFF

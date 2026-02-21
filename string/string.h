@@ -1,16 +1,23 @@
 // --- zstr (Zero terminated STRing, a.k.a. "c-string")
 
 function int
-zstr_length(char* zstr)
+zstr_length(char const* zstr)
 {
     int result = 0;
-    char* cursor = zstr;
+    char const* cursor = zstr;
     while (*cursor)
     {
         result++;
         cursor++;
     }
 
+    return result;
+}
+
+function int
+zstr_length(char* zstr)
+{
+    int result = zstr_length((char const*)zstr);
     return result;
 }
 
@@ -30,7 +37,10 @@ struct String
     u8 const* end() const { return data + length; }
 
     explicit String(char* zstr) { this->data = (u8*)zstr; this->length = zstr_length(zstr); }
+    explicit String(char const* zstr) { this->data = (u8*)zstr; this->length = zstr_length(zstr); }
+
     String(char* zstr, uint byte_count) { this->data = (u8*)zstr; this->length = byte_count; }
+    String(char const* zstr, uint byte_count) { this->data = (u8*)zstr; this->length = byte_count; }
 
     u8 & operator[](int i) const { return data[i]; }
     bool operator == (String const& other) { return string_eq(*this, other); }
@@ -67,7 +77,7 @@ enum class Null_Terminate : u8
 };
 
 function void
-zstr_copy(char* src, char* dst, int dst_length, Null_Terminate null_terminate=Null_Terminate::YES)
+zstr_copy(char const* src, char* dst, int dst_length, Null_Terminate null_terminate=Null_Terminate::YES)
 {
     if (dst_length == 0) return;
 
@@ -85,6 +95,12 @@ zstr_copy(char* src, char* dst, int dst_length, Null_Terminate null_terminate=Nu
     }
 
     if ((bool)null_terminate) *dst = '\0';
+}
+
+function void
+zstr_copy(char* src, char* dst, int dst_length, Null_Terminate null_terminate=Null_Terminate::YES)
+{
+    zstr_copy((char const*)src, dst, dst_length, null_terminate);
 }
 
 // HMM - Should a String carry around if it is null-terminated or not? Need a convenient way to print strings...
@@ -112,7 +128,7 @@ string_copy(String src, u8* dst, int dst_length, Null_Terminate null_terminate=N
 }
 
 function char*
-zstr_create(char* src, Memory_Region memory)
+zstr_create(char const* src, Memory_Region memory)
 {
     int lengthSrc = zstr_length(src);
     int dst_length = lengthSrc + 1;
@@ -122,9 +138,16 @@ zstr_create(char* src, Memory_Region memory)
     return dst;
 }
 
+function char*
+zstr_create(char* src, Memory_Region memory)
+{
+    char* result = zstr_create((char const*)src, memory);
+    return result;
+}
+
 // HMM - rename these to string_copy?
 function String
-string_create(char* src, Memory_Region memory)
+string_create(char const* src, Memory_Region memory)
 {
     String dst;
     dst.length = zstr_length(src);
@@ -368,28 +391,6 @@ zstr_eq(char* str0, char* str1)
     return (*cursor0 == '\0' && *cursor1 == '\0');
 }
 
-function u32
-string_hash(String const& str)
-{
-    u32 result = StartHash(str.data, str.length);
-    return result;
-}
-
-function u32
-string_hash_lowercase(String const& str)
-{
-    u32 result = StartHash();
-
-    // @Slow
-    for (int i = 0; i < str.length; i++)
-    {
-        // TODO - this isn't even forcing to lowercase? Uh... don't trust this code.
-        result = BuildHash((void*)(str.data + i), 1, result);
-    }
-
-    return result;
-}
-
 function bool
 string_eq(String str0, char* str1)
 {
@@ -488,7 +489,7 @@ zstr_eq_lowercase(char* str0, char* str1)
 }
 
 function bool
-string_eq_lowercase(String const& str0, char* str1)
+string_eq_lowercase(String const& str0, char const* str1)
 {
     u8* cursor0 = str0.data;
     u8* endCursor0 = str0.data + str0.length;

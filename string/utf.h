@@ -63,7 +63,7 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
     int i = *pI;
 
     if (i < 0 || i >= cBytesUtf8)
-        goto LError;
+        return UTF::invalidCodePoint;
 
     u32 result = UTF::invalidCodePoint;
 
@@ -76,11 +76,11 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
     else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen2))
     {
         if (i >= cBytesUtf8)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         u32 b1 = (u32)bytesUtf8[i++];
         if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation))
-            goto LError;
+            return UTF::invalidCodePoint;
 
         UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen2;
         UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
@@ -90,20 +90,20 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
 
         // "overlong" encoding
         if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen1].maxCodePoint)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         result = codePoint;
     }
     else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen3))
     {
         if (i >= cBytesUtf8 - 1)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         u32 b1 = (u32)bytesUtf8[i++];
         u32 b2 = (u32)bytesUtf8[i++];
         if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation) ||
             !IsCodeUnitType((u8)b2, UTF8::CodeUnitType::Continuation))
-            goto LError;
+            return UTF::invalidCodePoint;
 
         UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen3;
         UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
@@ -114,14 +114,14 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
 
         // "overlong" encoding
         if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen2].maxCodePoint)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         result = codePoint;
     }
     else if (IsCodeUnitType((u8)b0, UTF8::CodeUnitType::LeadLen4))
     {
         if (i >= cBytesUtf8 - 2)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         u32 b1 = (u32)bytesUtf8[i++];
         u32 b2 = (u32)bytesUtf8[i++];
@@ -129,7 +129,7 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
         if (!IsCodeUnitType((u8)b1, UTF8::CodeUnitType::Continuation) ||
             !IsCodeUnitType((u8)b2, UTF8::CodeUnitType::Continuation) ||
             !IsCodeUnitType((u8)b3, UTF8::CodeUnitType::Continuation))
-            goto LError;
+            return UTF::invalidCodePoint;
 
         UTF8::CodeUnitMetadata * leadByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::LeadLen4;
         UTF8::CodeUnitMetadata * contByteMeta = UTF8::codeUnitMetadata + (int)UTF8::CodeUnitType::Continuation;
@@ -141,20 +141,17 @@ NextCodePointUtf8_(u8 * bytesUtf8, int cBytesUtf8, int* pI)
 
         // "overlong" encoding
         if (codePoint <= UTF8::codeUnitMetadata[(int)UTF8::CodeUnitType::LeadLen3].maxCodePoint)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         result = codePoint;
     }
     else
     {
-        goto LError;
+        return UTF::invalidCodePoint;
     }
 
     *pI = i;
     return result;
-
-LError:    // @goto
-    return UTF::invalidCodePoint;
 }
 
 // --- UTF-16
@@ -165,7 +162,7 @@ NextCodePointUtf16_(u8 * bytesUtf16, int cBytesUtf16, int* pI, Endianness endian
     int i = *pI;
 
     if (i < 0 || i >= cBytesUtf16 - 1)
-        goto LError;
+        return UTF::invalidCodePoint;
 
     // NOTE - Immediately cast up to u32 to avoid any surprises when bit-twiddling
     u32 b0 = (u32)bytesUtf16[i++];
@@ -183,7 +180,7 @@ NextCodePointUtf16_(u8 * bytesUtf16, int cBytesUtf16, int* pI, Endianness endian
     else if (codeUnit0 >= 0xD800 && codeUnit0 <= 0xDBFF)
     {
         if (i >= cBytesUtf16 - 1)
-            goto LError;
+            return UTF::invalidCodePoint;
 
         u32 b2 = (u32)bytesUtf16[i++];
         u32 b3 = (u32)bytesUtf16[i++];
@@ -202,9 +199,6 @@ NextCodePointUtf16_(u8 * bytesUtf16, int cBytesUtf16, int* pI, Endianness endian
 
     *pI = i;
     return result;
-
-LError:    // @goto
-    return UTF::invalidCodePoint;
 }
 
 // --- Conversion
@@ -220,13 +214,16 @@ MakeUtf8CodeUnit_Fast(u32 codePoint, UTF8::CodeUnitType codeUnitType, int cFollo
     return result;
 }
 
- String
+String
 Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness endianness=Endianness::LITTLE)
 {
     String result = {};
 
     if (cBytesUtf16 & 1)
-        goto LError;
+    {
+        result = {};
+        return result;
+    }
 
     int cBytesRequired = 0;
     {
@@ -235,7 +232,10 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
         {
             u32 codePoint = NextCodePointUtf16_(bytesUtf16, cBytesUtf16, &iByteScan, endianness);
             if (codePoint == UTF::invalidCodePoint)
-                goto LError;
+            {
+                result = {};
+                return result;
+            }
 
             if (codePoint <= 0x7F)
             {
@@ -297,7 +297,4 @@ Utf8FromUtf16(u8 * bytesUtf16, int cBytesUtf16, Memory_Region memory, Endianness
     ASSERT(iByteWrite == cBytesRequired);
     return result;
 
-LError:    // @goto
-    result = {};    // @Hack - Need a better way to handle this
-    return result;
 }

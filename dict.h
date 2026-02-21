@@ -357,8 +357,10 @@ template <typename K, typename V>
 function V*
 dict_find_ptr(Dict<K, V> const& dict, K const& key)
 {
+    using Kvp = Dict<K, V>::Kvp;
+
     V* result = nullptr;
-    if (Dict<K, V>::Kvp* kvp = dict_find_kvp_ptr(dict, key))
+    if (Kvp* kvp = dict_find_kvp_ptr(dict, key))
     {
         result = &kvp->value;
     }

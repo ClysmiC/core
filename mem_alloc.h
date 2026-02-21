@@ -949,14 +949,16 @@ PreallocateRecycleListContiguous(
     int cntItemPreallocate,
     CTZ ctz=CTZ::NO)
 {
-    auto * slots = (Recycle_Allocator<T>::Slot*)allocate(alloc->memory,
-                                                         cntItemPreallocate * sizeof(Recycle_Allocator<T>::Slot),
-                                                         ctz);
+    using Slot = Recycle_Allocator<T>::Slot;
+    Slot * slots = (Slot*)allocate(
+                            alloc->memory,
+                            cntItemPreallocate * sizeof(Recycle_Allocator<T>::Slot),
+                            ctz);
 
     for (int iSlot = 0; iSlot < cntItemPreallocate; iSlot++)
     {
-        auto * slot = slots + iSlot;
-        auto * slotNext =
+        Slot* slot = slots + iSlot;
+        Slot* slotNext =
             (iSlot < cntItemPreallocate - 1) ?
             (slot + 1) :
             alloc->recycleList;
@@ -975,7 +977,7 @@ template <typename T>
 function void
 recycle(Recycle_Allocator<T>* alloc, T* item)
 {
-    auto * slot = (Recycle_Allocator<T>::Slot*)item;
+    auto * slot = (typename Recycle_Allocator<T>::Slot*)item;
 
     slot->pNextRecycled = alloc->recycleList;
     alloc->recycleList = slot;

@@ -44,7 +44,7 @@ struct IterByPtr
 template <typename ENUM_KEY, typename T_VALUE, ENUM_KEY START=ENUM_KEY::NIL + 1>
 struct Enum_Table
 {
-    T_VALUE items[ENUM_KEY::ENUM_COUNT - START];
+    T_VALUE items[(uint)(ENUM_KEY::ENUM_COUNT - START)];
 
     T_VALUE& operator[](ENUM_KEY index)
     {
